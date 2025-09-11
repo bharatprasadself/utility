@@ -2,6 +2,7 @@ package com.utilityzone.controller;
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.ResponseEntity;
 import java.time.ZonedDateTime;
@@ -9,8 +10,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.time.zone.ZoneRulesException;
-//http://localhost:8080/timezone/convert?fromTimezone=Europe/London&toTimezone=Asia/Kolkata
+//http://localhost:8080/api/timezone/convert?fromTimezone=Europe/London&toTimezone=Asia/Kolkata
 @RestController
+@RequestMapping("/api/timezone")
 public class TimezoneController {
     
     private final Set<String> majorTimezones = new LinkedHashSet<>(Arrays.asList(
@@ -33,30 +35,30 @@ public class TimezoneController {
 
     @GetMapping("/timezones")
     public ResponseEntity<Map<String, Object>> getAvailableTimezones() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timezones", majorTimezones);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of(
+            "data", Map.of("timezones", majorTimezones)
+        ));
     }
 
-    @GetMapping("/timezone/current")
+    @GetMapping("/current")
     public ResponseEntity<?> getCurrentTime(@RequestParam String timezone) {
         try {
             ZoneId zoneId = ZoneId.of(timezone);
             ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("timezone", timezone);
-            response.put("currentTime", zonedDateTime.format(formatter));
-            response.put("offset", zonedDateTime.getOffset().toString());
+            Map<String, Object> info = new HashMap<>();
+            info.put("timezone", timezone);
+            info.put("currentTime", zonedDateTime.format(formatter));
+            info.put("offset", zonedDateTime.getOffset().toString());
             
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("data", info));
         } catch (ZoneRulesException e) {
             return ResponseEntity.badRequest()
-                .body("Invalid timezone. Please use one of the supported timezones from /timezones endpoint");
+                .body(Map.of("message", "Invalid timezone. Please use one of the supported timezones from /timezones endpoint"));
         }
     }
 
-    @GetMapping("/timezone/convert")
+    @GetMapping("/convert")
     public ResponseEntity<?> convertTime(
             @RequestParam String fromTimezone,
             @RequestParam String toTimezone,
@@ -78,22 +80,22 @@ public class TimezoneController {
             
             ZonedDateTime targetTime = sourceTime.withZoneSameInstant(targetZone);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("fromTimezone", fromTimezone);
-            response.put("toTimezone", toTimezone);
-            response.put("sourceTime", sourceTime.format(formatter));
-            response.put("convertedTime", targetTime.format(formatter));
-            response.put("hoursDifference", 
+            Map<String, Object> conversionInfo = new HashMap<>();
+            conversionInfo.put("fromTimezone", fromTimezone);
+            conversionInfo.put("toTimezone", toTimezone);
+            conversionInfo.put("sourceTime", sourceTime.format(formatter));
+            conversionInfo.put("convertedTime", targetTime.format(formatter));
+            conversionInfo.put("hoursDifference", 
                 (targetZone.getRules().getOffset(targetTime.toInstant()).getTotalSeconds() - 
                  sourceZone.getRules().getOffset(sourceTime.toInstant()).getTotalSeconds()) / 3600.0);
             
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("data", conversionInfo));
         } catch (ZoneRulesException e) {
             return ResponseEntity.badRequest()
-                .body("Invalid timezone. Please use one of the supported timezones from /timezones endpoint");
+                .body(Map.of("message", "Invalid timezone. Please use one of the supported timezones from /timezones endpoint"));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                .body("Error: " + e.getMessage() + ". For custom time, use format: yyyy-MM-dd HH:mm:ss");
+                .body(Map.of("message", "Error: " + e.getMessage() + ". For custom time, use format: yyyy-MM-dd HH:mm:ss"));
         }
     }
 }

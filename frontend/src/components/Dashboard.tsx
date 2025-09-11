@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Box, Tab, Tabs, Paper } from '@mui/material';
+import { Box, Paper, Container, Tabs, Tab } from '@mui/material';
 import CurrencyConverter from './CurrencyConverter';
 import TimezoneConverter from './TimezoneConverter';
+import Advertisement from './Advertisement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -34,14 +35,23 @@ export default function Dashboard() {
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 800, margin: 'auto', mt: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Paper elevation={3}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={value} onChange={handleChange}>
-            <Tab label="Currency Converter" />
-            <Tab label="Timezone Converter" />
+          <Tabs 
+            value={value} 
+            onChange={handleChange} 
+            aria-label="dashboard tabs"
+            variant="fullWidth"
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{ bgcolor: 'grey.100' }}
+          >
+            <Tab label="Currency Converter" sx={{ py: 2 }} />
+            <Tab label="Timezone Converter" sx={{ py: 2 }} />
           </Tabs>
         </Box>
+        
         <TabPanel value={value} index={0}>
           <CurrencyConverter />
         </TabPanel>
@@ -49,6 +59,18 @@ export default function Dashboard() {
           <TimezoneConverter />
         </TabPanel>
       </Paper>
-    </Box>
+
+      {/* Render Advertisement at bottom on small screens, side on larger screens */}
+      <Box sx={{ 
+        mt: { xs: 3, md: 0 }, 
+        ml: { md: 3 },
+        position: { md: 'fixed' },
+        right: { md: '2rem' },
+        top: { md: '5rem' },
+        width: { md: '300px' }
+      }}>
+        <Advertisement />
+      </Box>
+    </Container>
   );
 }

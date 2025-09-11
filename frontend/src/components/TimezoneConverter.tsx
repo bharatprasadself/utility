@@ -56,7 +56,11 @@ export default function TimezoneConverter() {
         ? selectedDate.format('YYYY-MM-DD HH:mm:ss')
         : undefined;
       
-      const data = await api.convertTime(fromTimezone, toTimezone, dateStr);
+      const data = await api.convertTime({
+        fromTimezone,
+        toTimezone,
+        dateTime: dateStr
+      });
       setResult(data);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Conversion failed. Please try again.';
@@ -67,8 +71,8 @@ export default function TimezoneConverter() {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+    <Container maxWidth="sm" sx={{ width: '100%', maxWidth: '600px' }}>
+      <Paper elevation={3} sx={{ p: 3, mt: 3, minHeight: '400px' }}>
         <Typography variant="h5" gutterBottom>
           Timezone Converter
         </Typography>

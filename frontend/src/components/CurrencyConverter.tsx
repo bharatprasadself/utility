@@ -9,7 +9,8 @@ import {
   Typography,
   Box,
   CircularProgress,
-  Alert
+  Alert,
+  Stack
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import api from '../services/api';
@@ -49,7 +50,11 @@ export default function CurrencyConverter() {
         setError('Please enter a valid positive number');
         return;
       }
-      const data = await api.convertCurrency(amountNum, fromCurrency, toCurrency);
+      const data = await api.convertCurrency({
+        amount: amountNum,
+        from: fromCurrency,
+        to: toCurrency
+      });
       setResult(data);
     } catch (err) {
       setError('Conversion failed. Please try again.');
@@ -59,27 +64,26 @@ export default function CurrencyConverter() {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+    <Container maxWidth="sm" sx={{ width: '100%', maxWidth: '600px' }}>
+      <Paper elevation={3} sx={{ p: 3, mt: 3, minHeight: '400px' }}>
         <Typography variant="h5" gutterBottom>
           Currency Converter
         </Typography>
 
-        <Box sx={{ mb: 3 }}>
+        <Stack spacing={3}>
           <TextField
             label="Amount"
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             fullWidth
-            margin="normal"
           />
 
           <Select
             value={fromCurrency}
             onChange={(e: SelectChangeEvent) => setFromCurrency(e.target.value)}
             fullWidth
-            sx={{ mb: 2 }}
+            label="From Currency"
           >
             {currencies.map((currency) => (
               <MenuItem key={currency} value={currency}>
@@ -92,7 +96,7 @@ export default function CurrencyConverter() {
             value={toCurrency}
             onChange={(e: SelectChangeEvent) => setToCurrency(e.target.value)}
             fullWidth
-            sx={{ mb: 2 }}
+            label="To Currency"
           >
             {currencies.map((currency) => (
               <MenuItem key={currency} value={currency}>
@@ -109,27 +113,27 @@ export default function CurrencyConverter() {
           >
             {loading ? <CircularProgress size={24} /> : 'Convert'}
           </Button>
-        </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+          {error && (
+            <Alert severity="error">
+              {error}
+            </Alert>
+          )}
 
-        {result && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Result:
-            </Typography>
-            <Typography>
-              {amount} {result.from} = {result.result.toFixed(2)} {result.to}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Exchange Rate: 1 {result.from} = {result.rate.toFixed(6)} {result.to}
-            </Typography>
-          </Box>
-        )}
+          {result && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Result:
+              </Typography>
+              <Typography>
+                {amount} {result.from} = {result.result.toFixed(2)} {result.to}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Exchange Rate: 1 {result.from} = {result.rate.toFixed(6)} {result.to}
+              </Typography>
+            </Box>
+          )}
+        </Stack>
       </Paper>
     </Container>
   );

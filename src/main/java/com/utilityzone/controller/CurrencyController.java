@@ -2,14 +2,16 @@ package com.utilityzone.controller;
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.ResponseEntity;
 import java.util.HashMap;
 import java.util.Map;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-//http://localhost:8080/convert?amount=100&fromCurrency=USD&toCurrency=INR
+//http://localhost:8080/api/currency/convert?amount=100&from=USD&to=INR
 @RestController
+@RequestMapping("/api/currency")
 public class CurrencyController {
     private final Map<String, BigDecimal> exchangeRates = new HashMap<>();
 
@@ -29,17 +31,17 @@ public class CurrencyController {
     @GetMapping("/convert")
     public ResponseEntity<?> convertCurrency(
             @RequestParam BigDecimal amount,
-            @RequestParam String fromCurrency,
-            @RequestParam String toCurrency) {
+            @RequestParam String from,
+            @RequestParam String to) {
         
         try {
             // Validate currencies
-            fromCurrency = fromCurrency.toUpperCase();
-            toCurrency = toCurrency.toUpperCase();
+            String fromCurrency = from.toUpperCase();
+            String toCurrency = to.toUpperCase();
             
             if (!exchangeRates.containsKey(fromCurrency) || !exchangeRates.containsKey(toCurrency)) {
                 return ResponseEntity.badRequest()
-                    .body("Invalid currency code. Supported currencies: " + String.join(", ", exchangeRates.keySet()));
+                    .body(Map.of("message", "Invalid currency code. Supported currencies: " + String.join(", ", exchangeRates.keySet())));
             }
 
             // Convert to USD first (if not already USD)
@@ -54,14 +56,14 @@ public class CurrencyController {
             BigDecimal result = amountInUsd.multiply(exchangeRates.get(toCurrency))
                 .setScale(2, RoundingMode.HALF_UP);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("from", fromCurrency);
-            response.put("to", toCurrency);
-            response.put("amount", amount);
-            response.put("result", result);
-            response.put("rate", exchangeRates.get(toCurrency).divide(exchangeRates.get(fromCurrency), 6, RoundingMode.HALF_UP));
+            Map<String, Object> conversionResult = new HashMap<>();
+            conversionResult.put("from", fromCurrency);
+            conversionResult.put("to", toCurrency);
+            conversionResult.put("amount", amount);
+            conversionResult.put("result", result);
+            conversionResult.put("rate", exchangeRates.get(toCurrency).divide(exchangeRates.get(fromCurrency), 6, RoundingMode.HALF_UP));
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("data", conversionResult));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                 .body("Error: " + e.getMessage());
@@ -70,8 +72,8 @@ public class CurrencyController {
 
     @GetMapping("/currencies")
     public ResponseEntity<Map<String, Object>> getAvailableCurrencies() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("currencies", exchangeRates.keySet());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of(
+            "data", Map.of("currencies", exchangeRates.keySet())
+        ));
     }
 }
