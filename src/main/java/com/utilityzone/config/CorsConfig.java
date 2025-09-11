@@ -14,9 +14,10 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         
-        // Allow all origins for development
+        // Allow specific origins
         config.addAllowedOrigin("http://localhost:5173"); // Vite default port
         config.addAllowedOrigin("http://localhost:3000"); // React default port
+        config.addAllowedOrigin("https://utilityzone.in"); // Production domain
         
         // Allow all HTTP methods
         config.addAllowedMethod("*");
