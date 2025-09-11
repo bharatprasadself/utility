@@ -1,5 +1,5 @@
 # ---------- STAGE 1: build with Maven (has JDK + maven) ----------
-FROM maven:3.9.4-eclipse-temurin-17 AS build
+FROM maven:3.9.4-eclipse-temurin-21 AS build
 
 WORKDIR /workspace
 
@@ -20,7 +20,7 @@ RUN chmod +x ./mvnw
 RUN ./mvnw -B -DskipTests package
 
 # ---------- STAGE 2: runtime image (slim JRE) ----------
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 
 ARG JAR_NAME
 # If you don't set JAR_NAME, copy the first jar found in target
