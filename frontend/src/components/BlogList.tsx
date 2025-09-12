@@ -11,7 +11,8 @@ import {
     Stack,
     Alert,
     Container,
-    Box
+    Box,
+    CircularProgress
 } from '@mui/material';
 import { useState, useEffect } from 'react';
 import blogService from '../services/blog';
@@ -24,33 +25,56 @@ export default function BlogList() {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [error, setError] = useState('');
-    const { user } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+    const { user, isAdmin } = useAuth();
 
     useEffect(() => {
         loadBlogs();
+        // Set up auto-refresh every 30 seconds
+        const interval = setInterval(loadBlogs, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const loadBlogs = async () => {
+        setIsLoading(true);
         try {
-            const data = await blogService.getAll();
-            setBlogs(Array.isArray(data.data) ? data.data : []); // Handle API response structure
-            setError('');
-        } catch (err) {
+            console.log('Loading blogs...');
+            const blogs = await blogService.getAll();
+            console.log('Blogs loaded:', blogs);
+            if (Array.isArray(blogs)) {
+                setBlogs(blogs);
+                setError('');
+            } else {
+                console.error('Invalid blogs data:', blogs);
+                setError('Received invalid data from server');
+                setBlogs([]);
+            }
+        } catch (err: any) {
             console.error('Failed to load blogs:', err);
-            setError('Failed to load blogs. Please try again later.');
+            setError(err.message || 'Failed to load blogs. Please try again later.');
+            setBlogs([]); // Reset blogs on error
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const handleSubmit = async () => {
+        if (!title.trim() || !content.trim()) {
+            setError('Title and content are required');
+            return;
+        }
         try {
             const newBlog: CreateBlogRequest = { title, content };
             await blogService.create(newBlog);
+            await loadBlogs(); // Refresh the list
             setOpen(false);
             setTitle('');
             setContent('');
-            loadBlogs();
-        } catch (err) {
-            setError('Failed to create blog post');
+            setError('');
+        } catch (err: any) {
+            console.error('Failed to create blog:', err);
+            setError(err.message || 'Failed to create blog. Please try again later.');
+            await loadBlogs(); // Refresh list even if creation fails
         }
     };
 
@@ -58,7 +82,7 @@ export default function BlogList() {
         <Container maxWidth="lg" sx={{ mt: 4 }}>
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h4">Blog Posts</Typography>
-                {user && (
+                {user && isAdmin() && (
                     <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
                         Create New Post
                     </Button>
@@ -74,8 +98,9 @@ export default function BlogList() {
                             </Typography>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
                                 By {blog.author} on {new Date(blog.createdAt).toLocaleDateString()}
+                                {blog.updatedAt !== blog.createdAt && ` (Updated: ${new Date(blog.updatedAt).toLocaleDateString()})`}
                             </Typography>
-                            <Typography variant="body1">
+                            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
                                 {blog.content}
                             </Typography>
                         </CardContent>

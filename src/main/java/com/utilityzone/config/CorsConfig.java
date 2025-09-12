@@ -17,19 +17,30 @@ public class CorsConfig {
         // Allow specific origins
         config.addAllowedOrigin("http://localhost:5173"); // Vite default port
         config.addAllowedOrigin("http://localhost:3000"); // React default port
-        config.addAllowedOrigin("https://utilityzone.in"); // Production domain
-        
-        // Allow all HTTP methods
-        config.addAllowedMethod("*");
-        
-        // Allow all headers
-        config.addAllowedHeader("*");
+        config.addAllowedOrigin("http://localhost:8080"); // Spring Boot default port
+        config.addAllowedOrigin("https://utility-nrd7.onrender.com"); // Production domain
         
         // Allow credentials
         config.setAllowCredentials(true);
         
-        // Expose the Authorization header
+        // Allow specific methods
+        config.addAllowedMethod("GET");
+        config.addAllowedMethod("POST");
+        config.addAllowedMethod("PUT");
+        config.addAllowedMethod("DELETE");
+        config.addAllowedMethod("OPTIONS");
+        
+        // Allow specific headers
+        config.addAllowedHeader("Authorization");
+        config.addAllowedHeader("Content-Type");
+        config.addAllowedHeader("Accept");
+        config.addAllowedHeader("Origin");
+        
+        // Expose headers that frontend might need
         config.addExposedHeader("Authorization");
+        
+        // How long the browser should cache the CORS response
+        config.setMaxAge(3600L);
         
         source.registerCorsConfiguration("/api/**", config);
         return new CorsFilter(source);

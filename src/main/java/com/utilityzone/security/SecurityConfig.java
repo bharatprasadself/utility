@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -54,29 +55,38 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configure(http))
-            .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> 
-                auth.requestMatchers("/api/auth/**").permitAll()
-                    // Currency converter endpoints - public
-                    .requestMatchers("/api/currency/**").permitAll()
-                    // Timezone converter endpoints - public
-                    .requestMatchers("/api/timezone/**").permitAll()
-                    // Blog endpoints - GET is public, others require authentication
-                    .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/blogs/**").authenticated()
-                    .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
-                    .requestMatchers(HttpMethod.DELETE, "/api/blogs/**").authenticated()
-                    // H2 Console access
-                    .requestMatchers("/h2-console/**").permitAll()
-                    .anyRequest().authenticated()
-            );
+        // Disable CSRF and frame options for H2 Console
+        http.csrf().disable()
+            .headers().frameOptions().disable()
+            .and()
+            // Enable CORS
+            .cors()
+            .and()
+            // Configure session management
+            .sessionManagement()
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .and()
+            // Configure exception handling
+            .exceptionHandling()
+            .authenticationEntryPoint(unauthorizedHandler)
+            .and()
+            // Configure authorization
+            .authorizeHttpRequests()
+            // H2 Console access
+            .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).permitAll()
+            // Public endpoints
+            .requestMatchers("/api/auth/**").permitAll()
+            .requestMatchers("/api/currency/**").permitAll()
+            .requestMatchers("/api/timezone/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
+            // Protected endpoints
+            .requestMatchers(HttpMethod.POST, "/api/blogs/**").authenticated()
+            .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
+            .requestMatchers(HttpMethod.DELETE, "/api/blogs/**").authenticated()
+            .anyRequest().authenticated();
 
-        http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
-        http.authenticationProvider(authenticationProvider());
-        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.authenticationProvider(authenticationProvider())
+            .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -2,6 +2,7 @@ package com.utilityzone.controller;
 
 import com.utilityzone.model.Blog;
 import com.utilityzone.repository.BlogRepository;
+import com.utilityzone.security.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -9,37 +10,57 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 @RestController
 @RequestMapping("/api/blogs")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:8080", "https://utility-nrd7.onrender.com"}, 
+    allowedHeaders = "*", 
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE},
+    allowCredentials = "true")
 public class BlogController {
 
     @Autowired
     private BlogRepository blogRepository;
+    
+    @Autowired
+    private JwtUtils jwtUtils;
 
     @GetMapping
-    public List<Blog> getAllBlogs() {
-        return blogRepository.findAllByOrderByPublishDateDesc();
+    public ResponseEntity<?> getAllBlogs() {
+        try {
+            System.out.println("Fetching all blogs...");
+            List<Blog> blogs = blogRepository.findAllByOrderByPublishDateDesc();
+            System.out.println("Found " + blogs.size() + " blogs");
+            return ResponseEntity.ok(blogs);
+        } catch (Exception e) {
+            System.err.println("Error fetching blogs: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500)
+                .body(Map.of("message", "Failed to fetch blogs: " + e.getMessage()));
+        }
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
-    public Blog createBlog(@RequestBody Blog blog, @RequestHeader("Authorization") String token) {
-        blog.setPublishDate(LocalDateTime.now());
-        // Get username from JWT token
-        String username = getUsernameFromToken(token);
-        blog.setAuthor(username);
-        return blogRepository.save(blog);
-    }
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> createBlog(@RequestBody Blog blog, @RequestHeader("Authorization") String token) {
+        try {
+            if (blog.getTitle() == null || blog.getTitle().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Title is required");
+            }
+            if (blog.getContent() == null || blog.getContent().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Content is required");
+            }
 
-    private String getUsernameFromToken(String token) {
-        // Remove "Bearer " prefix
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
+            blog.setPublishDate(LocalDateTime.now());
+            String username = extractUsernameFromToken(token);
+            blog.setAuthor(username);
+            Blog savedBlog = blogRepository.save(blog);
+            return ResponseEntity.ok(savedBlog);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to create blog: " + e.getMessage());
         }
-        // TODO: Extract username from JWT token
-        return "Anonymous"; // Temporary placeholder
     }
 
     @GetMapping("/{id}")
@@ -47,5 +68,66 @@ public class BlogController {
         return blogRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> updateBlog(@PathVariable Long id, @RequestBody Blog blog, @RequestHeader("Authorization") String token) {
+        try {
+            if (blog.getTitle() == null || blog.getTitle().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Title is required");
+            }
+            if (blog.getContent() == null || blog.getContent().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Content is required");
+            }
+
+            return blogRepository.findById(id)
+                .map(existingBlog -> {
+                    String username = extractUsernameFromToken(token);
+                    if (!existingBlog.getAuthor().equals(username)) {
+                        return ResponseEntity.status(403).body("You can only edit your own blogs");
+                    }
+                    
+                    existingBlog.setTitle(blog.getTitle().trim());
+                    existingBlog.setContent(blog.getContent().trim());
+                    existingBlog.setUpdatedAt(LocalDateTime.now());
+                    return ResponseEntity.ok(blogRepository.save(existingBlog));
+                })
+                .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to update blog: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> deleteBlog(@PathVariable Long id, @RequestHeader("Authorization") String token) {
+        try {
+            return blogRepository.findById(id)
+                .map(blog -> {
+                    String username = extractUsernameFromToken(token);
+                    if (!blog.getAuthor().equals(username)) {
+                        return ResponseEntity.status(403).body("You can only delete your own blogs");
+                    }
+                    
+                    blogRepository.delete(blog);
+                    return ResponseEntity.ok().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to delete blog: " + e.getMessage());
+        }
+    }
+
+    private String extractUsernameFromToken(String token) {
+        if (token == null || !token.startsWith("Bearer ")) {
+            throw new IllegalArgumentException("Invalid authorization header");
+        }
+        try {
+            token = token.substring(7);
+            return jwtUtils.getUserNameFromJwtToken(token);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid JWT token: " + e.getMessage());
+        }
     }
 }

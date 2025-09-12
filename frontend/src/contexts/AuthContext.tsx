@@ -4,11 +4,12 @@ import authService from '../services/auth';
 import type { AuthResponse } from '../services/auth';
 
 interface AuthContextType {
-    user: { username: string; token: string } | null;
+    user: { username: string; token: string; roles?: string[] } | null;
     login: (username: string, password: string) => Promise<void>;
     register: (username: string, password: string) => Promise<void>;
     logout: () => void;
     loading: boolean;
+    isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,7 +19,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    const [user, setUser] = useState<{ username: string; token: string } | null>(null);
+    const [user, setUser] = useState<{ username: string; token: string; roles?: string[] } | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -36,7 +37,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const login = async (username: string, password: string) => {
         try {
             const response: AuthResponse = await authService.login({ username, password });
-            const userData = { username: response.username, token: response.token };
+            const userData = { 
+                username: response.username, 
+                token: response.token,
+                roles: response.roles 
+            };
             setUser(userData);
             localStorage.setItem('username', response.username);
         } catch (error) {
@@ -57,8 +62,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(null);
     };
 
+    const isAdmin = () => {
+        return user?.roles?.includes('ROLE_ADMIN') || false;
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, loading, isAdmin }}>
             {children}
         </AuthContext.Provider>
     );

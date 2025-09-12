@@ -79,7 +79,7 @@ const Navigation = () => {
             Logout ({user.username})
           </Button>
         ) : (
-          <>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <Button
               color="inherit"
               onClick={() => navigate('/login')}
@@ -106,7 +106,7 @@ const Navigation = () => {
             >
               Register
             </Button>
-          </>
+          </div>
         )}
       </Box>
     </Box>

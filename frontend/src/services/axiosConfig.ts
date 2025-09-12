@@ -8,9 +8,11 @@ export const API_BASE_URL = import.meta.env.MODE === 'production'
 const axiosInstance = axios.create({
     baseURL: API_BASE_URL,
     headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
     },
-    withCredentials: true // Important for CORS
+    withCredentials: true, // Important for CORS with credentials
+    timeout: 10000 // 10 second timeout
 });
 
 // Request interceptor to add auth token
@@ -31,15 +33,34 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
     (response) => response,
     async (error) => {
+        if (error.code === 'ERR_NETWORK') {
+            // Handle network errors (server not running, no internet, etc.)
+            console.error('Network error:', error);
+            throw new Error('Unable to connect to the server. Please check your internet connection.');
+        }
+        
         if (error.response) {
-            // Handle 401 Unauthorized
-            if (error.response.status === 401) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('username');
-                window.location.href = '/login';
+            // Handle specific HTTP error codes
+            switch (error.response.status) {
+                case 401:
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('username');
+                    window.location.href = '/login';
+                    throw new Error('Session expired. Please log in again.');
+                case 403:
+                    throw new Error('You do not have permission to perform this action.');
+                case 404:
+                    throw new Error('The requested resource was not found.');
+                case 500:
+                    throw new Error('Internal server error. Please try again later.');
+                default:
+                    throw new Error(error.response.data?.message || 'An unexpected error occurred.');
             }
         }
-        return Promise.reject(error);
+
+        // Handle other types of errors
+        console.error('Axios error:', error);
+        throw new Error('An unexpected error occurred. Please try again.');
     }
 );
 

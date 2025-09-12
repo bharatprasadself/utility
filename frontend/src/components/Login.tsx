@@ -14,18 +14,30 @@ export default function Login() {
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        
+        // Validate inputs
+        if (!username || !password) {
+            setError('Please enter both username and password');
+            return;
+        }
+
         setError('');
         setIsLoading(true);
         
         try {
             await login(username, password);
+            // Only navigate if the component is still mounted and login was successful
             navigate('/');
-        } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
-                : 'Failed to login. Please check your credentials.';
+        } catch (err: any) {
+            let errorMessage = 'Failed to login. Please check your credentials.';
+            if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
             setError(errorMessage);
         } finally {
+            // Always reset loading state
             setIsLoading(false);
         }
     };
@@ -35,7 +47,15 @@ export default function Login() {
             <Typography variant="h4" gutterBottom>
                 Login
             </Typography>
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {error && (
+                <Alert 
+                    severity="error" 
+                    sx={{ mb: 2 }}
+                    onClose={() => setError('')}
+                >
+                    {error}
+                </Alert>
+            )}
             <form onSubmit={handleSubmit} noValidate>
                 <Stack spacing={2}>
                     <TextField
@@ -72,7 +92,11 @@ export default function Login() {
                         {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
                     </Button>
                     <Button 
-                        onClick={() => navigate('/register')} 
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            navigate('/register');
+                        }} 
                         color="secondary"
                         disabled={isLoading}
                     >
