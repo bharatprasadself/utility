@@ -14,11 +14,20 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         
-        // Allow specific origins
-        config.addAllowedOrigin("http://localhost:5173"); // Vite default port
-        config.addAllowedOrigin("http://localhost:3000"); // React default port
-        config.addAllowedOrigin("http://localhost:8080"); // Spring Boot default port
-        config.addAllowedOrigin("https://utility-nrd7.onrender.com"); // Production domain
+        // Get environment
+        String env = System.getenv("SPRING_PROFILES_ACTIVE");
+        boolean isProduction = "prod".equals(env);
+
+        if (isProduction) {
+            // Production origins
+            config.addAllowedOrigin("https://utilityzone.in");
+            config.addAllowedOrigin("https://www.utilityzone.in");
+        } else {
+            // Development origins
+            config.addAllowedOrigin("http://localhost:5173"); // Vite default port
+            config.addAllowedOrigin("http://localhost:3000"); // React default port
+            config.addAllowedOrigin("http://localhost:8080"); // Spring Boot default port
+        }
         
         // Allow credentials
         config.setAllowCredentials(true);
