@@ -60,12 +60,17 @@ const authService = {
 
     logout: () => {
         setAuthToken('');
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        localStorage.removeItem('roles');
     },
 
-    getCurrentUser: (): { username: string; token: string } | null => {
+    getCurrentUser: (): { username: string; token: string; roles?: string[] } | null => {
         const token = localStorage.getItem('token');
         const username = localStorage.getItem('username');
-        return token && username ? { username, token } : null;
+        const rolesString = localStorage.getItem('roles');
+        const roles = rolesString ? JSON.parse(rolesString) : undefined;
+        return token && username ? { username, token, roles } : null;
     },
 
     // Initialize auth state from localStorage

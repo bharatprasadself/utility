@@ -10,10 +10,13 @@ export interface Blog {
     updatedAt: string;
 }
 
-export interface CreateBlogRequest {
+export interface BlogRequest {
     title: string;
     content: string;
 }
+
+export interface CreateBlogRequest extends BlogRequest {}
+export interface UpdateBlogRequest extends BlogRequest {}
 
 export interface BlogError {
     message: string;
@@ -86,18 +89,14 @@ const blogService = {
 
     create: async (blog: CreateBlogRequest): Promise<Blog> => {
         try {
-            console.log('Creating blog:', blog);
-            const response = await axiosInstance.post<Blog>('/api/blogs', blog);
-            console.log('Blog created:', response.data);
+            const response = await axiosInstance.post('/api/blogs', blog);
             return response.data;
         } catch (error: any) {
-            console.error('Error creating blog:', error);
-            console.error('Response:', error.response);
             throw new Error(error.response?.data?.message || 'Failed to create blog');
         }
     },
 
-    update: async (id: number, blog: CreateBlogRequest): Promise<Blog> => {
+    update: async (id: number, blog: UpdateBlogRequest): Promise<Blog> => {
         try {
             const response = await axiosInstance.put<Blog>(`/api/blogs/${id}`, blog);
             return response.data;

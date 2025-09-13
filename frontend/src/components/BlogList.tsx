@@ -12,21 +12,25 @@ import {
     Alert,
     Container,
     Box,
-    CircularProgress
+    IconButton,
+    CardActions
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useState, useEffect } from 'react';
 import blogService from '../services/blog';
-import type { Blog, CreateBlogRequest } from '../services/blog';
+import type { Blog, BlogRequest } from '../services/blog';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function BlogList() {
     const [blogs, setBlogs] = useState<Blog[]>([]);
     const [open, setOpen] = useState(false);
+    const [editBlogId, setEditBlogId] = useState<number | null>(null);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const { user, isAdmin } = useAuth();
+    const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+    const { user } = useAuth();
 
     useEffect(() => {
         loadBlogs();
@@ -36,7 +40,6 @@ export default function BlogList() {
     }, []);
 
     const loadBlogs = async () => {
-        setIsLoading(true);
         try {
             console.log('Loading blogs...');
             const blogs = await blogService.getAll();
@@ -53,8 +56,6 @@ export default function BlogList() {
             console.error('Failed to load blogs:', err);
             setError(err.message || 'Failed to load blogs. Please try again later.');
             setBlogs([]); // Reset blogs on error
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -64,25 +65,55 @@ export default function BlogList() {
             return;
         }
         try {
-            const newBlog: CreateBlogRequest = { title, content };
-            await blogService.create(newBlog);
+            const blogData: BlogRequest = { 
+                title: title.trim(), 
+                content: content.trim() 
+            };
+            if (editBlogId !== null) {
+                await blogService.update(editBlogId, blogData);
+            } else {
+                await blogService.create(blogData);
+            }
             await loadBlogs(); // Refresh the list
-            setOpen(false);
-            setTitle('');
-            setContent('');
-            setError('');
+            handleClose();
         } catch (err: any) {
-            console.error('Failed to create blog:', err);
-            setError(err.message || 'Failed to create blog. Please try again later.');
-            await loadBlogs(); // Refresh list even if creation fails
+            console.error(`Failed to ${editBlogId ? 'update' : 'create'} blog:`, err);
+            setError(err.message || `Failed to ${editBlogId ? 'update' : 'create'} blog. Please try again later.`);
+            await loadBlogs(); // Refresh list even if operation fails
         }
+    };
+
+    const handleEdit = (blog: Blog) => {
+        setEditBlogId(blog.id);
+        setTitle(blog.title);
+        setContent(blog.content);
+        setOpen(true);
+    };
+
+    const handleDelete = async (id: number) => {
+        try {
+            await blogService.delete(id);
+            setConfirmDelete(null);
+            await loadBlogs();
+        } catch (err: any) {
+            console.error('Failed to delete blog:', err);
+            setError(err.message || 'Failed to delete blog. Please try again later.');
+        }
+    };
+
+    const handleClose = () => {
+        setOpen(false);
+        setEditBlogId(null);
+        setTitle('');
+        setContent('');
+        setError('');
     };
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4 }}>
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h4">Blog Posts</Typography>
-                {user && isAdmin() && (
+                {user?.roles?.includes('ROLE_ADMIN') && (
                     <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
                         Create New Post
                     </Button>
@@ -104,12 +135,22 @@ export default function BlogList() {
                                 {blog.content}
                             </Typography>
                         </CardContent>
+                        {user?.roles?.includes('ROLE_ADMIN') && (
+                            <CardActions sx={{ justifyContent: 'flex-end' }}>
+                                <IconButton onClick={() => handleEdit(blog)} color="primary">
+                                    <EditIcon />
+                                </IconButton>
+                                <IconButton onClick={() => setConfirmDelete(blog.id)} color="error">
+                                    <DeleteIcon />
+                                </IconButton>
+                            </CardActions>
+                        )}
                     </Card>
                 ))}
             </Stack>
 
-            <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Create New Blog Post</DialogTitle>
+            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+                <DialogTitle>{editBlogId ? 'Edit Blog Post' : 'Create New Blog Post'}</DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         {error && <Alert severity="error">{error}</Alert>}
@@ -132,9 +173,22 @@ export default function BlogList() {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpen(false)}>Cancel</Button>
+                    <Button onClick={handleClose}>Cancel</Button>
                     <Button onClick={handleSubmit} variant="contained" color="primary">
-                        Create
+                        {editBlogId ? 'Update' : 'Create'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>Confirm Delete</DialogTitle>
+                <DialogContent>
+                    <Typography>Are you sure you want to delete this blog post? This action cannot be undone.</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmDelete(null)}>Cancel</Button>
+                    <Button onClick={() => confirmDelete && handleDelete(confirmDelete)} color="error" variant="contained">
+                        Delete
                     </Button>
                 </DialogActions>
             </Dialog>
