@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 @RestController
 @RequestMapping("/api/blogs")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:8080", "https://utility-nrd7.onrender.com"}, 
-    allowedHeaders = "*", 
-    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE},
+@CrossOrigin(
+    origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:8080", "https://utility-nrd7.onrender.com"}, 
+    allowedHeaders = {"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"},
+    exposedHeaders = {"Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"},
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
     allowCredentials = "true")
 public class BlogController {
 
@@ -83,11 +85,6 @@ public class BlogController {
 
             return blogRepository.findById(id)
                 .map(existingBlog -> {
-                    String username = extractUsernameFromToken(token);
-                    if (!existingBlog.getAuthor().equals(username)) {
-                        return ResponseEntity.status(403).body("You can only edit your own blogs");
-                    }
-                    
                     existingBlog.setTitle(blog.getTitle().trim());
                     existingBlog.setContent(blog.getContent().trim());
                     existingBlog.setUpdatedAt(LocalDateTime.now());
@@ -101,15 +98,10 @@ public class BlogController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<?> deleteBlog(@PathVariable Long id, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> deleteBlog(@PathVariable Long id) {
         try {
             return blogRepository.findById(id)
                 .map(blog -> {
-                    String username = extractUsernameFromToken(token);
-                    if (!blog.getAuthor().equals(username)) {
-                        return ResponseEntity.status(403).body("You can only delete your own blogs");
-                    }
-                    
                     blogRepository.delete(blog);
                     return ResponseEntity.ok().build();
                 })

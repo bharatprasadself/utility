@@ -32,9 +32,8 @@ const authService = {
             if (response.data.token) {
                 setAuthToken(response.data.token);
                 localStorage.setItem('username', response.data.username);
-                if (response.data.roles) {
-                    localStorage.setItem('roles', JSON.stringify(response.data.roles));
-                }
+                localStorage.setItem('roles', JSON.stringify(response.data.roles || []));
+                console.log('Stored roles:', response.data.roles); // Debug log
                 return response.data;
             } else {
                 console.error('Response missing token:', response.data); // Debug log
@@ -69,8 +68,26 @@ const authService = {
         const token = localStorage.getItem('token');
         const username = localStorage.getItem('username');
         const rolesString = localStorage.getItem('roles');
-        const roles = rolesString ? JSON.parse(rolesString) : undefined;
-        return token && username ? { username, token, roles } : null;
+        
+        // Debug logging
+        console.log('Token from storage:', token);
+        console.log('Username from storage:', username);
+        console.log('Roles string from storage:', rolesString);
+        
+        let roles: string[] = [];
+        try {
+            if (rolesString) {
+                roles = JSON.parse(rolesString);
+                console.log('Successfully parsed roles:', roles);
+            }
+        } catch (error) {
+            console.error('Error parsing roles:', error);
+            roles = [];
+        }
+        
+        const user = token && username ? { username, token, roles } : null;
+        console.log('Returning user object:', user);
+        return user;
     },
 
     // Initialize auth state from localStorage

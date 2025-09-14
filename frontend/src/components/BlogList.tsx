@@ -13,7 +13,8 @@ import {
     Container,
     Box,
     IconButton,
-    CardActions
+    CardActions,
+    Tooltip
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -32,38 +33,43 @@ export default function BlogList() {
     const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
     const { user } = useAuth();
 
+    const isAdmin = user?.roles?.includes("ROLE_ADMIN") ?? false;
+
     useEffect(() => {
         loadBlogs();
-        // Set up auto-refresh every 30 seconds
         const interval = setInterval(loadBlogs, 30000);
+        console.log('User roles:', user?.roles, 'Is admin:', isAdmin);
         return () => clearInterval(interval);
-    }, []);
+    }, [user, isAdmin]);
 
     const loadBlogs = async () => {
         try {
-            console.log('Loading blogs...');
             const blogs = await blogService.getAll();
-            console.log('Blogs loaded:', blogs);
             if (Array.isArray(blogs)) {
                 setBlogs(blogs);
                 setError('');
             } else {
-                console.error('Invalid blogs data:', blogs);
                 setError('Received invalid data from server');
                 setBlogs([]);
             }
         } catch (err: any) {
             console.error('Failed to load blogs:', err);
             setError(err.message || 'Failed to load blogs. Please try again later.');
-            setBlogs([]); // Reset blogs on error
+            setBlogs([]);
         }
     };
 
     const handleSubmit = async () => {
+        if (!isAdmin) {
+            setError('You must be an admin to manage blogs');
+            return;
+        }
+
         if (!title.trim() || !content.trim()) {
             setError('Title and content are required');
             return;
         }
+
         try {
             const blogData: BlogRequest = { 
                 title: title.trim(), 
@@ -74,16 +80,19 @@ export default function BlogList() {
             } else {
                 await blogService.create(blogData);
             }
-            await loadBlogs(); // Refresh the list
+            await loadBlogs();
             handleClose();
         } catch (err: any) {
             console.error(`Failed to ${editBlogId ? 'update' : 'create'} blog:`, err);
             setError(err.message || `Failed to ${editBlogId ? 'update' : 'create'} blog. Please try again later.`);
-            await loadBlogs(); // Refresh list even if operation fails
         }
     };
 
     const handleEdit = (blog: Blog) => {
+        if (!isAdmin) {
+            setError('You must be an admin to edit blogs');
+            return;
+        }
         setEditBlogId(blog.id);
         setTitle(blog.title);
         setContent(blog.content);
@@ -91,6 +100,10 @@ export default function BlogList() {
     };
 
     const handleDelete = async (id: number) => {
+        if (!isAdmin) {
+            setError('You must be an admin to delete blogs');
+            return;
+        }
         try {
             await blogService.delete(id);
             setConfirmDelete(null);
@@ -111,83 +124,236 @@ export default function BlogList() {
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4 }}>
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h4">Blog Posts</Typography>
-                {user?.roles?.includes('ROLE_ADMIN') && (
-                    <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
-                        Create New Post
-                    </Button>
+            <Box sx={{ mb: 4 }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    mb: 3,
+                    borderBottom: '2px solid #e0e0e0',
+                    pb: 2
+                }}>
+                    <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
+                            Blog Posts
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Logged in as: {user?.username}
+                            {isAdmin && (
+                                <Typography
+                                    component="span"
+                                    sx={{
+                                        ml: 1,
+                                        px: 1,
+                                        py: 0.5,
+                                        bgcolor: 'primary.main',
+                                        color: 'white',
+                                        borderRadius: 1,
+                                        fontSize: '0.75rem'
+                                    }}
+                                >
+                                    Admin
+                                </Typography>
+                            )}
+                        </Typography>
+                    </Box>
+                    {isAdmin && (
+                        <Button 
+                            variant="contained" 
+                            color="primary" 
+                            onClick={() => setOpen(true)}
+                            startIcon={<EditIcon />}
+                            sx={{
+                                px: 3,
+                                py: 1,
+                                borderRadius: 2,
+                                boxShadow: 2,
+                                '&:hover': {
+                                    boxShadow: 4
+                                }
+                            }}
+                        >
+                            Create New Post
+                        </Button>
+                    )}
+                </Box>
+                {error && (
+                    <Alert 
+                        severity="error" 
+                        sx={{ 
+                            mb: 2,
+                            borderRadius: 2
+                        }}
+                        onClose={() => setError('')}
+                    >
+                        {error}
+                    </Alert>
                 )}
             </Box>
             
             <Stack spacing={2}>
                 {blogs.map((blog) => (
-                    <Card key={blog.id}>
+                    <Card key={blog.id} sx={{ borderRadius: 2, boxShadow: 2 }}>
                         <CardContent>
-                            <Typography variant="h5" gutterBottom>
+                            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
                                 {blog.title}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary" gutterBottom>
-                                By {blog.author} on {new Date(blog.createdAt).toLocaleDateString()}
-                                {blog.updatedAt !== blog.createdAt && ` (Updated: ${new Date(blog.updatedAt).toLocaleDateString()})`}
-                            </Typography>
-                            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                                <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 'medium' }}>
+                                    By {blog.author}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    • {new Date(blog.createdAt).toLocaleDateString()}
+                                </Typography>
+                                {blog.updatedAt !== blog.createdAt && (
+                                    <Typography variant="body2" sx={{ color: 'warning.main', fontSize: '0.8rem' }}>
+                                        • Updated: {new Date(blog.updatedAt).toLocaleDateString()}
+                                    </Typography>
+                                )}
+                            </Box>
+                            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: '#34495e', lineHeight: 1.6, mb: 2 }}>
                                 {blog.content}
                             </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Admin status: {isAdmin ? 'true' : 'false'}
+                            </Typography>
                         </CardContent>
-                        {user?.roles?.includes('ROLE_ADMIN') && (
-                            <CardActions sx={{ justifyContent: 'flex-end' }}>
-                                <IconButton onClick={() => handleEdit(blog)} color="primary">
-                                    <EditIcon />
-                                </IconButton>
-                                <IconButton onClick={() => setConfirmDelete(blog.id)} color="error">
-                                    <DeleteIcon />
-                                </IconButton>
-                            </CardActions>
-                        )}
+                        <Box sx={{ 
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            borderTop: '1px solid #e0e0e0',
+                            mt: 2,
+                            pt: 2
+                        }}>
+                            {isAdmin && (
+                                <>
+                                    <Button
+                                        startIcon={<EditIcon />}
+                                        onClick={() => handleEdit(blog)}
+                                        color="primary"
+                                        variant="contained"
+                                        size="small"
+                                        sx={{ mr: 1 }}
+                                    >
+                                        Edit
+                                    </Button>
+                                    <Button
+                                        startIcon={<DeleteIcon />}
+                                        onClick={() => setConfirmDelete(blog.id)}
+                                        color="error"
+                                        variant="contained"
+                                        size="small"
+                                    >
+                                        Delete
+                                    </Button>
+                                </>
+                            )}
+                        </Box>
                     </Card>
                 ))}
             </Stack>
 
-            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle>{editBlogId ? 'Edit Blog Post' : 'Create New Blog Post'}</DialogTitle>
-                <DialogContent>
-                    <Stack spacing={2} sx={{ mt: 1 }}>
-                        {error && <Alert severity="error">{error}</Alert>}
+            <Dialog 
+                open={open} 
+                onClose={handleClose} 
+                maxWidth="sm" 
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 2,
+                        boxShadow: 3
+                    }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid #e0e0e0', bgcolor: 'grey.50', px: 3, py: 2 }}>
+                    <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                        {editBlogId ? 'Edit Blog Post' : 'Create New Blog Post'}
+                    </Typography>
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, py: 3 }}>
+                    <Stack spacing={3}>
+                        {error && (
+                            <Alert severity="error" onClose={() => setError('')} sx={{ borderRadius: 1 }}>
+                                {error}
+                            </Alert>
+                        )}
                         <TextField
                             label="Title"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             fullWidth
                             required
+                            variant="outlined"
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1
+                                }
+                            }}
                         />
                         <TextField
                             label="Content"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             multiline
-                            rows={4}
+                            rows={6}
                             fullWidth
                             required
+                            variant="outlined"
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1
+                                }
+                            }}
                         />
                     </Stack>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleSubmit} variant="contained" color="primary">
+                <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <Button onClick={handleClose} variant="outlined" sx={{ borderRadius: 1 }}>
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleSubmit} 
+                        variant="contained" 
+                        color="primary"
+                        sx={{ borderRadius: 1, px: 3 }}
+                    >
                         {editBlogId ? 'Update' : 'Create'}
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} maxWidth="xs" fullWidth>
-                <DialogTitle>Confirm Delete</DialogTitle>
-                <DialogContent>
-                    <Typography>Are you sure you want to delete this blog post? This action cannot be undone.</Typography>
+            <Dialog 
+                open={confirmDelete !== null} 
+                onClose={() => setConfirmDelete(null)} 
+                maxWidth="xs" 
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 2,
+                        boxShadow: 3
+                    }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid #e0e0e0', bgcolor: 'error.light', color: 'error.contrastText', px: 3, py: 2 }}>
+                    <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                        Confirm Delete
+                    </Typography>
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, py: 3 }}>
+                    <Typography>
+                        Are you sure you want to delete this blog post? This action cannot be undone.
+                    </Typography>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmDelete(null)}>Cancel</Button>
-                    <Button onClick={() => confirmDelete && handleDelete(confirmDelete)} color="error" variant="contained">
+                <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <Button onClick={() => setConfirmDelete(null)} variant="outlined" sx={{ borderRadius: 1 }}>
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={() => confirmDelete && handleDelete(confirmDelete)} 
+                        color="error" 
+                        variant="contained"
+                        sx={{ borderRadius: 1, px: 3 }}
+                    >
                         Delete
                     </Button>
                 </DialogActions>
