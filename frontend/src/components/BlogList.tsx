@@ -11,10 +11,7 @@ import {
     Stack,
     Alert,
     Container,
-    Box,
-    IconButton,
-    CardActions,
-    Tooltip
+    Box
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -22,6 +19,60 @@ import { useState, useEffect } from 'react';
 import blogService from '../services/blog';
 import type { Blog, BlogRequest } from '../services/blog';
 import { useAuth } from '../contexts/AuthContext';
+
+const formatContent = (content: string) => {
+    // Normalize line endings and consolidate spaces
+    const normalizedContent = content
+        .replace(/\r\n/g, '\n')  // Normalize line endings
+        .replace(/\n\s+\n/g, '\n\n')  // Remove spaces between empty lines
+        .replace(/\n{2,}/g, '\n')  // Replace multiple newlines with single
+        .trim();  // Remove leading/trailing whitespace
+
+    // Split into paragraphs and process each
+    let inList = false;
+    const paragraphs = normalizedContent
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0) // Remove empty lines
+        .reduce((acc: string[], line) => {
+            // Handle list items
+            if (line.startsWith('- ')) {
+                if (!inList) {
+                    inList = true;
+                    acc.push('<ul class="blog-list">');
+                }
+                acc.push(`<li>${formatLine(line.substring(2))}</li>`);
+            } else {
+                if (inList) {
+                    inList = false;
+                    acc.push('</ul>');
+                }
+                acc.push(`<p class="blog-paragraph">${formatLine(line)}</p>`);
+            }
+            return acc;
+        }, []);
+
+    // Close any open list
+    if (inList) {
+        paragraphs.push('</ul>');
+    }
+
+    return `<div class="blog-content">${paragraphs.join('')}</div>`;
+};
+
+// Helper function to format text within a line
+const formatLine = (text: string) => {
+    return text
+        // Format links
+        .replace(
+            /(https?:\/\/[^\s]+)/g,
+            '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #1976d2; text-decoration: none;">$1</a>'
+        )
+        // Format bold text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Format italic text
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
+};
 
 export default function BlogList() {
     const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -31,6 +82,7 @@ export default function BlogList() {
     const [content, setContent] = useState('');
     const [error, setError] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+    const [expandedPosts, setExpandedPosts] = useState<number[]>([]);
     const { user } = useAuth();
 
     const isAdmin = user?.roles?.includes("ROLE_ADMIN") ?? false;
@@ -38,9 +90,8 @@ export default function BlogList() {
     useEffect(() => {
         loadBlogs();
         const interval = setInterval(loadBlogs, 30000);
-        console.log('User roles:', user?.roles, 'Is admin:', isAdmin);
         return () => clearInterval(interval);
-    }, [user, isAdmin]);
+    }, []);
 
     const loadBlogs = async () => {
         try {
@@ -193,7 +244,13 @@ export default function BlogList() {
             
             <Stack spacing={2}>
                 {blogs.map((blog) => (
-                    <Card key={blog.id} sx={{ borderRadius: 2, boxShadow: 2 }}>
+                    <Card key={blog.id} sx={{ 
+                        borderRadius: 2, 
+                        boxShadow: 2,
+                        '&:hover': {
+                            boxShadow: 3
+                        }
+                    }}>
                         <CardContent>
                             <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
                                 {blog.title}
@@ -211,44 +268,110 @@ export default function BlogList() {
                                     </Typography>
                                 )}
                             </Box>
-                            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: '#34495e', lineHeight: 1.6, mb: 2 }}>
-                                {blog.content}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                Admin status: {isAdmin ? 'true' : 'false'}
-                            </Typography>
+                            <Box sx={{ position: 'relative' }}>
+                                <Typography 
+                                    variant="body1" 
+                                    sx={{ 
+                                        color: '#34495e',
+                                        lineHeight: 1.5,
+                                        '& .blog-content': {
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.75rem'
+                                        },
+                                        '& .blog-paragraph': { 
+                                            margin: 0
+                                        },
+                                        '& a': { 
+                                            color: 'primary.main',
+                                            textDecoration: 'none',
+                                            '&:hover': {
+                                                textDecoration: 'underline'
+                                            }
+                                        },
+                                        '& .blog-list': { 
+                                            listStyleType: 'disc',
+                                            pl: 3,
+                                            m: 0,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.5rem'
+                                        },
+                                        '& li': {
+                                            m: 0,
+                                            pl: 0.5
+                                        }
+                                    }}
+                                >
+                                    {expandedPosts.includes(blog.id) ? (
+                                        <Box>
+                                            <div dangerouslySetInnerHTML={{ 
+                                                __html: formatContent(blog.content)
+                                            }} />
+                                            <Button
+                                                onClick={() => setExpandedPosts(prev => prev.filter(id => id !== blog.id))}
+                                                sx={{ 
+                                                    display: 'block',
+                                                    mt: 2,
+                                                    color: 'primary.main',
+                                                    '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' }
+                                                }}
+                                            >
+                                                Show Less
+                                            </Button>
+                                        </Box>
+                                    ) : (
+                                        <Box>
+                                            <div dangerouslySetInnerHTML={{ 
+                                                __html: formatContent(blog.content.slice(0, 200) + (blog.content.length > 200 ? '...' : ''))
+                                            }} />
+                                            <Button
+                                                onClick={() => setExpandedPosts(prev => [...prev, blog.id])}
+                                                sx={{ 
+                                                    display: 'block',
+                                                    mt: 1,
+                                                    color: 'primary.main',
+                                                    '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' }
+                                                }}
+                                            >
+                                                Read More
+                                            </Button>
+                                        </Box>
+                                    )}
+                                </Typography>
+                            </Box>
+                            <Box sx={{ 
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                borderTop: '1px solid #e0e0e0',
+                                mt: 2,
+                                pt: 2
+                            }}>
+                                {isAdmin && (
+                                    <Box>
+                                        <Button
+                                            startIcon={<EditIcon />}
+                                            onClick={() => handleEdit(blog)}
+                                            color="primary"
+                                            variant="contained"
+                                            size="small"
+                                            sx={{ mr: 1 }}
+                                        >
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            startIcon={<DeleteIcon />}
+                                            onClick={() => setConfirmDelete(blog.id)}
+                                            color="error"
+                                            variant="contained"
+                                            size="small"
+                                        >
+                                            Delete
+                                        </Button>
+                                    </Box>
+                                )}
+                            </Box>
                         </CardContent>
-                        <Box sx={{ 
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            borderTop: '1px solid #e0e0e0',
-                            mt: 2,
-                            pt: 2
-                        }}>
-                            {isAdmin && (
-                                <>
-                                    <Button
-                                        startIcon={<EditIcon />}
-                                        onClick={() => handleEdit(blog)}
-                                        color="primary"
-                                        variant="contained"
-                                        size="small"
-                                        sx={{ mr: 1 }}
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        startIcon={<DeleteIcon />}
-                                        onClick={() => setConfirmDelete(blog.id)}
-                                        color="error"
-                                        variant="contained"
-                                        size="small"
-                                    >
-                                        Delete
-                                    </Button>
-                                </>
-                            )}
-                        </Box>
                     </Card>
                 ))}
             </Stack>
