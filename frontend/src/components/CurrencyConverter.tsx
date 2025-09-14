@@ -65,73 +65,168 @@ export default function CurrencyConverter() {
 
   return (
     <Container maxWidth="sm" sx={{ width: '100%', maxWidth: '600px' }}>
-      <Paper elevation={3} sx={{ p: 3, mt: 3, minHeight: '400px' }}>
-        <Typography variant="h5" gutterBottom>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 3, 
+          mt: 3, 
+          minHeight: '400px',
+          background: 'linear-gradient(to bottom, #ffffff, #f8f9fa)'
+        }}
+      >
+        <Typography 
+          variant="h5" 
+          gutterBottom 
+          sx={{ 
+            textAlign: 'center',
+            color: 'primary.main',
+            fontWeight: 'bold',
+            mb: 4
+          }}
+        >
           Currency Converter
         </Typography>
 
         <Stack spacing={3}>
-          <TextField
-            label="Amount"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            fullWidth
-          />
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <TextField
+              label="Amount"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              sx={{ 
+                flex: 1,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2
+                }
+              }}
+              InputProps={{
+                sx: { bgcolor: 'white' }
+              }}
+            />
+            <Select
+              value={fromCurrency}
+              onChange={(e: SelectChangeEvent) => setFromCurrency(e.target.value)}
+              sx={{ 
+                width: '120px',
+                bgcolor: 'white',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2
+                }
+              }}
+              label="From"
+            >
+              {currencies.map((currency) => (
+                <MenuItem key={currency} value={currency}>
+                  {currency}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
 
-          <Select
-            value={fromCurrency}
-            onChange={(e: SelectChangeEvent) => setFromCurrency(e.target.value)}
-            fullWidth
-            label="From Currency"
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              my: 1 
+            }}
           >
-            {currencies.map((currency) => (
-              <MenuItem key={currency} value={currency}>
-                {currency}
-              </MenuItem>
-            ))}
-          </Select>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: 'text.secondary',
+                fontWeight: 'bold'
+              }}
+            >
+              ⟷
+            </Typography>
+          </Box>
 
-          <Select
-            value={toCurrency}
-            onChange={(e: SelectChangeEvent) => setToCurrency(e.target.value)}
-            fullWidth
-            label="To Currency"
-          >
-            {currencies.map((currency) => (
-              <MenuItem key={currency} value={currency}>
-                {currency}
-              </MenuItem>
-            ))}
-          </Select>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <TextField
+              disabled
+              value={result ? result.result.toFixed(2) : ''}
+              sx={{ 
+                flex: 1,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  bgcolor: result ? '#f0f7ff' : 'white'
+                }
+              }}
+              placeholder="Converted Amount"
+            />
+            <Select
+              value={toCurrency}
+              onChange={(e: SelectChangeEvent) => setToCurrency(e.target.value)}
+              sx={{ 
+                width: '120px',
+                bgcolor: 'white',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2
+                }
+              }}
+              label="To"
+            >
+              {currencies.map((currency) => (
+                <MenuItem key={currency} value={currency}>
+                  {currency}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
 
           <Button
             variant="contained"
             onClick={handleConvert}
             disabled={loading}
-            fullWidth
+            sx={{
+              mt: 2,
+              py: 1.5,
+              borderRadius: 2,
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4
+              }
+            }}
           >
             {loading ? <CircularProgress size={24} /> : 'Convert'}
           </Button>
 
           {error && (
-            <Alert severity="error">
+            <Alert 
+              severity="error"
+              sx={{ 
+                borderRadius: 2,
+                '& .MuiAlert-message': { width: '100%' }
+              }}
+            >
               {error}
             </Alert>
           )}
 
           {result && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Result:
-              </Typography>
-              <Typography>
-                {amount} {result.from} = {result.result.toFixed(2)} {result.to}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Exchange Rate: 1 {result.from} = {result.rate.toFixed(6)} {result.to}
-              </Typography>
-            </Box>
+            <Paper 
+              elevation={1} 
+              sx={{ 
+                p: 2, 
+                mt: 2, 
+                borderRadius: 2,
+                bgcolor: '#f8f9fa'
+              }}
+            >
+              <Stack spacing={1}>
+                <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                  Exchange Rate
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
+                  1 {result.from} = {result.rate.toFixed(4)} {result.to}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Last updated: {new Date().toLocaleTimeString()}
+                </Typography>
+              </Stack>
+            </Paper>
           )}
         </Stack>
       </Paper>

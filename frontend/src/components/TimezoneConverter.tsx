@@ -72,13 +72,35 @@ export default function TimezoneConverter() {
 
   return (
     <Container maxWidth="sm" sx={{ width: '100%', maxWidth: '600px' }}>
-      <Paper elevation={3} sx={{ p: 3, mt: 3, minHeight: '400px' }}>
-        <Typography variant="h5" gutterBottom>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 3, 
+          mt: 3, 
+          minHeight: '400px',
+          background: 'linear-gradient(to bottom, #ffffff, #f8f9fa)'
+        }}
+      >
+        <Typography 
+          variant="h5" 
+          gutterBottom 
+          sx={{ 
+            textAlign: 'center',
+            color: 'primary.main',
+            fontWeight: 'bold',
+            mb: 4
+          }}
+        >
           Timezone Converter
         </Typography>
 
         {initialLoading ? (
-          <Box display="flex" justifyContent="center" my={4}>
+          <Box 
+            display="flex" 
+            justifyContent="center" 
+            alignItems="center" 
+            minHeight="300px"
+          >
             <CircularProgress />
           </Box>
         ) : (
@@ -88,66 +110,183 @@ export default function TimezoneConverter() {
                 label="Select Date & Time"
                 value={selectedDate}
                 onChange={(newValue) => setSelectedDate(newValue)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    bgcolor: 'white'
+                  }
+                }}
               />
             </LocalizationProvider>
 
-            <Select
-              value={fromTimezone}
-              onChange={(e: SelectChangeEvent) => setFromTimezone(e.target.value)}
-              fullWidth
-              label="From Timezone"
-            >
-              {timezones.map((timezone) => (
-                <MenuItem key={timezone} value={timezone}>
-                  {timezone}
-                </MenuItem>
-              ))}
-            </Select>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 2,
+              p: 2,
+              bgcolor: 'white',
+              borderRadius: 2,
+              boxShadow: 1
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    width: '80px'
+                  }}
+                >
+                  From:
+                </Typography>
+                <Select
+                  value={fromTimezone}
+                  onChange={(e: SelectChangeEvent) => setFromTimezone(e.target.value)}
+                  fullWidth
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2
+                    }
+                  }}
+                >
+                  {timezones.map((timezone) => (
+                    <MenuItem key={timezone} value={timezone}>
+                      {timezone.replace('_', ' ')}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Box>
 
-            <Select
-              value={toTimezone}
-              onChange={(e: SelectChangeEvent) => setToTimezone(e.target.value)}
-              fullWidth
-              label="To Timezone"
-            >
-              {timezones.map((timezone) => (
-                <MenuItem key={timezone} value={timezone}>
-                  {timezone}
-                </MenuItem>
-              ))}
-            </Select>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  color: 'text.secondary'
+                }}
+              >
+                ↓
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    width: '80px'
+                  }}
+                >
+                  To:
+                </Typography>
+                <Select
+                  value={toTimezone}
+                  onChange={(e: SelectChangeEvent) => setToTimezone(e.target.value)}
+                  fullWidth
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2
+                    }
+                  }}
+                >
+                  {timezones.map((timezone) => (
+                    <MenuItem key={timezone} value={timezone}>
+                      {timezone.replace('_', ' ')}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Box>
+            </Box>
 
             <Button
               variant="contained"
               onClick={handleConvert}
               disabled={loading}
-              fullWidth
+              sx={{
+                py: 1.5,
+                borderRadius: 2,
+                boxShadow: 2,
+                '&:hover': {
+                  boxShadow: 4
+                }
+              }}
             >
-              {loading ? <CircularProgress size={24} /> : 'Convert'}
+              {loading ? <CircularProgress size={24} /> : 'Convert Time'}
             </Button>
 
             {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  borderRadius: 2,
+                  '& .MuiAlert-message': { width: '100%' }
+                }}
+              >
                 {error}
               </Alert>
             )}
 
             {result && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Result:
-                </Typography>
-                <Typography>
-                  {result.sourceTime}
-                </Typography>
-                <Typography>
-                  ⟶ {result.convertedTime}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Time Difference: {Math.abs(result.hoursDifference)} hours
-                  {result.hoursDifference > 0 ? ' ahead' : ' behind'}
-                </Typography>
-              </Box>
+              <Paper 
+                elevation={1}
+                sx={{ 
+                  p: 2.5,
+                  borderRadius: 2,
+                  bgcolor: '#f0f7ff',
+                  border: '1px solid',
+                  borderColor: 'primary.light'
+                }}
+              >
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {fromTimezone.replace('_', ' ')}
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
+                      {result.sourceTime}
+                    </Typography>
+                  </Box>
+
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'center',
+                      color: 'primary.main'
+                    }}
+                  >
+                    ↓
+                  </Box>
+
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {toTimezone.replace('_', ' ')}
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
+                      {result.convertedTime}
+                    </Typography>
+                  </Box>
+
+                  <Box 
+                    sx={{ 
+                      mt: 1, 
+                      pt: 1, 
+                      borderTop: '1px solid',
+                      borderColor: 'primary.light'
+                    }}
+                  >
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: 'text.secondary',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5
+                      }}
+                    >
+                      <span role="img" aria-label="clock">⏰</span>
+                      Time Difference: {Math.abs(result.hoursDifference)} hours
+                      {result.hoursDifference > 0 ? ' ahead' : ' behind'}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
             )}
           </Stack>
         )}
