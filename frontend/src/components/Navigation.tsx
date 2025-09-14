@@ -5,14 +5,31 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useState } from 'react';
 
+interface SubNavItem {
+  label: string;
+  path: string;
+}
+
 interface NavItem {
   label: string;
   path: string;
+  subItems?: SubNavItem[];
 }
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/' },
   { label: 'Blogs', path: '/blogs' },
+  { 
+    label: 'Articles',
+    path: '/articles',
+    subItems: [
+      { label: 'Spring Boot', path: '/articles/spring-boot' },
+      { label: 'React JS', path: '/articles/react' },
+      { label: 'PostgreSQL', path: '/articles/postgresql' },
+      { label: 'Docker', path: '/articles/docker' },
+      { label: 'Microservices', path: '/articles/microservices' }
+    ]
+  }
 ];
 
 const Navigation = () => {
@@ -21,18 +38,28 @@ const Navigation = () => {
   const { user, logout } = useAuth();
   const isMobile = useMediaQuery('(max-width:600px)');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [articleAnchorEl, setArticleAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
+  };
+
+  const handleArticleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setArticleAnchorEl(event.currentTarget);
   };
 
   const handleClose = () => {
     setAnchorEl(null);
   };
 
+  const handleArticleClose = () => {
+    setArticleAnchorEl(null);
+  };
+
   const handleNavigation = (path: string) => {
     navigate(path);
     handleClose();
+    handleArticleClose();
   };
 
   const renderDesktopNav = () => (
@@ -46,22 +73,67 @@ const Navigation = () => {
     }}>
       <Box sx={{ display: 'flex', gap: 3 }}>
         {navItems.map((item) => (
-          <Button
-            key={item.path}
-            color="inherit"
-            onClick={() => navigate(item.path)}
-            aria-current={location.pathname === item.path ? 'page' : undefined}
-            aria-label={`Navigate to ${item.label}`}
-            sx={{
-              px: 3,
-              py: 1,
-              borderRadius: 1,
-              bgcolor: location.pathname === item.path ? 'rgba(255,255,255,0.1)' : 'transparent',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
-            }}
-          >
-            {item.label}
-          </Button>
+          <Box key={item.path}>
+            <Button
+              color="inherit"
+              onClick={item.subItems ? handleArticleMenu : () => navigate(item.path)}
+              aria-current={location.pathname === item.path ? 'page' : undefined}
+              aria-label={`Navigate to ${item.label}`}
+              aria-controls={item.subItems ? 'article-menu' : undefined}
+              aria-haspopup={item.subItems ? 'true' : undefined}
+              sx={{
+                px: 3,
+                py: 1,
+                borderRadius: 1,
+                bgcolor: location.pathname.startsWith(item.path) ? 'rgba(255,255,255,0.1)' : 'transparent',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+              }}
+            >
+              {item.label}
+              {item.subItems && ' ▾'}
+            </Button>
+            {item.subItems && (
+              <Menu
+                id="article-menu"
+                anchorEl={articleAnchorEl}
+                open={Boolean(articleAnchorEl)}
+                onClose={handleArticleClose}
+                sx={{
+                  '& .MuiPaper-root': {
+                    borderRadius: 2,
+                    mt: 1,
+                    minWidth: 180,
+                    boxShadow: 3
+                  }
+                }}
+              >
+                {item.subItems.map((subItem) => (
+                  <MenuItem
+                    key={subItem.path}
+                    onClick={() => handleNavigation(subItem.path)}
+                    selected={location.pathname === subItem.path}
+                    sx={{
+                      py: 1,
+                      px: 2,
+                      '&:hover': {
+                        bgcolor: 'primary.light',
+                        color: 'white'
+                      },
+                      '&.Mui-selected': {
+                        bgcolor: 'primary.main',
+                        color: 'white',
+                        '&:hover': {
+                          bgcolor: 'primary.dark'
+                        }
+                      }
+                    }}
+                  >
+                    {subItem.label}
+                  </MenuItem>
+                ))}
+              </Menu>
+            )}
+          </Box>
         ))}
       </Box>
       <Box sx={{ display: 'flex', gap: 2 }}>
