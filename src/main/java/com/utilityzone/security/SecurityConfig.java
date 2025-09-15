@@ -79,10 +79,14 @@ public class SecurityConfig {
             .requestMatchers("/api/currency/**").permitAll()
             .requestMatchers("/api/timezone/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()  // Allow public access to article endpoints
             // Protected endpoints
             .requestMatchers(HttpMethod.POST, "/api/blogs/**").authenticated()
             .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
             .requestMatchers(HttpMethod.DELETE, "/api/blogs/**").authenticated()
+            .requestMatchers(HttpMethod.POST, "/api/articles/**").authenticated()
+            .requestMatchers(HttpMethod.PUT, "/api/articles/**").authenticated()
+            .requestMatchers(HttpMethod.DELETE, "/api/articles/**").authenticated()
             .anyRequest().authenticated();
 
         http.authenticationProvider(authenticationProvider())

@@ -1,36 +1,79 @@
-import { ArticleLayout, type Article } from './ArticleLayout';
+import { useState, useEffect } from 'react';
+import { ArticleLayout } from './ArticleLayout';
+import type { Article } from '../../types/Article';
+import { ArticleCategory } from '../../types/Article';
+import { ArticleService } from '../../services/article';
 
-const microservicesArticles: Article[] = [
+// Static fallback articles
+const staticArticles: Article[] = [
   {
-    id: 1,
-    title: "Introduction to Microservices Architecture",
-    description: "Learn the fundamentals of microservices architecture, its benefits, and when to use it in your applications.",
-    tags: ["Architecture", "Beginner", "Design Patterns"],
-    readTime: "12 min read"
+    id: 5001,
+    title: 'Introduction to Microservices Architecture',
+    description: 'Learn fundamentals of microservices architecture, benefits, and use cases.',
+    content: '# Introduction to Microservices Architecture\n\nMicroservices architecture structures an application as a collection of small autonomous services.',
+    tags: ['Architecture', 'Beginner', 'Design Patterns'],
+    readTime: '8 min read',
+    category: ArticleCategory.MICROSERVICES,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
-    id: 2,
-    title: "Service Discovery and Load Balancing",
-    description: "Implement service discovery and load balancing in your microservices architecture using modern tools and techniques.",
-    tags: ["Service Discovery", "Load Balancing", "Advanced"],
-    readTime: "15 min read"
+    id: 5002,
+    title: 'Service Discovery and Load Balancing',
+    description: 'Implement service discovery and load balancing patterns in microservices.',
+    content: '# Service Discovery & Load Balancing\n\nKey mechanisms for dynamic microservice environments.',
+    tags: ['Service Discovery', 'Networking', 'Advanced'],
+    readTime: '10 min read',
+    category: ArticleCategory.MICROSERVICES,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
-    id: 3,
-    title: "Event-Driven Microservices",
-    description: "Deep dive into event-driven architecture in microservices, including message queues and event sourcing.",
-    tags: ["Event-Driven", "Kafka", "Advanced"],
-    readTime: "15 min read"
+    id: 5003,
+    title: 'Event-Driven Microservices',
+    description: 'Event-driven patterns with messaging and eventual consistency.',
+    content: '# Event-Driven Microservices\n\nUsing events to decouple service responsibilities.',
+    tags: ['Event-Driven', 'Kafka', 'Messaging'],
+    readTime: '11 min read',
+    category: ArticleCategory.MICROSERVICES,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];
 
 function MicroservicesArticles() {
+  const [articles, setArticles] = useState<Article[]>(staticArticles);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        console.log('🔍 Fetching articles in category: MICROSERVICES');
+        const response = await ArticleService.getArticlesByCategory(ArticleCategory.MICROSERVICES);
+        console.log(`✅ Successfully fetched ${response.data.length} articles in category MICROSERVICES`);
+        if (response.data && response.data.length > 0) {
+          setArticles(response.data);
+        } else {
+          console.log('No articles returned from API, using static content');
+          setArticles(staticArticles);
+        }
+      } catch (e) {
+        console.log('No articles returned from API, using static content');
+        setArticles(staticArticles);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   return (
     <ArticleLayout
       title="Microservices Articles"
-      description="Explore microservices architecture, patterns, and implementation strategies."
-      articles={microservicesArticles}
+      description="Explore microservices architecture, communication patterns, and operational practices."
+      articles={articles}
       breadcrumbLabel="Microservices"
+      loading={loading}
     />
   );
 }

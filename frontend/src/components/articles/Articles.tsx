@@ -1,10 +1,10 @@
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Container, Paper, Typography, Box, Breadcrumbs, Link } from '@mui/material';
 import SpringBootArticles from './SpringBootArticles';
-import ReactArticles from './ReactArticles';
-import PostgreSQLArticles from './PostgreSQLArticles';
-import DockerArticles from './DockerArticles';
-import MicroservicesArticles from './MicroservicesArticles';
+import ReactArticles from './ReactArticles.tsx';
+import PostgreSQLArticles from './PostgreSQLArticles.tsx';
+import DockerArticles from './DockerArticles.tsx';
+import MicroservicesArticles from './MicroservicesArticles.tsx';
 
 export default function Articles() {
   const navigate = useNavigate();
@@ -32,11 +32,11 @@ export default function Articles() {
         </Box>
 
         <Routes>
-          <Route path="spring-boot" element={<SpringBootArticles />} />
-          <Route path="react" element={<ReactArticles />} />
-          <Route path="postgresql" element={<PostgreSQLArticles />} />
-          <Route path="docker" element={<DockerArticles />} />
-          <Route path="microservices" element={<MicroservicesArticles />} />
+          <Route path="spring-boot/*" element={<SpringBootArticles />} />
+          <Route path="react/*" element={<ReactArticles />} />
+          <Route path="postgresql/*" element={<PostgreSQLArticles />} />
+          <Route path="docker/*" element={<DockerArticles />} />
+          <Route path="microservices/*" element={<MicroservicesArticles />} />
           <Route 
             path="/" 
             element={

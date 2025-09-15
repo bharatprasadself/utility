@@ -13,19 +13,14 @@ import {
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { useNavigate } from 'react-router-dom';
 
-export interface Article {
-  id: number;
-  title: string;
-  description: string;
-  tags: string[];
-  readTime: string;
-}
+import type { Article } from '../../types/Article';
 
 interface ArticleLayoutProps {
   title: string;
   description: string;
   articles: Article[];
   breadcrumbLabel: string;
+  loading?: boolean;
   children?: ReactNode;
 }
 
@@ -34,6 +29,7 @@ export function ArticleLayout({
   description, 
   articles, 
   breadcrumbLabel,
+  loading = false,
   children 
 }: ArticleLayoutProps) {
   const navigate = useNavigate();
@@ -64,12 +60,32 @@ export function ArticleLayout({
 
       {children}
 
-      <Stack spacing={3}>
-        {articles.map((article) => (
+      {loading ? (
+        <Stack spacing={3}>
+          {[1, 2, 3].map((index) => (
+            <Card key={index} sx={{ borderRadius: 2 }}>
+              <CardContent>
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ width: '60%', height: 24, bgcolor: 'grey.200', borderRadius: 1, mb: 1 }} />
+                  <Box sx={{ width: '40%', height: 20, bgcolor: 'grey.100', borderRadius: 1 }} />
+                </Box>
+                <Box sx={{ width: '90%', height: 60, bgcolor: 'grey.100', borderRadius: 1, mb: 2 }} />
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ width: 60, height: 24, bgcolor: 'grey.200', borderRadius: 1 }} />
+                  <Box sx={{ width: 80, height: 24, bgcolor: 'grey.200', borderRadius: 1 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
+      ) : (
+        <Stack spacing={3}>
+          {articles.map((article) => (
           <Card 
             key={article.id}
             sx={{ 
               borderRadius: 2,
+              cursor: 'pointer',
               '&:hover': {
                 boxShadow: 3,
                 transform: 'translateY(-2px)',
@@ -78,11 +94,31 @@ export function ArticleLayout({
             }}
           >
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'flex-start', 
+                  mb: 2,
+                  cursor: 'pointer'
+                }}
+                onClick={() => {
+                  console.log('Article clicked:', article);
+                  const id = article.id;
+                  const category = article.category.toLowerCase();
+                  navigate(`/articles/${category}/${id}`);
+                }}
+              >
                 <Typography variant="h6" sx={{ color: '#2c3e50', fontWeight: 'bold' }}>
                   {article.title}
                 </Typography>
-                <IconButton size="small">
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('Bookmark clicked');
+                  }}
+                >
                   <BookmarkIcon />
                 </IconButton>
               </Box>
@@ -115,7 +151,8 @@ export function ArticleLayout({
             </CardContent>
           </Card>
         ))}
-      </Stack>
+        </Stack>
+      )}
     </Box>
   );
 }
