@@ -44,9 +44,13 @@ public class CorsConfig {
         config.addAllowedHeader("Content-Type");
         config.addAllowedHeader("Accept");
         config.addAllowedHeader("Origin");
+        config.addAllowedHeader("X-Requested-With");
+        config.addAllowedHeader("Access-Control-Request-Method");
+        config.addAllowedHeader("Access-Control-Request-Headers");
         
         // Expose headers that frontend might need
         config.addExposedHeader("Authorization");
+        config.addExposedHeader("Content-Disposition");
         
         // How long the browser should cache the CORS response
         config.setMaxAge(3600L);

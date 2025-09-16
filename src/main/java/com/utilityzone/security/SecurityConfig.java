@@ -78,7 +78,12 @@ public class SecurityConfig {
             .requestMatchers("/api/auth/**").permitAll()
             .requestMatchers("/api/currency/**").permitAll()
             .requestMatchers("/api/timezone/**").permitAll()
+            .requestMatchers("/api/qrcode/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
+            // File converter endpoints (explicitly permit all HTTP methods)
+            .requestMatchers(HttpMethod.GET, "/api/converter/**").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/converter/**").permitAll()
+            .requestMatchers(HttpMethod.OPTIONS, "/api/converter/**").permitAll()
             // Protected endpoints
             .requestMatchers(HttpMethod.POST, "/api/blogs/**").authenticated()
             .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
