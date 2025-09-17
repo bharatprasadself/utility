@@ -16,9 +16,10 @@ import type { SelectChangeEvent } from '@mui/material';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import DownloadIcon from '@mui/icons-material/Download';
 import { getConversionFormats, convertFile } from '../services/fileConverter';
+import type { ConversionFormat } from '../services/fileConverter';
 
 const FileConverter: React.FC = () => {
-    const [supportedFormats, setSupportedFormats] = useState<string[][]>([]);
+    const [supportedFormats, setSupportedFormats] = useState<ConversionFormat[]>([]);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [sourceFormat, setSourceFormat] = useState<string>('');
     const [targetFormat, setTargetFormat] = useState<string>('');
@@ -32,10 +33,11 @@ const FileConverter: React.FC = () => {
 
     const loadSupportedFormats = async () => {
         try {
-            const formats = await getConversionFormats();
-            setSupportedFormats(formats);
+            const response = await getConversionFormats();
+            setSupportedFormats(response.supportedFormats);
         } catch (err) {
             setError('Failed to load supported formats');
+            console.error('Error loading formats:', err);
         }
     };
 
@@ -62,8 +64,8 @@ const FileConverter: React.FC = () => {
 
     const getTargetFormats = () => {
         if (!sourceFormat) return [];
-        const formats = supportedFormats.find(format => format[0] === sourceFormat);
-        return formats ? [formats[1]] : [];
+        const format = supportedFormats.find(f => f.sourceFormat === sourceFormat);
+        return format ? format.targetFormats : [];
     };
 
     const handleConvert = async () => {
@@ -141,8 +143,8 @@ const FileConverter: React.FC = () => {
                             onChange={handleSourceFormatChange}
                         >
                             {supportedFormats.map(format => (
-                                <MenuItem key={format[0]} value={format[0]}>
-                                    {format[0].toUpperCase()}
+                                <MenuItem key={format.sourceFormat} value={format.sourceFormat}>
+                                    {format.sourceFormat.toUpperCase()}
                                 </MenuItem>
                             ))}
                         </Select>
@@ -155,7 +157,7 @@ const FileConverter: React.FC = () => {
                             label="Target Format"
                             onChange={handleTargetFormatChange}
                         >
-                            {getTargetFormats().map(format => (
+                            {getTargetFormats().map((format: string) => (
                                 <MenuItem key={format} value={format}>
                                     {format.toUpperCase()}
                                 </MenuItem>

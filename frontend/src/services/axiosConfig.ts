@@ -3,7 +3,7 @@ import axios from 'axios';
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 
   (import.meta.env.MODE === 'production'
     ? 'https://utility-nrd7.onrender.com'
-    : 'http://localhost:8080');
+    : '');  // Empty string to use relative URLs in development
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
