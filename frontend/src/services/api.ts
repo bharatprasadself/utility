@@ -73,15 +73,22 @@ const api = {
     },
 
     // Timezone endpoints
-    getTimezones: async (): Promise<string[]> => {
+    getMajorTimezones: async (): Promise<string[]> => {
         try {
-            const response = await axiosInstance.get<ApiResponse<TimezonesResponse>>('/api/timezone/timezones');
+            const response = await axiosInstance.get<ApiResponse<TimezonesResponse>>('/api/timezone/major-timezones');
             return response.data.data.timezones;
         } catch (error) {
             throw handleApiError(error);
         }
     },
-    
+    getAllTimezones: async (): Promise<string[]> => {
+        try {
+            const response = await axiosInstance.get<ApiResponse<TimezonesResponse>>('/api/timezone/all-timezones');
+            return response.data.data.timezones;
+        } catch (error) {
+            throw handleApiError(error);
+        }
+    },
     getCurrentTime: async (timezone: string): Promise<TimeZoneInfo> => {
         try {
             const response = await axiosInstance.get<ApiResponse<TimeZoneInfo>>('/api/timezone/current', {
