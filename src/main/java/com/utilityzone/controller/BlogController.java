@@ -11,16 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.RequestMethod;
+
 
 @RestController
 @RequestMapping("/api/blogs")
-@CrossOrigin(
-    origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:8080", "https://utility-nrd7.onrender.com"}, 
-    allowedHeaders = {"Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"},
-    exposedHeaders = {"Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"},
-    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
-    allowCredentials = "true")
 public class BlogController {
 
     @Autowired

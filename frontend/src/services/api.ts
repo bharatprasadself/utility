@@ -29,8 +29,13 @@ interface ApiResponse<T> {
     message?: string;
 }
 
+export interface CurrencyInfo {
+    code: string;
+    description: string;
+}
+
 interface CurrenciesResponse {
-    currencies: string[];
+    currencies: CurrencyInfo[];
 }
 
 interface TimezonesResponse {
@@ -47,7 +52,7 @@ const handleApiError = (error: unknown): never => {
 
 const api = {
     // Currency endpoints
-    getCurrencies: async (): Promise<string[]> => {
+    getCurrencies: async (): Promise<CurrencyInfo[]> => {
         try {
             const response = await axiosInstance.get<ApiResponse<CurrenciesResponse>>('/api/currency/currencies');
             return response.data.data.currencies;
@@ -68,15 +73,22 @@ const api = {
     },
 
     // Timezone endpoints
-    getTimezones: async (): Promise<string[]> => {
+    getMajorTimezones: async (): Promise<string[]> => {
         try {
-            const response = await axiosInstance.get<ApiResponse<TimezonesResponse>>('/api/timezone/timezones');
+            const response = await axiosInstance.get<ApiResponse<TimezonesResponse>>('/api/timezone/major-timezones');
             return response.data.data.timezones;
         } catch (error) {
             throw handleApiError(error);
         }
     },
-    
+    getAllTimezones: async (): Promise<string[]> => {
+        try {
+            const response = await axiosInstance.get<ApiResponse<TimezonesResponse>>('/api/timezone/all-timezones');
+            return response.data.data.timezones;
+        } catch (error) {
+            throw handleApiError(error);
+        }
+    },
     getCurrentTime: async (timezone: string): Promise<TimeZoneInfo> => {
         try {
             const response = await axiosInstance.get<ApiResponse<TimeZoneInfo>>('/api/timezone/current', {
