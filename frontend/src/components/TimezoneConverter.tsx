@@ -27,7 +27,6 @@ export default function TimezoneConverter() {
 
   // Helper to extract zone ID from "zoneId - abbr (UTC...)"
   const extractZoneId = (tz: string) => tz.split(' - ')[0];
-  const [allTimezones, setAllTimezones] = useState<string[]>([]);
   const [showAll, setShowAll] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(dayjs());
   const [result, setResult] = useState<TimeZoneConversion | null>(null);
@@ -38,18 +37,13 @@ export default function TimezoneConverter() {
   useEffect(() => {
     const loadTimezones = async () => {
       try {
-        const [major, all] = await Promise.all([
-          api.getMajorTimezones(),
-          api.getAllTimezones()
-        ]);
-        setAllTimezones(all);
+        let tzList: string[] = [];
         if (showAll) {
-          setTimezones(all);
+          tzList = await api.getAllTimezones();
         } else {
-          setTimezones(major);
+          tzList = await api.getMajorTimezones();
         }
-        // Set defaults if needed
-        const tzList = showAll ? all : major;
+        setTimezones(tzList);
         if (tzList.length > 0) {
           if (!tzList.includes(fromTimezone)) setFromTimezone(tzList[0]);
           if (!tzList.includes(toTimezone)) setToTimezone(tzList[1] || tzList[0]);
