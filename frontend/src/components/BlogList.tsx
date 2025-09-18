@@ -20,44 +20,48 @@ import blogService from '../services/blog';
 import type { Blog, BlogRequest } from '../services/blog';
 import { useAuth } from '../contexts/AuthContext';
 
+interface FormattedContent {
+    type: 'paragraph' | 'list';
+    items: string[];
+}
+
 const formatContent = (content: string) => {
     // Normalize line endings and consolidate spaces
     const normalizedContent = content
-        .replace(/\r\n/g, '\n')  // Normalize line endings
-        .replace(/\n\s+\n/g, '\n\n')  // Remove spaces between empty lines
-        .replace(/\n{2,}/g, '\n')  // Replace multiple newlines with single
-        .trim();  // Remove leading/trailing whitespace
+        .replace(/\r\n/g, '\n')
+        .replace(/\n\s+\n/g, '\n\n')
+        .replace(/\n{2,}/g, '\n')
+        .trim();
 
-    // Split into paragraphs and process each
-    let inList = false;
-    const paragraphs = normalizedContent
+    const lines = normalizedContent
         .split('\n')
         .map(line => line.trim())
-        .filter(line => line.length > 0) // Remove empty lines
-        .reduce((acc: string[], line) => {
-            // Handle list items
-            if (line.startsWith('- ')) {
-                if (!inList) {
-                    inList = true;
-                    acc.push('<ul class="blog-list">');
-                }
-                acc.push(`<li>${formatLine(line.substring(2))}</li>`);
-            } else {
-                if (inList) {
-                    inList = false;
-                    acc.push('</ul>');
-                }
-                acc.push(`<p class="blog-paragraph">${formatLine(line)}</p>`);
-            }
-            return acc;
-        }, []);
+        .filter(line => line.length > 0);
 
-    // Close any open list
-    if (inList) {
-        paragraphs.push('</ul>');
+    const formattedContent: FormattedContent[] = [];
+    let currentList: string[] = [];
+
+    lines.forEach(line => {
+        if (line.startsWith('- ')) {
+            // List item
+            currentList.push(formatLine(line.substring(2)));
+        } else {
+            // If we were building a list, add it to the content
+            if (currentList.length > 0) {
+                formattedContent.push({ type: 'list', items: [...currentList] });
+                currentList = [];
+            }
+            // Add paragraph
+            formattedContent.push({ type: 'paragraph', items: [formatLine(line)] });
+        }
+    });
+
+    // Add any remaining list items
+    if (currentList.length > 0) {
+        formattedContent.push({ type: 'list', items: currentList });
     }
 
-    return `<div class="blog-content">${paragraphs.join('')}</div>`;
+    return formattedContent;
 };
 
 // Helper function to format text within a line
@@ -305,9 +309,19 @@ export default function BlogList() {
                                 >
                                     {expandedPosts.includes(blog.id) ? (
                                         <Box>
-                                            <div dangerouslySetInnerHTML={{ 
-                                                __html: formatContent(blog.content)
-                                            }} />
+                                            <div className="blog-content">
+                                                {formatContent(blog.content).map((section, index) => (
+                                                    section.type === 'list' ? (
+                                                        <ul key={index} className="blog-list">
+                                                            {section.items.map((item, itemIndex) => (
+                                                                <li key={itemIndex} dangerouslySetInnerHTML={{ __html: item }} />
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p key={index} className="blog-paragraph" dangerouslySetInnerHTML={{ __html: section.items[0] }} />
+                                                    )
+                                                ))}
+                                            </div>
                                             <Button
                                                 onClick={() => setExpandedPosts(prev => prev.filter(id => id !== blog.id))}
                                                 sx={{ 
@@ -322,9 +336,19 @@ export default function BlogList() {
                                         </Box>
                                     ) : (
                                         <Box>
-                                            <div dangerouslySetInnerHTML={{ 
-                                                __html: formatContent(blog.content.slice(0, 200) + (blog.content.length > 200 ? '...' : ''))
-                                            }} />
+                                            <div className="blog-content">
+                                                {formatContent(blog.content.slice(0, 200) + (blog.content.length > 200 ? '...' : '')).map((section, index) => (
+                                                    section.type === 'list' ? (
+                                                        <ul key={index} className="blog-list">
+                                                            {section.items.map((item, itemIndex) => (
+                                                                <li key={itemIndex} dangerouslySetInnerHTML={{ __html: item }} />
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p key={index} className="blog-paragraph" dangerouslySetInnerHTML={{ __html: section.items[0] }} />
+                                                    )
+                                                ))}
+                                            </div>
                                             <Button
                                                 onClick={() => setExpandedPosts(prev => [...prev, blog.id])}
                                                 sx={{ 
