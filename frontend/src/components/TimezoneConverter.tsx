@@ -130,11 +130,28 @@ export default function TimezoneConverter() {
                 label="Select Date & Time"
                 value={selectedDate}
                 onChange={(newValue) => setSelectedDate(newValue)}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    bgcolor: 'white'
-                  }
+                slotProps={{
+                  textField: {
+                    InputProps: {
+                      sx: {
+                        backgroundColor: '#fff',
+                        color: '#0d47a1',
+                        borderRadius: 2,
+                        fontWeight: 600,
+                        fontSize: '1.25rem',
+                        '& .MuiSvgIcon-root': {
+                          color: '#1976d2',
+                        },
+                      },
+                    },
+                    InputLabelProps: {
+                      sx: {
+                        color: '#1976d2',
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                      },
+                    },
+                  },
                 }}
               />
             </LocalizationProvider>
