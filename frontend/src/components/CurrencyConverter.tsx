@@ -14,10 +14,10 @@ import {
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import api from '../services/api';
-import type { CurrencyConversion } from '../services/api';
+import type { CurrencyConversion, CurrencyInfo } from '../services/api';
 
 export default function CurrencyConverter() {
-  const [currencies, setCurrencies] = useState<string[]>([]);
+  const [currencies, setCurrencies] = useState<CurrencyInfo[]>([]);
   const [amount, setAmount] = useState<string>('1');
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
   const [toCurrency, setToCurrency] = useState<string>('EUR');
@@ -30,8 +30,8 @@ export default function CurrencyConverter() {
       try {
         const data = await api.getCurrencies();
         setCurrencies(data);
-        if (data.length > 0 && !data.includes(fromCurrency)) {
-          setFromCurrency(data[0]);
+        if (data.length > 0 && !data.some(c => c.code === fromCurrency)) {
+          setFromCurrency(data[0].code);
         }
       } catch (err) {
         setError('Failed to load currencies');
@@ -108,7 +108,7 @@ export default function CurrencyConverter() {
               value={fromCurrency}
               onChange={(e: SelectChangeEvent) => setFromCurrency(e.target.value)}
               sx={{ 
-                width: '120px',
+                width: '280px',
                 bgcolor: 'white',
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2
@@ -117,8 +117,8 @@ export default function CurrencyConverter() {
               label="From"
             >
               {currencies.map((currency) => (
-                <MenuItem key={currency} value={currency}>
-                  {currency}
+                <MenuItem key={currency.code} value={currency.code}>
+                  {currency.code} - {currency.description}
                 </MenuItem>
               ))}
             </Select>
@@ -160,7 +160,7 @@ export default function CurrencyConverter() {
               value={toCurrency}
               onChange={(e: SelectChangeEvent) => setToCurrency(e.target.value)}
               sx={{ 
-                width: '120px',
+                width: '280px',
                 bgcolor: 'white',
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2
@@ -169,8 +169,8 @@ export default function CurrencyConverter() {
               label="To"
             >
               {currencies.map((currency) => (
-                <MenuItem key={currency} value={currency}>
-                  {currency}
+                <MenuItem key={currency.code} value={currency.code}>
+                  {currency.code} - {currency.description}
                 </MenuItem>
               ))}
             </Select>

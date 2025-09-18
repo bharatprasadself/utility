@@ -29,8 +29,13 @@ interface ApiResponse<T> {
     message?: string;
 }
 
+export interface CurrencyInfo {
+    code: string;
+    description: string;
+}
+
 interface CurrenciesResponse {
-    currencies: string[];
+    currencies: CurrencyInfo[];
 }
 
 interface TimezonesResponse {
@@ -47,7 +52,7 @@ const handleApiError = (error: unknown): never => {
 
 const api = {
     // Currency endpoints
-    getCurrencies: async (): Promise<string[]> => {
+    getCurrencies: async (): Promise<CurrencyInfo[]> => {
         try {
             const response = await axiosInstance.get<ApiResponse<CurrenciesResponse>>('/api/currency/currencies');
             return response.data.data.currencies;
