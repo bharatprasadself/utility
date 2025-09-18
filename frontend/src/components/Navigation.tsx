@@ -1,5 +1,4 @@
 import { AppBar, Toolbar, Typography, Button, Box, IconButton, useMediaQuery, Menu, MenuItem } from '@mui/material';
-import CalculateIcon from '@mui/icons-material/Calculate';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -200,9 +199,17 @@ const Navigation = () => {
             minWidth: 'fit-content'
           }}
         >
-          <CalculateIcon 
-            aria-hidden="true"
-            sx={{ display: 'flex', mr: 2, color: '#ffffff' }} 
+          <img 
+            src="/favicon.ico"
+            alt="Utility Zone Logo"
+            style={{ 
+              width: '32px', 
+              height: '32px',
+              marginRight: '16px',
+              backgroundColor: 'white',
+              padding: '4px',
+              borderRadius: '4px'
+            }}
           />
           <Typography 
             variant="h6" 

@@ -5,27 +5,38 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.ResponseEntity;
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpStatus;
+import java.util.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.*;
+import java.util.concurrent.locks.ReentrantLock;
 //http://localhost:8080/api/currency/convert?amount=100&from=USD&to=INR
 @RestController
 @RequestMapping("/api/currency")
 public class CurrencyController {
-    private final Map<String, BigDecimal> exchangeRates = new HashMap<>();
+    private final RestTemplate restTemplate = new RestTemplate();
+    private static final String RATES_API = "https://api.frankfurter.dev/v1/latest";
+    private static final String CURRENCIES_API = "https://api.frankfurter.dev/v1/currencies";
 
-    public CurrencyController() {
-        // Initialize with some major currency exchange rates (relative to USD)
-        exchangeRates.put("USD", BigDecimal.ONE);
-        exchangeRates.put("EUR", new BigDecimal("0.93")); // 1 USD = 0.93 EUR
-        exchangeRates.put("GBP", new BigDecimal("0.79")); // 1 USD = 0.79 GBP
-        exchangeRates.put("JPY", new BigDecimal("147.71")); // 1 USD = 147.71 JPY
-        exchangeRates.put("AUD", new BigDecimal("1.56")); // 1 USD = 1.56 AUD
-        exchangeRates.put("CAD", new BigDecimal("1.36")); // 1 USD = 1.36 CAD
-        exchangeRates.put("CHF", new BigDecimal("0.89")); // 1 USD = 0.89 CHF
-        exchangeRates.put("CNY", new BigDecimal("7.33")); // 1 USD = 7.33 CNY
-        exchangeRates.put("INR", new BigDecimal("83.06")); // 1 USD = 83.06 INR
+    // Caching
+    private Map<String, Object> cachedRatesResponse = null;
+    private LocalDateTime ratesCacheExpiry = LocalDateTime.MIN;
+    private Map<String, String> cachedCurrencies = null;
+    private LocalDateTime currenciesCacheExpiry = LocalDateTime.MIN;
+    private final ReentrantLock cacheLock = new ReentrantLock();
+
+    private LocalDateTime next1630CET() {
+        // CET is UTC+1 or CEST (summer) is UTC+2
+        ZoneId cetZone = ZoneId.of("Europe/Paris"); // Paris observes CET/CEST
+        ZonedDateTime nowCET = ZonedDateTime.now(cetZone);
+        ZonedDateTime today1630 = nowCET.withHour(16).withMinute(30).withSecond(0).withNano(0);
+        if (nowCET.isAfter(today1630)) {
+            today1630 = today1630.plusDays(1);
+        }
+        // Convert back to server local time
+        return today1630.withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
     }
 
     @GetMapping("/convert")
@@ -33,47 +44,102 @@ public class CurrencyController {
             @RequestParam BigDecimal amount,
             @RequestParam String from,
             @RequestParam String to) {
-        
         try {
-            // Validate currencies
             String fromCurrency = from.toUpperCase();
             String toCurrency = to.toUpperCase();
-            
-            if (!exchangeRates.containsKey(fromCurrency) || !exchangeRates.containsKey(toCurrency)) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("message", "Invalid currency code. Supported currencies: " + String.join(", ", exchangeRates.keySet())));
+
+            Map response;
+            cacheLock.lock();
+            try {
+                boolean cacheValid = cachedRatesResponse != null && ratesCacheExpiry.isAfter(LocalDateTime.now());
+                if (!cacheValid) {
+                    // Fetch new rates (for all currencies)
+                    cachedRatesResponse = restTemplate.getForObject(RATES_API, Map.class);
+                    ratesCacheExpiry = next1630CET();
+                }
+                response = cachedRatesResponse;
+            } finally {
+                cacheLock.unlock();
             }
 
-            // Convert to USD first (if not already USD)
-            BigDecimal amountInUsd;
-            if (fromCurrency.equals("USD")) {
-                amountInUsd = amount;
-            } else {
-                amountInUsd = amount.divide(exchangeRates.get(fromCurrency), 6, RoundingMode.HALF_UP);
+            if (response == null || !response.containsKey("rates")) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("message", "Failed to fetch rates from provider."));
             }
-
-            // Convert from USD to target currency
-            BigDecimal result = amountInUsd.multiply(exchangeRates.get(toCurrency))
-                .setScale(2, RoundingMode.HALF_UP);
+            Map<String, Object> rates = (Map<String, Object>) response.get("rates");
+            // Special edge case: USD to EUR (Frankfurter does not provide USD as base)
+            if ("USD".equals(fromCurrency) && "EUR".equals(toCurrency)) {
+                Object usdRateObj = rates.get("USD");
+                if (usdRateObj == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "USD not supported by provider."));
+                }
+                BigDecimal usdToEurRate = BigDecimal.ONE.divide(new BigDecimal(usdRateObj.toString()), 8, RoundingMode.HALF_UP);
+                BigDecimal result = amount.multiply(usdToEurRate).setScale(2, RoundingMode.HALF_UP);
+                Map<String, Object> conversionResult = new HashMap<>();
+                conversionResult.put("from", fromCurrency);
+                conversionResult.put("to", toCurrency);
+                conversionResult.put("amount", amount);
+                conversionResult.put("result", result);
+                conversionResult.put("rate", usdToEurRate.setScale(6, RoundingMode.HALF_UP));
+                return ResponseEntity.ok(Map.of("data", conversionResult));
+            }
+            // If fromCurrency is not EUR, we need to convert via EUR (Frankfurter base is EUR)
+            BigDecimal baseAmount = amount;
+            if (!"EUR".equals(fromCurrency)) {
+                // Convert from 'fromCurrency' to EUR
+                Object fromRateObj = rates.get(fromCurrency);
+                if (fromRateObj == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Invalid source currency or not supported by provider."));
+                }
+                BigDecimal fromRate = new BigDecimal(fromRateObj.toString());
+                baseAmount = amount.divide(fromRate, 8, RoundingMode.HALF_UP);
+            }
+            // Now convert from EUR to target
+            Object toRateObj = rates.get(toCurrency);
+            if (toRateObj == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Invalid target currency or not supported by provider."));
+            }
+            BigDecimal toRate = new BigDecimal(toRateObj.toString());
+            BigDecimal result = baseAmount.multiply(toRate).setScale(2, RoundingMode.HALF_UP);
 
             Map<String, Object> conversionResult = new HashMap<>();
             conversionResult.put("from", fromCurrency);
             conversionResult.put("to", toCurrency);
             conversionResult.put("amount", amount);
             conversionResult.put("result", result);
-            conversionResult.put("rate", exchangeRates.get(toCurrency).divide(exchangeRates.get(fromCurrency), 6, RoundingMode.HALF_UP));
+            conversionResult.put("rate", result.divide(amount, 6, RoundingMode.HALF_UP));
 
             return ResponseEntity.ok(Map.of("data", conversionResult));
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body("Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 
     @GetMapping("/currencies")
     public ResponseEntity<Map<String, Object>> getAvailableCurrencies() {
-        return ResponseEntity.ok(Map.of(
-            "data", Map.of("currencies", exchangeRates.keySet())
-        ));
+        try {
+            Map<String, String> currencies;
+            cacheLock.lock();
+            try {
+                boolean cacheValid = cachedCurrencies != null && currenciesCacheExpiry.isAfter(LocalDateTime.now());
+                if (!cacheValid) {
+                    cachedCurrencies = restTemplate.getForObject(CURRENCIES_API, Map.class);
+                    currenciesCacheExpiry = next1630CET();
+                }
+                currencies = cachedCurrencies;
+            } finally {
+                cacheLock.unlock();
+            }
+            if (currencies == null) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("message", "Failed to fetch currencies from provider."));
+            }
+            // Build a list of { code, description } objects
+            List<Map<String, String>> currencyList = new ArrayList<>();
+            for (Map.Entry<String, String> entry : currencies.entrySet()) {
+                currencyList.add(Map.of("code", entry.getKey(), "description", entry.getValue()));
+            }
+            return ResponseEntity.ok(Map.of("data", Map.of("currencies", currencyList)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Error: " + e.getMessage()));
+        }
     }
 }

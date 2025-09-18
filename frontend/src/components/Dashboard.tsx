@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Box, Paper, Container, Tabs, Tab } from '@mui/material';
 import CurrencyConverter from './CurrencyConverter';
 import TimezoneConverter from './TimezoneConverter';
+import FileConverter from './FileConverter';
+import QRCodeGenerator from './QRCodeGenerator';
 import Advertisement from './Advertisement';
 
 interface TabPanelProps {
@@ -19,7 +21,7 @@ function TabPanel(props: TabPanelProps) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 2 }}>
           {children}
         </Box>
       )}
@@ -49,6 +51,8 @@ export default function Dashboard() {
           >
             <Tab label="Currency Converter" sx={{ py: 2 }} />
             <Tab label="Timezone Converter" sx={{ py: 2 }} />
+            <Tab label="File Converter" sx={{ py: 2 }} />
+            <Tab label="QR Code Generator" sx={{ py: 2 }} />
           </Tabs>
         </Box>
         
@@ -57,6 +61,12 @@ export default function Dashboard() {
         </TabPanel>
         <TabPanel value={value} index={1}>
           <TimezoneConverter />
+        </TabPanel>
+        <TabPanel value={value} index={2}>
+          <FileConverter />
+        </TabPanel>
+        <TabPanel value={value} index={3}>
+          <QRCodeGenerator />
         </TabPanel>
       </Paper>
 

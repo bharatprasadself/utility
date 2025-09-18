@@ -15,28 +15,66 @@ import java.time.zone.ZoneRulesException;
 @RequestMapping("/api/timezone")
 public class TimezoneController {
     
-    private final Set<String> majorTimezones = new LinkedHashSet<>(Arrays.asList(
+    // Major timezones for quick selection
+    private static final List<String> MAJOR_TIMEZONES = List.of(
         "America/New_York",      // New York, USA
         "America/Los_Angeles",   // Los Angeles, USA
         "America/Chicago",       // Chicago, USA
         "Europe/London",         // London, UK
         "Europe/Paris",          // Paris, France
         "Europe/Berlin",         // Berlin, Germany
-        "Asia/Kolkata",         // Mumbai/New Delhi/Kolkata, India (IST)
-        "Asia/Tokyo",           // Tokyo, Japan
-        "Asia/Shanghai",        // Shanghai, China
-        "Asia/Dubai",           // Dubai, UAE
-        "Asia/Singapore",       // Singapore
-        "Australia/Sydney",     // Sydney, Australia
-        "Pacific/Auckland"      // Auckland, New Zealand
-    ));
+        "Asia/Kolkata",          // Mumbai/New Delhi/Kolkata, India (IST)
+        "Asia/Tokyo",            // Tokyo, Japan
+        "Asia/Shanghai",         // Shanghai, China
+        "Asia/Dubai",            // Dubai, UAE
+        "Asia/Singapore",        // Singapore
+        "Australia/Sydney",      // Sydney, Australia
+        "Pacific/Auckland"       // Auckland, New Zealand
+    );
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
 
-    @GetMapping("/timezones")
-    public ResponseEntity<Map<String, Object>> getAvailableTimezones() {
+    @GetMapping("/all-timezones")
+    public ResponseEntity<Map<String, Object>> getAllTimezones() {
+        Set<String> zoneIds = ZoneId.getAvailableZoneIds();
+        List<String> timezoneList = new ArrayList<>();
+        DateTimeFormatter abbrFormatter = DateTimeFormatter.ofPattern("z");
+        for (String zoneId : zoneIds) {
+            try {
+                ZoneId zid = ZoneId.of(zoneId);
+                ZonedDateTime now = ZonedDateTime.now(zid);
+                String abbreviation = abbrFormatter.format(now); // More robust abbreviation
+                String offset = now.getOffset().toString();
+                String info = zoneId + " - " + abbreviation + " (UTC" + offset + ")";
+                timezoneList.add(info);
+            } catch (Exception e) {
+                // skip invalid zone
+            }
+        }
+        Collections.sort(timezoneList);
         return ResponseEntity.ok(Map.of(
-            "data", Map.of("timezones", majorTimezones)
+            "data", Map.of("timezones", timezoneList)
+        ));
+    }
+
+    @GetMapping("/major-timezones")
+    public ResponseEntity<Map<String, Object>> getMajorTimezones() {
+        List<String> timezoneList = new ArrayList<>();
+        DateTimeFormatter abbrFormatter = DateTimeFormatter.ofPattern("z");
+        for (String zoneId : MAJOR_TIMEZONES) {
+            try {
+                ZoneId zid = ZoneId.of(zoneId);
+                ZonedDateTime now = ZonedDateTime.now(zid);
+                String abbreviation = abbrFormatter.format(now);
+                String offset = now.getOffset().toString();
+                String info = zoneId + " - " + abbreviation + " (UTC" + offset + ")";
+                timezoneList.add(info);
+            } catch (Exception e) {
+                // skip invalid zone
+            }
+        }
+        return ResponseEntity.ok(Map.of(
+            "data", Map.of("timezones", timezoneList)
         ));
     }
 

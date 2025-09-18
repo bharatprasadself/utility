@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
-import {
-  Container,
-  Paper,
-  Select,
-  MenuItem,
-  Button,
-  Typography,
-  Box,
-  CircularProgress,
-  Alert,
-  Stack
-} from '@mui/material';
+import Container from '@mui/material/Container';
+import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import type { SelectChangeEvent } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -24,6 +24,10 @@ export default function TimezoneConverter() {
   const [timezones, setTimezones] = useState<string[]>([]);
   const [fromTimezone, setFromTimezone] = useState<string>('America/New_York');
   const [toTimezone, setToTimezone] = useState<string>('Asia/Tokyo');
+
+  // Helper to extract zone ID from "zoneId - abbr (UTC...)"
+  const extractZoneId = (tz: string) => tz.split(' - ')[0];
+  const [showAll, setShowAll] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(dayjs());
   const [result, setResult] = useState<TimeZoneConversion | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,11 +37,16 @@ export default function TimezoneConverter() {
   useEffect(() => {
     const loadTimezones = async () => {
       try {
-        const data = await api.getTimezones();
-        setTimezones(data);
-        if (data.length > 0) {
-          if (!data.includes(fromTimezone)) setFromTimezone(data[0]);
-          if (!data.includes(toTimezone)) setToTimezone(data[1]);
+        let tzList: string[] = [];
+        if (showAll) {
+          tzList = await api.getAllTimezones();
+        } else {
+          tzList = await api.getMajorTimezones();
+        }
+        setTimezones(tzList);
+        if (tzList.length > 0) {
+          if (!tzList.includes(fromTimezone)) setFromTimezone(tzList[0]);
+          if (!tzList.includes(toTimezone)) setToTimezone(tzList[1] || tzList[0]);
         }
       } catch (err) {
         setError('Failed to load timezones');
@@ -45,9 +54,9 @@ export default function TimezoneConverter() {
         setInitialLoading(false);
       }
     };
-
     loadTimezones();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAll]);
   const handleConvert = async () => {
     setError('');
     setLoading(true);
@@ -55,10 +64,10 @@ export default function TimezoneConverter() {
       const dateStr = selectedDate 
         ? selectedDate.format('YYYY-MM-DD HH:mm:ss')
         : undefined;
-      
+      // Extract only the zone ID for backend
       const data = await api.convertTime({
-        fromTimezone,
-        toTimezone,
+        fromTimezone: extractZoneId(fromTimezone),
+        toTimezone: extractZoneId(toTimezone),
         dateTime: dateStr
       });
       setResult(data);
@@ -94,6 +103,11 @@ export default function TimezoneConverter() {
           Timezone Converter
         </Typography>
 
+        <FormControlLabel
+          control={<Switch checked={showAll} onChange={() => setShowAll((v) => !v)} color="primary" />}
+          label={showAll ? "Show Major Timezones" : "Show All Timezones"}
+          sx={{ mb: 2, ml: 1 }}
+        />
         {initialLoading ? (
           <Box 
             display="flex" 
@@ -110,11 +124,28 @@ export default function TimezoneConverter() {
                 label="Select Date & Time"
                 value={selectedDate}
                 onChange={(newValue) => setSelectedDate(newValue)}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    bgcolor: 'white'
-                  }
+                slotProps={{
+                  textField: {
+                    InputProps: {
+                      sx: {
+                        backgroundColor: '#fff',
+                        color: '#0d47a1',
+                        borderRadius: 2,
+                        fontWeight: 600,
+                        fontSize: '1.25rem',
+                        '& .MuiSvgIcon-root': {
+                          color: '#1976d2',
+                        },
+                      },
+                    },
+                    InputLabelProps: {
+                      sx: {
+                        color: '#1976d2',
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                      },
+                    },
+                  },
                 }}
               />
             </LocalizationProvider>
