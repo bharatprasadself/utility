@@ -8,6 +8,7 @@ import Register from './components/Register';
 import BlogList from './components/BlogList';
 import Navigation from './components/Navigation';
 import { AuthProvider } from './contexts/AuthContext';
+import Articles from './components/articles/Articles';
 import theme from './theme';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
                     <Route path="/blogs" element={<BlogList />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/articles/*" element={<Articles />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>
