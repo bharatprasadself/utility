@@ -44,6 +44,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             };
             setUser(userData);
             localStorage.setItem('username', response.username);
+            localStorage.setItem('roles', JSON.stringify(response.roles || []));
         } catch (error) {
             throw error;
         }
