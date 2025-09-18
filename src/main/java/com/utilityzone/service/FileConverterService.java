@@ -1,27 +1,26 @@
 package com.utilityzone.service;
-
+// Required imports (add these at top of your class file)
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
-import java.awt.Color;
 import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.stereotype.Service;
+
 import com.utilityzone.payload.request.FileConversionRequest;
 import com.utilityzone.payload.response.FileConversionResponse;
+
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.awt.Color;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-
 
 @Slf4j
 @Service
@@ -60,236 +59,411 @@ public class FileConverterService {
                 .build();
     }
 
-private byte[] convertDocxToPdf(byte[] content) throws IOException {
-    try (ByteArrayInputStream bis = new ByteArrayInputStream(content);
-         XWPFDocument docx = new XWPFDocument(bis);
-         PDDocument pdfDoc = new PDDocument();
-         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-
-        // load unicode font
-        PDType0Font unicodeFont;
-        try (InputStream fontStream = getClass().getResourceAsStream("/fonts/DejaVuSans.ttf")) {
-            if (fontStream == null) throw new IOException("Font not found: /fonts/DejaVuSans.ttf");
-            unicodeFont = PDType0Font.load(pdfDoc, fontStream, true);
-        }
-
-        final float margin = 50f;
-        final float defaultFontSize = 12f;
-        final float leadingFactor = 1.2f;
-
-        PDPage page = new PDPage(PDRectangle.A4);
-        pdfDoc.addPage(page);
-
-        float pageWidth = page.getMediaBox().getWidth();
-        float pageHeight = page.getMediaBox().getHeight();
-        float curX = margin;
-        float curY = pageHeight - margin;
-
-    PDPageContentStream contentStream = new PDPageContentStream(pdfDoc, page);
-    contentStream.setFont(unicodeFont, defaultFontSize);
-    contentStream.beginText();
-    contentStream.newLineAtOffset(curX, curY);
-
-        for (IBodyElement element : docx.getBodyElements()) {
-            if (element instanceof XWPFParagraph) {
-                XWPFParagraph para = (XWPFParagraph) element;
-
-                List<XWPFRun> runs = para.getRuns();
-                if (runs == null || runs.isEmpty()) {
-                    // paragraph gap
-                    float gap = defaultFontSize * 0.5f;
-                    if (curY - gap <= margin) {
-                        // new page
-                        try { contentStream.endText(); } catch (IllegalStateException ignored) {}
-                        if (contentStream != null) contentStream.close();
-                        page = new PDPage(PDRectangle.A4);
-                        pdfDoc.addPage(page);
-                        pageWidth = page.getMediaBox().getWidth();
-                        pageHeight = page.getMediaBox().getHeight();
-                        curY = pageHeight - margin;
-                        contentStream = new PDPageContentStream(pdfDoc, page);
-                        contentStream.setFont(unicodeFont, defaultFontSize);
-                        contentStream.beginText();
-                        contentStream.newLineAtOffset(curX, curY);
-                    } else {
-                        contentStream.newLineAtOffset(0, -gap);
-                        curY -= gap;
-                    }
-                    continue;
-                }
-
-                for (XWPFRun run : runs) {
-                    String runText = run.getText(0);
-                    if (runText == null) runText = "";
-
-                    // determine run font size (fallback to default)
-                    int poiFontSize = run.getFontSize();
-                    float runFontSize = (poiFontSize > 0) ? poiFontSize : defaultFontSize;
-                    float leading = runFontSize * leadingFactor;
-
-                    // determine run color
-                    Color runColor = null;
-                    String hex = run.getColor();
-                    if (hex != null && !hex.isBlank()) {
-                        try {
-                            if (hex.startsWith("#")) hex = hex.substring(1);
-                            int rgb = Integer.parseInt(hex, 16);
-                            runColor = new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
-                        } catch (Exception ex) {
-                            runColor = null;
-                        }
-                    }
-
-                    // preserve explicit line breaks inside run
-                    String[] logicalLines = runText.split("\\R", -1);
-                    for (int li = 0; li < logicalLines.length; li++) {
-                        String logicalLine = logicalLines[li];
-
-                        // wrap lines according to run font size
-                        List<String> wrapped = wrapText(logicalLine, unicodeFont, runFontSize, pageWidth - 2 * margin);
-
-                        for (String lineChunk : wrapped) {
-                            // ensure space on page
-                            if (curY - leading <= margin) {
-                                try { contentStream.endText(); } catch (IllegalStateException ignored) {}
-                                if (contentStream != null) contentStream.close();
-                                page = new PDPage(PDRectangle.A4);
-                                pdfDoc.addPage(page);
-                                pageWidth = page.getMediaBox().getWidth();
-                                pageHeight = page.getMediaBox().getHeight();
-                                curY = pageHeight - margin;
-                                contentStream = new PDPageContentStream(pdfDoc, page);
-                                contentStream.setFont(unicodeFont, runFontSize);
-                                contentStream.beginText();
-                                contentStream.newLineAtOffset(curX, curY);
-                            }
-
-                            // set run-specific font size & color BEFORE writing
-                            contentStream.setFont(unicodeFont, runFontSize);
-                            if (runColor != null) contentStream.setNonStrokingColor(runColor);
-                            else contentStream.setNonStrokingColor(Color.BLACK);
-
-                            // show text (we are in text mode)
-                            contentStream.showText(lineChunk);
-                            contentStream.newLineAtOffset(0, -leading);
-                            curY -= leading;
-                        }
-                    }
-
-                    // handle images embedded in this run (if any)
-                    for (XWPFPicture pic : run.getEmbeddedPictures()) {
-                        XWPFPictureData picData = pic.getPictureData();
-                        if (picData == null || picData.getData() == null || picData.getData().length == 0) continue;
-
-                        // end text block before drawing
-                        try { contentStream.endText(); } catch (IllegalStateException ignored) {}
-
-                        PDImageXObject pdImage = PDImageXObject.createFromByteArray(pdfDoc, picData.getData(), picData.getFileName());
-                        float availableWidth = pageWidth - 2 * margin;
-                        float imageWidth = pdImage.getWidth();
-                        float imageHeight = pdImage.getHeight();
-                        float scale = Math.min(1.0f, availableWidth / imageWidth);
-                        float drawW = imageWidth * scale;
-                        float drawH = imageHeight * scale;
-
-                        if (curY - drawH <= margin) {
-                            page = new PDPage(PDRectangle.A4);
-                            pdfDoc.addPage(page);
-                            pageWidth = page.getMediaBox().getWidth();
-                            pageHeight = page.getMediaBox().getHeight();
-                            curY = pageHeight - margin;
-                        }
-
-                        try (PDPageContentStream imgStream = new PDPageContentStream(pdfDoc, page, PDPageContentStream.AppendMode.APPEND, true)) {
-                            imgStream.drawImage(pdImage, margin, curY - drawH, drawW, drawH);
-                        }
-                        curY -= (drawH + 6f);
-                        // resume text: close previous contentStream if open, then open new one
-                        if (contentStream != null) contentStream.close();
-                        contentStream = new PDPageContentStream(pdfDoc, page, PDPageContentStream.AppendMode.APPEND, true);
-                        contentStream.setFont(unicodeFont, defaultFontSize);
-                        contentStream.beginText();
-                        contentStream.newLineAtOffset(curX, curY);
-                    }
-                }
-
-                // paragraph spacing after runs
-                float paraSpacing = defaultFontSize * 0.5f;
-                if (curY - paraSpacing <= margin) {
-                    try { contentStream.endText(); } catch (IllegalStateException ignored) {}
-                    if (contentStream != null) contentStream.close();
-                    page = new PDPage(PDRectangle.A4);
-                    pdfDoc.addPage(page);
-                    curY = page.getMediaBox().getHeight() - margin;
-                    contentStream = new PDPageContentStream(pdfDoc, page);
-                    contentStream.setFont(unicodeFont, defaultFontSize);
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(curX, curY);
-                } else {
-                    contentStream.newLineAtOffset(0, -paraSpacing);
-                    curY -= paraSpacing;
-                }
-
-            } else if (element instanceof XWPFTable) {
-                // Render the table using the helper
-                try { contentStream.endText(); } catch (IllegalStateException ignored) {}
-                if (contentStream != null) contentStream.close();
-                float[] curYRef = new float[] { curY };
-                renderTableToPdf((XWPFTable) element, pdfDoc, page, unicodeFont, defaultFontSize, margin, pageWidth, curYRef);
-                curY = curYRef[0];
-                // Resume text after table
-                contentStream = new PDPageContentStream(pdfDoc, page, PDPageContentStream.AppendMode.APPEND, true);
-                contentStream.setFont(unicodeFont, defaultFontSize);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(curX, curY);
-            }
-        }
-
-        // finalize
-        if (contentStream != null) {
-            try { 
-                contentStream.endText(); 
-            } catch (IllegalStateException ignored) {
-
-            } finally {
-                if (contentStream != null) {
-                    contentStream.close();
-                }
-            }
-        }
-
-        // PDFBox requires all content streams (including those for images) to be closed before saving
-        // All image streams are already closed in try-with-resources blocks above
-        pdfDoc.save(baos);
-        return baos.toByteArray();
-    }
-}
-
-
-
-    private byte[] convertPdfToDocx(byte[] content) throws IOException {
+private byte[] convertPdfToDocx(byte[] content) throws IOException {
         try (PDDocument pdf = PDDocument.load(new ByteArrayInputStream(content));
              ByteArrayOutputStream out = new ByteArrayOutputStream();
              XWPFDocument document = new XWPFDocument()) {
-            
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(pdf);
 
-            XWPFParagraph para = document.createParagraph();
-            XWPFRun run = para.createRun();
-            run.setText(text);
+            // Split into lines and try to preserve line breaks
+            String[] lines = text.split("\r?\n");
+            for (String line : lines) {
+                // Only treat as table if there are at least 2 tab characters
+                int tabCount = line.length() - line.replace("\t", "").length();
+                if (tabCount >= 2) {
+                    String[] cells = line.split("\t");
+                    XWPFTable table = document.createTable(1, cells.length);
+                    XWPFTableRow row = table.getRow(0);
+                    for (int i = 0; i < cells.length; i++) {
+                        row.getCell(i).setText(cells[i].trim());
+                    }
+                } else {
+                    XWPFParagraph para = document.createParagraph();
+                    XWPFRun run = para.createRun();
+                    run.setText(line);
+                }
+            }
 
             document.write(out);
             return out.toByteArray();
         }
     }
 
-    private List<String> wrapText(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
+private byte[] convertDocxToPdf(byte[] content) throws IOException {
+    try (ByteArrayInputStream bis = new ByteArrayInputStream(content);
+         XWPFDocument docx = new XWPFDocument(bis);
+         PDDocument pdfDoc = new PDDocument();
+         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+        // Load embedded font (change file/name if needed)
+        PDType0Font unicodeFont;
+        try (InputStream fontStream = getClass().getResourceAsStream("/fonts/DejaVuSans.ttf")) {
+            if (fontStream == null) {
+                throw new IOException("Font resource not found: /fonts/DejaVuSans.ttf");
+            }
+            unicodeFont = PDType0Font.load(pdfDoc, fontStream, true);
+        }
+
+        // layout constants
+        final float margin = 50f;
+        final float defaultFontSize = 12f;
+        final float leadingFactor = 1.2f;
+
+    // create first page and content stream
+    PDPage page = new PDPage(PDRectangle.A4);
+    pdfDoc.addPage(page);
+
+    State st = new State();
+    st.pdfDoc = pdfDoc;
+    st.page = page;
+    st.font = unicodeFont;
+    st.pageWidth = page.getMediaBox().getWidth();
+    st.pageHeight = page.getMediaBox().getHeight();
+    st.curX = margin;
+    st.curY = st.pageHeight - margin;
+
+    st.contentStream = new PDPageContentStream(pdfDoc, st.page);
+    st.contentStream.setFont(st.font, defaultFontSize);
+    st.contentStream.beginText();
+    st.contentStream.newLineAtOffset(st.curX, st.curY);
+
+        try {
+            // process headers
+            for (XWPFHeader header : docx.getHeaderList()) {
+                for (XWPFParagraph p : header.getParagraphs()) {
+                    processParagraph(p, st, defaultFontSize, leadingFactor, margin);
+                }
+            }
+
+            // main body elements
+            for (IBodyElement element : docx.getBodyElements()) {
+                if (element instanceof XWPFParagraph) {
+                    processParagraph((XWPFParagraph) element, st, defaultFontSize, leadingFactor, margin);
+                } else if (element instanceof XWPFTable) {
+                    processTable((XWPFTable) element, st, defaultFontSize, leadingFactor, margin);
+                }
+            }
+
+            // process footers
+            for (XWPFFooter footer : docx.getFooterList()) {
+                for (XWPFParagraph p : footer.getParagraphs()) {
+                    processParagraph(p, st, defaultFontSize, leadingFactor, margin);
+                }
+            }
+        } finally {
+            // Always close the last content stream before saving
+            if (st.contentStream != null) {
+                try { st.contentStream.endText(); } catch (IllegalStateException ignored) {}
+                try { st.contentStream.close(); } catch (Exception ignored) {}
+                st.contentStream = null;
+            }
+        }
+
+        pdfDoc.save(baos);
+        return baos.toByteArray();
+    }
+}
+
+
+// The following helper implementations assume you add a private static inner class `State` to your service:
+ private static class State {
+    PDDocument pdfDoc;
+    PDPage page;
+    PDPageContentStream contentStream;
+    float curX, curY, pageWidth, pageHeight;
+    PDType0Font font;
+ }
+
+/*
+ * Helper: processParagraph (actual implementation that uses State)
+ */
+private void processParagraph(XWPFParagraph para, State st, float defaultFontSize, float leadingFactor, float margin) throws IOException {
+    List<XWPFRun> runs = para.getRuns();
+    // if no runs -> blank paragraph (add spacing)
+    if (runs == null || runs.isEmpty()) {
+        float gap = defaultFontSize * 0.5f;
+        ensureSpaceOrNewPage(st, gap, margin, defaultFontSize);
+        newLine(st, gap);
+        return;
+    }
+
+    for (XWPFRun run : runs) {
+        String runText = extractRunText(run);
+        if (runText == null) runText = "";
+
+        // run-level font size
+        int poiSize = run.getFontSize();
+        float runFontSize = poiSize > 0 ? poiSize : defaultFontSize;
+        float leading = runFontSize * leadingFactor;
+
+        // run color
+        Color runColor = parseColor(run.getColor());
+
+        // split by explicit newlines
+        String[] logicalLines = runText.split("\\R", -1);
+        for (String logicalLine : logicalLines) {
+            List<String> wrapped = wrapText(logicalLine, st.font, runFontSize, st.pageWidth - 2 * margin);
+            for (String chunk : wrapped) {
+                if (st.curY - leading <= margin) {
+                    // new page
+                    closeTextSafe(st);
+                    if (st.contentStream != null) { try { st.contentStream.close(); } catch (Exception ignored) {} }
+                    st.page = new PDPage(PDRectangle.A4);
+                    st.pdfDoc.addPage(st.page);
+                    st.pageWidth = st.page.getMediaBox().getWidth();
+                    st.pageHeight = st.page.getMediaBox().getHeight();
+                    st.curY = st.pageHeight - margin;
+
+                    st.contentStream = new PDPageContentStream(st.pdfDoc, st.page);
+                    st.contentStream.setFont(st.font, runFontSize);
+                    st.contentStream.beginText();
+                    st.contentStream.newLineAtOffset(st.curX, st.curY);
+                }
+
+                // set run-specific font size & color BEFORE writing
+                st.contentStream.setFont(st.font, runFontSize);
+                if (runColor != null) st.contentStream.setNonStrokingColor(runColor);
+                else st.contentStream.setNonStrokingColor(Color.BLACK);
+
+                // write chunk
+                st.contentStream.showText(chunk);
+                st.contentStream.newLineAtOffset(0, -leading);
+                st.curY -= leading;
+            }
+        }
+
+        // images in this run
+        for (XWPFPicture pic : run.getEmbeddedPictures()) {
+            XWPFPictureData pd = pic.getPictureData();
+            if (pd == null || pd.getData() == null || pd.getData().length == 0) continue;
+
+            // end text and draw image
+            closeTextSafe(st);
+            if (st.contentStream != null) { try { st.contentStream.close(); } catch (Exception ignored) {} }
+
+            PDImageXObject pdImg = PDImageXObject.createFromByteArray(st.pdfDoc, pd.getData(), pd.getFileName());
+            float availableWidth = st.pageWidth - 2 * margin;
+            float imgW = pdImg.getWidth();
+            float imgH = pdImg.getHeight();
+            float scale = Math.min(1.0f, availableWidth / imgW);
+            float drawW = imgW * scale;
+            float drawH = imgH * scale;
+
+            if (st.curY - drawH <= margin) {
+                st.page = new PDPage(PDRectangle.A4);
+                st.pdfDoc.addPage(st.page);
+                st.pageWidth = st.page.getMediaBox().getWidth();
+                st.pageHeight = st.page.getMediaBox().getHeight();
+                st.curY = st.pageHeight - margin;
+            }
+
+            try (PDPageContentStream imgStream = new PDPageContentStream(st.pdfDoc, st.page, AppendMode.APPEND, true)) {
+                imgStream.drawImage(pdImg, margin, st.curY - drawH, drawW, drawH);
+            }
+
+            st.curY -= (drawH + 6f);
+
+            // resume text on same page
+            st.contentStream = new PDPageContentStream(st.pdfDoc, st.page, AppendMode.APPEND, true);
+            st.contentStream.setFont(st.font, defaultFontSize);
+            st.contentStream.beginText();
+            st.contentStream.newLineAtOffset(st.curX, st.curY);
+        }
+    }
+
+    // paragraph spacing after runs
+    float paraSpacing = defaultFontSize * 0.5f;
+    if (st.curY - paraSpacing <= margin) {
+        closeTextSafe(st);
+        if (st.contentStream != null) { try { st.contentStream.close(); } catch (Exception ignored) {} }
+        st.page = new PDPage(PDRectangle.A4);
+        st.pdfDoc.addPage(st.page);
+        st.curY = st.page.getMediaBox().getHeight() - margin;
+        st.contentStream = new PDPageContentStream(st.pdfDoc, st.page);
+        st.contentStream.setFont(st.font, defaultFontSize);
+        st.contentStream.beginText();
+        st.contentStream.newLineAtOffset(st.curX, st.curY);
+    } else {
+        st.contentStream.newLineAtOffset(0, -paraSpacing);
+        st.curY -= paraSpacing;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Helper: processTable - iterate cells and process their paragraphs
+////////////////////////////////////////////////////////////////////////////////
+private void processTable(XWPFTable table, State st, float defaultFontSize, float leadingFactor, float margin) throws IOException {
+    // Table rendering: draw borders and cell text
+    float cellPadding = 4f;
+    float tableWidth = st.pageWidth - 2 * margin;
+    List<XWPFTableRow> rows = table.getRows();
+    if (rows.isEmpty()) return;
+    // Find max number of columns in any row
+    int numCols = 0;
+    for (XWPFTableRow row : rows) {
+        if (row.getTableCells().size() > numCols) numCols = row.getTableCells().size();
+    }
+    if (numCols == 0) return;
+    float cellWidth = tableWidth / numCols;
+    float y = st.curY;
+    float lineSpacing = defaultFontSize * leadingFactor;
+    float rowGap = 2f;
+
+    for (XWPFTableRow row : rows) {
+        float x = margin;
+        // Calculate max number of lines in any cell in this row
+        int maxLines = 1;
+        List<List<String>> wrappedCellLines = new ArrayList<>();
+        for (int ci = 0; ci < numCols; ci++) {
+            StringBuilder cellText = new StringBuilder();
+            if (ci < row.getTableCells().size()) {
+                XWPFTableCell cell = row.getCell(ci);
+                for (XWPFParagraph p : cell.getParagraphs()) {
+                    if (cellText.length() > 0) cellText.append(" ");
+                    // Join all runs in the paragraph
+                    List<XWPFRun> runs = p.getRuns();
+                    if (runs != null && !runs.isEmpty()) {
+                        for (XWPFRun run : runs) {
+                            String t = extractRunText(run);
+                            if (t != null && !t.isEmpty()) cellText.append(t);
+                        }
+                    }
+                }
+            }
+            List<String> lines = wrapText(cellText.toString(), st.font, defaultFontSize, cellWidth - 2 * cellPadding);
+            wrappedCellLines.add(lines);
+            if (lines.size() > maxLines) maxLines = lines.size();
+        }
+        float maxRowHeight = maxLines * lineSpacing + 2 * cellPadding;
+        // Page break if needed
+        if (y - maxRowHeight <= margin) {
+            closeTextSafe(st);
+            if (st.contentStream != null) { try { st.contentStream.close(); } catch (Exception ignored) {} }
+            st.page = new PDPage(PDRectangle.A4);
+            st.pdfDoc.addPage(st.page);
+            st.pageWidth = st.page.getMediaBox().getWidth();
+            st.pageHeight = st.page.getMediaBox().getHeight();
+            y = st.pageHeight - margin;
+            st.curY = y;
+            st.contentStream = new PDPageContentStream(st.pdfDoc, st.page);
+            st.contentStream.setFont(st.font, defaultFontSize);
+            st.contentStream.beginText();
+            st.contentStream.newLineAtOffset(st.curX, st.curY);
+        }
+        // Draw each cell
+        for (int ci = 0; ci < numCols; ci++) {
+            // Draw cell border
+            try (PDPageContentStream borderStream = new PDPageContentStream(st.pdfDoc, st.page, AppendMode.APPEND, true)) {
+                borderStream.setStrokingColor(0, 0, 0);
+                borderStream.addRect(x, y - maxRowHeight, cellWidth, maxRowHeight);
+                borderStream.stroke();
+            }
+            // Write cell text with wrapping, top-aligned
+            List<String> lines = wrappedCellLines.get(ci);
+            float textY = y - cellPadding - defaultFontSize;
+            try (PDPageContentStream textStream = new PDPageContentStream(st.pdfDoc, st.page, AppendMode.APPEND, true)) {
+                textStream.setFont(st.font, defaultFontSize);
+                for (String line : lines) {
+                    textStream.beginText();
+                    textStream.newLineAtOffset(x + cellPadding, textY);
+                    textStream.showText(line);
+                    textStream.endText();
+                    textY -= lineSpacing;
+                }
+            }
+            x += cellWidth;
+        }
+        y -= (maxRowHeight + rowGap);
+    }
+    // After table, reset text cursor to left margin and below the table
+    st.curY = y;
+    st.curX = margin;
+    // Close any open text block and start a new one at the left margin
+    closeTextSafe(st);
+    if (st.contentStream != null) { try { st.contentStream.close(); } catch (Exception ignored) {} }
+    st.contentStream = new PDPageContentStream(st.pdfDoc, st.page, AppendMode.APPEND, true);
+    st.contentStream.setFont(st.font, defaultFontSize);
+    st.contentStream.beginText();
+    st.contentStream.newLineAtOffset(st.curX, st.curY);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Helper: extractRunText - read all CTR <t> pieces in a run
+////////////////////////////////////////////////////////////////////////////////
+private String extractRunText(XWPFRun run) {
+    if (run == null) return "";
+    StringBuilder sb = new StringBuilder();
+    try {
+        if (run.getCTR() != null) {
+            int tCount = run.getCTR().sizeOfTArray();
+            for (int i = 0; i < tCount; i++) {
+                String s = run.getText(i);
+                if (s != null) sb.append(s);
+            }
+        } else {
+            String s = run.getText(0);
+            if (s != null) sb.append(s);
+        }
+    } catch (Exception e) {
+        String s = run.getText(0);
+        if (s != null) sb.append(s);
+    }
+    return sb.toString();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Helper: parseColor - returns java.awt.Color or null if not parseable
+////////////////////////////////////////////////////////////////////////////////
+private Color parseColor(String hex) {
+    if (hex == null) return null;
+    try {
+        if (hex.startsWith("#")) hex = hex.substring(1);
+        int rgb = Integer.parseInt(hex, 16);
+        return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+    } catch (Exception e) {
+        return null;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Helper: ensureSpaceOrNewPage + newLine + closeTextSafe
+////////////////////////////////////////////////////////////////////////////////
+private void ensureSpaceOrNewPage(State st, float needed, float margin, float defaultFontSize) throws IOException {
+    if (st.curY - needed <= margin) {
+        try { st.contentStream.endText(); } catch (IllegalStateException ignored) {}
+        st.contentStream.close();
+        st.page = new PDPage(PDRectangle.A4);
+        st.pdfDoc.addPage(st.page);
+        st.pageWidth = st.page.getMediaBox().getWidth();
+        st.pageHeight = st.page.getMediaBox().getHeight();
+        st.curY = st.pageHeight - margin;
+        st.contentStream = new PDPageContentStream(st.pdfDoc, st.page);
+        st.contentStream.setFont(st.font, defaultFontSize);
+        st.contentStream.beginText();
+        st.contentStream.newLineAtOffset(st.curX, st.curY);
+    }
+}
+
+private void newLine(State st, float delta) throws IOException {
+    st.contentStream.newLineAtOffset(0, -delta);
+    st.curY -= delta;
+}
+
+private void closeTextSafe(State st) {
+    try { st.contentStream.endText(); } catch (Exception ignored) {}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Helper: wrapText - measures width and wraps words using font metrics
+////////////////////////////////////////////////////////////////////////////////
+private List<String> wrapText(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
     List<String> lines = new ArrayList<>();
     if (text == null || text.isEmpty()) return lines;
 
     String[] words = text.split("\\s+");
     StringBuilder line = new StringBuilder();
+
     for (String w : words) {
         String tentative = line.length() == 0 ? w : line + " " + w;
         float width = font.getStringWidth(tentative) / 1000f * fontSize;
@@ -301,7 +475,7 @@ private byte[] convertDocxToPdf(byte[] content) throws IOException {
                 lines.add(line.toString());
                 line.setLength(0);
             }
-            // if single word is longer than maxWidth, put it alone
+            // if single word larger than width, still add it as fallback
             if (font.getStringWidth(w) / 1000f * fontSize > maxWidth) {
                 lines.add(w);
             } else {
@@ -312,62 +486,5 @@ private byte[] convertDocxToPdf(byte[] content) throws IOException {
     if (line.length() > 0) lines.add(line.toString());
     return lines;
 }
-
-    // Helper to render a table to PDF with improved text wrapping and dynamic row height
-    private void renderTableToPdf(XWPFTable table, PDDocument pdfDoc, PDPage page, PDType0Font font, float fontSize, float margin, float pageWidth, float[] curYRef) throws IOException {
-        float cellPadding = 4f;
-        float tableWidth = pageWidth - 2 * margin;
-        int numCols = table.getRow(0).getTableCells().size();
-        float cellWidth = tableWidth / numCols;
-        float y = curYRef[0];
-        float lineSpacing = fontSize + 2;
-        float rowGap = 2f;
-
-        for (XWPFTableRow row : table.getRows()) {
-            float x = margin;
-            // Calculate max number of lines in any cell in this row
-            int maxLines = 1;
-            List<List<String>> wrappedCellLines = new ArrayList<>();
-            for (XWPFTableCell cell : row.getTableCells()) {
-                String cellText = cell.getText();
-                List<String> lines = wrapText(cellText != null ? cellText : "", font, fontSize, cellWidth - 2 * cellPadding);
-                wrappedCellLines.add(lines);
-                if (lines.size() > maxLines) maxLines = lines.size();
-            }
-            float maxRowHeight = maxLines * lineSpacing + 2 * cellPadding;
-            // Page break if needed
-            if (y - maxRowHeight <= margin) {
-                page = new PDPage(PDRectangle.A4);
-                pdfDoc.addPage(page);
-                y = page.getMediaBox().getHeight() - margin;
-            }
-            // Draw each cell
-            for (int ci = 0; ci < row.getTableCells().size(); ci++) {
-                XWPFTableCell cell = row.getCell(ci);
-                // Draw cell border
-                try (PDPageContentStream borderStream = new PDPageContentStream(pdfDoc, page, PDPageContentStream.AppendMode.APPEND, true)) {
-                    borderStream.setStrokingColor(0, 0, 0);
-                    borderStream.addRect(x, y - maxRowHeight, cellWidth, maxRowHeight);
-                    borderStream.stroke();
-                }
-                // Write cell text with wrapping, top-aligned
-                List<String> lines = wrappedCellLines.get(ci);
-                float textY = y - cellPadding - fontSize;
-                try (PDPageContentStream textStream = new PDPageContentStream(pdfDoc, page, PDPageContentStream.AppendMode.APPEND, true)) {
-                    textStream.setFont(font, fontSize);
-                    for (String line : lines) {
-                        textStream.beginText();
-                        textStream.newLineAtOffset(x + cellPadding, textY);
-                        textStream.showText(line);
-                        textStream.endText();
-                        textY -= lineSpacing;
-                    }
-                }
-                x += cellWidth;
-            }
-            y -= (maxRowHeight + rowGap);
-        }
-        curYRef[0] = y;
-    }
 
 }
