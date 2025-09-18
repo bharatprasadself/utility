@@ -66,6 +66,22 @@ public class CurrencyController {
                 return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("message", "Failed to fetch rates from provider."));
             }
             Map<String, Object> rates = (Map<String, Object>) response.get("rates");
+            // Special edge case: USD to EUR (Frankfurter does not provide USD as base)
+            if ("USD".equals(fromCurrency) && "EUR".equals(toCurrency)) {
+                Object usdRateObj = rates.get("USD");
+                if (usdRateObj == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "USD not supported by provider."));
+                }
+                BigDecimal usdToEurRate = BigDecimal.ONE.divide(new BigDecimal(usdRateObj.toString()), 8, RoundingMode.HALF_UP);
+                BigDecimal result = amount.multiply(usdToEurRate).setScale(2, RoundingMode.HALF_UP);
+                Map<String, Object> conversionResult = new HashMap<>();
+                conversionResult.put("from", fromCurrency);
+                conversionResult.put("to", toCurrency);
+                conversionResult.put("amount", amount);
+                conversionResult.put("result", result);
+                conversionResult.put("rate", usdToEurRate.setScale(6, RoundingMode.HALF_UP));
+                return ResponseEntity.ok(Map.of("data", conversionResult));
+            }
             // If fromCurrency is not EUR, we need to convert via EUR (Frankfurter base is EUR)
             BigDecimal baseAmount = amount;
             if (!"EUR".equals(fromCurrency)) {
