@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArticleLayout } from './ArticleLayout';
+import ArticleLayout from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
@@ -7,7 +7,7 @@ import { ArticleService } from '../../services/article';
 // Static fallback articles
 const staticArticles: Article[] = [
   {
-    id: 5001,
+    id: "5001",
     title: 'Introduction to Microservices Architecture',
     description: 'Learn fundamentals of microservices architecture, benefits, and use cases.',
     content: '# Introduction to Microservices Architecture\n\nMicroservices architecture structures an application as a collection of small autonomous services.',
@@ -18,7 +18,7 @@ const staticArticles: Article[] = [
     updatedAt: new Date().toISOString()
   },
   {
-    id: 5002,
+    id: "5002",
     title: 'Service Discovery and Load Balancing',
     description: 'Implement service discovery and load balancing patterns in microservices.',
     content: '# Service Discovery & Load Balancing\n\nKey mechanisms for dynamic microservice environments.',
@@ -29,7 +29,7 @@ const staticArticles: Article[] = [
     updatedAt: new Date().toISOString()
   },
   {
-    id: 5003,
+    id: "5003",
     title: 'Event-Driven Microservices',
     description: 'Event-driven patterns with messaging and eventual consistency.',
     content: '# Event-Driven Microservices\n\nUsing events to decouple service responsibilities.',
@@ -43,7 +43,7 @@ const staticArticles: Article[] = [
 
 function MicroservicesArticles() {
   const [articles, setArticles] = useState<Article[]>(staticArticles);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
@@ -60,8 +60,6 @@ function MicroservicesArticles() {
       } catch (e) {
         console.log('No articles returned from API, using static content');
         setArticles(staticArticles);
-      } finally {
-        setLoading(false);
       }
     };
     load();
@@ -72,8 +70,9 @@ function MicroservicesArticles() {
       title="Microservices Articles"
       description="Explore microservices architecture, communication patterns, and operational practices."
       articles={articles}
-      breadcrumbLabel="Microservices"
-      loading={loading}
+      isAdmin={false}
+      handleEdit={() => {}}
+      handleDelete={() => {}}
     />
   );
 }

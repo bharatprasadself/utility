@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArticleLayout } from './ArticleLayout';
+import ArticleLayout from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
@@ -7,7 +7,7 @@ import { ArticleService } from '../../services/article';
 // Static data as fallback
 const staticArticles: Article[] = [
   {
-    id: 2001,
+    id: "2001",
     title: "Modern React Development with Hooks",
     description: "Deep dive into React Hooks and how they revolutionize state management and side effects in functional components.",
     content: `# Modern React Development with Hooks
@@ -83,7 +83,7 @@ function useDebounce(value, delay) {
     updatedAt: new Date().toISOString()
   },
   {
-    id: 2002,
+    id: "2002",
     title: "Building Responsive UIs with Material-UI",
     description: "Learn how to create beautiful, responsive user interfaces using Material-UI components in React applications.",
     content: `# Building Responsive UIs with Material-UI
@@ -175,7 +175,7 @@ const styles = {
     updatedAt: new Date().toISOString()
   },
   {
-    id: 2003,
+    id: "2003",
     title: "State Management with Redux Toolkit",
     description: "Explore modern Redux development using Redux Toolkit. Simplify your state management with built-in best practices.",
     content: `# State Management with Redux Toolkit
@@ -310,8 +310,9 @@ function ReactArticles() {
       title="React JS Articles"
       description="Learn about React development, modern practices, and popular libraries in the React ecosystem."
       articles={articles}
-      breadcrumbLabel="React JS"
-      loading={loading}
+      isAdmin={false}
+      handleEdit={() => {}}
+      handleDelete={() => {}}
     />
   );
 }

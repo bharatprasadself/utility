@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArticleLayout } from './ArticleLayout';
+import ArticleLayout from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
@@ -7,7 +7,7 @@ import { ArticleService } from '../../services/article';
 // Static fallback articles
 const staticArticles: Article[] = [
   {
-    id: 1001,
+    id: "1001",
     title: 'Getting Started with Spring Boot 3',
     description: 'Create your first Spring Boot 3 application: setup, structure, and essentials.',
     content: '# Getting Started with Spring Boot 3\n\nSpring Boot 3 streamlines Java development with opinionated auto-configuration.',
@@ -18,7 +18,7 @@ const staticArticles: Article[] = [
     updatedAt: new Date().toISOString()
   },
   {
-    id: 1002,
+    id: "1002",
     title: 'Spring Boot Security Basics',
     description: 'Add authentication, authorization, and password security to your Spring Boot app.',
     content: '# Spring Boot Security Basics\n\nImplement foundational security patterns in Spring Boot.',
@@ -29,7 +29,7 @@ const staticArticles: Article[] = [
     updatedAt: new Date().toISOString()
   },
   {
-    id: 1003,
+    id: "1003",
     title: 'Building REST APIs with Spring Boot',
     description: 'Design and implement clean RESTful APIs using Spring Boot best practices.',
     content: '# Building REST APIs\n\nDesigning resource-centric endpoints and handling validation.',
@@ -86,8 +86,9 @@ function SpringBootArticles() {
       title="Spring Boot Articles"
       description="Explore Spring Boot features, security, and API development guides."
       articles={articles}
-      breadcrumbLabel="Spring Boot"
-      loading={loading}
+      isAdmin={false}
+      handleEdit={() => {}}
+      handleDelete={() => {}}
     />
   );
 }

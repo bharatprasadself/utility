@@ -18,19 +18,6 @@ export default function Articles() {
           background: 'linear-gradient(to bottom, #ffffff, #f8f9fa)'
         }}
       >
-        <Box sx={{ mb: 3 }}>
-          <Breadcrumbs aria-label="breadcrumb">
-            <Link
-              underline="hover"
-              color="inherit"
-              onClick={() => navigate('/articles')}
-              sx={{ cursor: 'pointer' }}
-            >
-              Articles
-            </Link>
-          </Breadcrumbs>
-        </Box>
-
         <Routes>
           <Route path="spring-boot/*" element={<SpringBootArticles />} />
           <Route path="react/*" element={<ReactArticles />} />

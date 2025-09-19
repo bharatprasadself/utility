@@ -226,18 +226,6 @@ export const ArticleList: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
-        {/* Breadcrumb */}
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              color: 'text.secondary',
-              '& > span': { mx: 1 }
-            }}
-          >
-            Articles <span>/</span> {selectedCategory !== 'ALL' ? selectedCategory.replace(/_/g, ' ') : 'All Categories'}
-          </Typography>
-        </Box>
 
         {/* Header Section */}
         <Stack 
@@ -248,26 +236,15 @@ export const ArticleList: React.FC = () => {
           mb={4}
         >
           <Box>
-            <Typography 
-              variant="h3" 
-              component="h1" 
-              sx={{ 
-                color: 'primary.main', 
-                mb: 1,
-                fontWeight: 'bold'
-              }}
-            >
-              {selectedCategory !== 'ALL' 
-                ? `${selectedCategory.replace(/_/g, ' ')} Articles`
-                : 'Technical Articles'
-              }
-            </Typography>
+            {/* Removed page title to eliminate 'Articles' from top left */}
             <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 1 }}>
               Discover articles about development, best practices, and advanced techniques.
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                Logged in as: {user?.username}
+                {user?.username && (
+                  <>Logged in as: {user.username}</>
+                )}
               </Typography>
               {isAdmin && (
                 <Chip
@@ -413,12 +390,7 @@ export const ArticleList: React.FC = () => {
             <CardContent sx={{ flex: 1, p: 3 }}>
               {/* Category and Read Time */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Chip 
-                  label={article.category.replace(/_/g, ' ')} 
-                  color="primary" 
-                  size="small"
-                  sx={{ borderRadius: 1, fontWeight: 500 }}
-                />
+                
                 <Typography 
                   variant="caption" 
                   sx={{ 

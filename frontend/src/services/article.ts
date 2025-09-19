@@ -19,7 +19,7 @@ export const ArticleService = {
     }
   },
 
-  getArticleById: async (id: number): Promise<AxiosResponse<Article>> => {
+  getArticleById: async (id: string): Promise<AxiosResponse<Article>> => {
     console.log(`🔍 Fetching article with ID: ${id}`);
     try {
       const response = await publicApi.get(`${BASE_URL}/${id}`);
@@ -70,7 +70,7 @@ export const ArticleService = {
     }
   },
 
-  updateArticle: async (id: number, article: Partial<Article>): Promise<AxiosResponse<Article>> => {
+  updateArticle: async (id: string, article: Partial<Article>): Promise<AxiosResponse<Article>> => {
     console.log(`📝 Updating article with ID ${id}:`, article);
     try {
       const response = await api.put(`${BASE_URL}/${id}`, article);
@@ -82,7 +82,7 @@ export const ArticleService = {
     }
   },
 
-  deleteArticle: async (id: number): Promise<AxiosResponse<void>> => {
+  deleteArticle: async (id: string): Promise<AxiosResponse<void>> => {
     console.log(`🗑️ Deleting article with ID: ${id}`);
     try {
       const response = await api.delete(`${BASE_URL}/${id}`);
