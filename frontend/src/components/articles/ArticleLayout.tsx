@@ -14,6 +14,7 @@ import {
   Container,
   Alert
 } from '@mui/material';
+import Paper from '@mui/material/Paper';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -23,8 +24,12 @@ interface Article {
   id: string;
   title: string;
   description: string;
-  category?: string;
-  readTime?: string;
+  content: string;
+  tags: string[];
+  readTime: string;
+  category: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface ArticleLayoutProps {
@@ -44,12 +49,13 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   handleEdit,
   handleDelete
 }) => {
+  // Local state for dialogs and form fields
   const [open, setOpen] = useState(false);
   const [editArticleId, setEditArticleId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [error, setError] = useState('');
   const [titleInput, setTitleInput] = useState('');
   const [descInput, setDescInput] = useState('');
+  const [error, setError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const handleClose = () => {
     setOpen(false);
@@ -60,47 +66,50 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   };
 
   const handleSubmit = () => {
-    // Implement create or update logic here
+    // Placeholder for submit logic
     handleClose();
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4, flex: 1 }}>
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 3,
-            borderBottom: '2px solid #e0e0e0',
-            pb: 2
-          }}>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
-                {title}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {description}
-                {isAdmin && (
-                  <Typography
-                    component="span"
-                    sx={{
-                      ml: 1,
-                      px: 1,
-                      py: 0.5,
-                      bgcolor: 'primary.main',
-                      color: 'white',
-                      borderRadius: 1,
-                      fontSize: '0.75rem'
-                    }}
-                  >
-                    Admin
-                  </Typography>
-                )}
-              </Typography>
-            </Box>
-            {isAdmin && (
+  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, px: 0, width: '100%' }}>
+      <Container
+        maxWidth="md"
+        sx={{
+          mt: 4,
+          mb: 4,
+          flexGrow: 1,
+          minWidth: 0
+        }}
+      >
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+        {/* Header Section (styled like Blogs) */}
+        <Box sx={{ mb: 4, width: '100%' }}>
+          <Box sx={{ width: '100%' }}>
+            <Typography variant="h4" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
+              {title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {description}
+              {isAdmin && (
+                <Typography
+                  component="span"
+                  sx={{
+                    ml: 1,
+                    px: 1,
+                    py: 0.5,
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    borderRadius: 1,
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Admin
+                </Typography>
+              )}
+            </Typography>
+          </Box>
+          {isAdmin && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
               <Button
                 variant="contained"
                 color="primary"
@@ -118,8 +127,16 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               >
                 Create Article
               </Button>
-            )}
-          </Box>
+            </Box>
+          )}
+          
+          <Box sx={{ borderTop: '2px solid #e0e0e0', mt: 1 }} />
+          
+          
+          
+          
+          
+          
           {error && (
             <Alert
               severity="error"
@@ -142,14 +159,14 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                 boxShadow: 3
               }
             }}>
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
                   {article.title}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
                   <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 'medium' }}>
                     {article.category}
-                  </Typography> 
+                  </Typography>
                   {article.readTime && (
                     <Typography variant="body2" color="text.secondary">
                       • {article.readTime}
@@ -167,6 +184,19 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   >
                     {article.description}
                   </Typography>
+                  {article.content && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: '#555',
+                        lineHeight: 1.6,
+                        whiteSpace: 'pre-line',
+                        mt: 1
+                      }}
+                    >
+                      {article.content}
+                    </Typography>
+                  )}
                 </Box>
                 <Box sx={{
                   display: 'flex',
@@ -202,8 +232,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               </CardContent>
             </Card>
           ))}
-        </Stack>
-        {/* Dialogs for create/edit and delete */}
+  </Stack>
+  </Paper>
+  {/* Dialogs for create/edit and delete */}
         <Dialog
           open={open}
           onClose={handleClose}
@@ -309,17 +340,22 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           </DialogActions>
         </Dialog>
       </Container>
-      <Box sx={{
-        mt: { xs: 3, md: 0 },
-        ml: { md: 3 },
-        position: { md: 'sticky' },
-        top: { md: '5rem' },
-        width: { md: '300px' },
-        alignSelf: { md: 'flex-start' }
-      }}>
-        <Advertisement />
-      </Box>
-    </Box>
+      <Box
+  sx={{
+    marginTop: '0',
+    ml: 6,
+    alignSelf: 'flex-start',
+    position: 'sticky',
+    top: '5rem',
+    width: '200px',  // Match the ad's width to reduce space
+    display: 'flex',  // Enable flexbox for alignment
+    justifyContent: 'flex-end',  // Push ad to the right
+    mr: 1,  // Optional: Small right margin for slight spacing from the border
+  }}
+>
+  <Advertisement />
+</Box>
+      </Box>  
   );
 };
 

@@ -19,18 +19,18 @@ import { useAuth } from '../contexts/AuthContext';
 import { useArticles } from '../contexts/ArticleContext';
 
 export const ArticleDetail: React.FC = () => {
-  const { id, '*': pathRest } = useParams<{ id: string; '*': string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  console.log('Path rest:', pathRest); // This will help debug the routing
+  // debug routing pathRest: removed verbose console log
 
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
 
-  const { getArticleById, isStaticArticle } = useArticles();
+  const { getArticleById } = useArticles();
 
   useEffect(() => {
     console.log('ArticleDetail mounted with ID:', id);
@@ -46,13 +46,12 @@ export const ArticleDetail: React.FC = () => {
     try {
       setLoading(true);
       console.log('Fetching article with ID:', id);
-      const articleId = parseInt(id);
       
       // Determine if we're on a static route
       const isStaticRoute = window.location.pathname.includes('/static/');
       console.log('Is static route:', isStaticRoute);
       
-      const foundArticle = await getArticleById(articleId);
+      const foundArticle = await getArticleById(id);
       if (foundArticle) {
         console.log('Article found:', foundArticle);
         setArticle(foundArticle);
@@ -83,7 +82,7 @@ export const ArticleDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Container maxWidth="md" sx={{ mt: 4 }}>
         <Skeleton variant="text" width="60%" height={60} />
         <Skeleton variant="text" width="40%" height={30} />
         <Box sx={{ mt: 3 }}>
@@ -95,14 +94,14 @@ export const ArticleDetail: React.FC = () => {
 
   if (error || !article) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Container maxWidth="md" sx={{ mt: 4 }}>
         <Typography color="error">{error || 'Article not found'}</Typography>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
+    <Container maxWidth="md" sx={{ mt: 4 }}>
       <Box sx={{ mb: 3 }}>
         <Breadcrumbs aria-label="breadcrumb">
           <Link
@@ -116,7 +115,7 @@ export const ArticleDetail: React.FC = () => {
         </Breadcrumbs>
       </Box>
 
-      <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
+  <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
           <IconButton 
             onClick={() => navigate('/articles')}
@@ -132,7 +131,7 @@ export const ArticleDetail: React.FC = () => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
               <Typography variant="body2" color="text.secondary">
-                {new Date(article.createdAt).toLocaleDateString()}
+                {article.createdAt ? new Date(article.createdAt).toLocaleDateString() : ''}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 • {article.readTime}

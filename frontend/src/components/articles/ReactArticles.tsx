@@ -3,6 +3,7 @@ import ArticleLayout from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Static data as fallback
 const staticArticles: Article[] = [
@@ -280,8 +281,9 @@ export function Counter() {
 ];
 
 function ReactArticles() {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadArticles = async () => {
@@ -297,8 +299,6 @@ function ReactArticles() {
         console.error('Error loading React articles:', error);
         console.log('Using static content as fallback');
         setArticles(staticArticles);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -310,7 +310,7 @@ function ReactArticles() {
       title="React JS Articles"
       description="Learn about React development, modern practices, and popular libraries in the React ecosystem."
       articles={articles}
-      isAdmin={false}
+      isAdmin={isAdmin}
       handleEdit={() => {}}
       handleDelete={() => {}}
     />

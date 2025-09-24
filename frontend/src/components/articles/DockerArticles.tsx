@@ -3,6 +3,8 @@ import  ArticleLayout  from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
+import { useAuth } from '../../contexts/AuthContext';
+
 // Static data as fallback while API is being set up
 const staticArticles: Article[] = [
   {
@@ -127,6 +129,8 @@ docker run --user 1000:1000 my-app
 ];
 
 function DockerArticles() {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
   const [loading, setLoading] = useState(true);
 
@@ -154,12 +158,13 @@ function DockerArticles() {
     loadArticles();
   }, []);
 
+ 
   return (
     <ArticleLayout
       title="Docker Articles"
       description="Learn about container technology, Docker best practices, and deployment strategies."
       articles={articles}
-      isAdmin={false}
+      isAdmin={isAdmin}
       handleEdit={() => {}}
       handleDelete={() => {}}
     />

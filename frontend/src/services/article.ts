@@ -32,7 +32,12 @@ export const ArticleService = {
   },
 
   getArticlesByCategory: async (category: ArticleCategory): Promise<AxiosResponse<Article[]>> => {
-    const url = `${BASE_URL}/category/${category}`;
+    // If category = ArticleCategory.SPRING_BOOT ("SPRING_BOOT")
+    const key = Object.keys(ArticleCategory).find(
+      k => ArticleCategory[k as keyof typeof ArticleCategory] === category
+    );
+    // key will be "SPRING_BOOT"
+    const url = `${BASE_URL}/category/${key}`;
     console.log(`🔍 Fetching articles from: ${url}`);
     try {
       const response = await publicApi.get(url);

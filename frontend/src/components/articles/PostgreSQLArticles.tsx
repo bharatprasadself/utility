@@ -3,7 +3,7 @@ import ArticleLayout from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
-
+import { useAuth } from '../../contexts/AuthContext';
 
 // Static data as fallback while API is being set up
 const staticArticles: Article[] = [
@@ -267,6 +267,8 @@ find $BACKUP_DIR -type f -mtime +7 -delete
 ];
 
 function PostgreSQLArticles() {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
   const [loading, setLoading] = useState(true);
 
@@ -294,15 +296,14 @@ function PostgreSQLArticles() {
   }, []);
 
   return (
-     
-        <ArticleLayout
-          title="PostgreSQL Articles"
-          description="Learn about PostgreSQL performance, schema design, and best practices."
-          articles={articles}
-          isAdmin={false}
-          handleEdit={() => {}}
-          handleDelete={() => {}}
-        /> 
+    <ArticleLayout
+      title="PostgreSQL Articles"
+      description="Learn about PostgreSQL performance, schema design, and best practices."
+      articles={articles}
+      isAdmin={isAdmin}
+      handleEdit={() => {}}
+      handleDelete={() => {}}
+    /> 
   );     
 }
 

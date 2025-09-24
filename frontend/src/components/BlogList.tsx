@@ -503,14 +503,14 @@ export default function BlogList() {
                     </DialogActions>
                 </Dialog>
             </Container>
-            <Box sx={{
-                mt: { xs: 3, md: 0 },
-                ml: { md: 3 },
-                position: { md: 'sticky' },
-                top: { md: '5rem' },
-                width: { md: '300px' },
-                alignSelf: { md: 'flex-start' }
-            }}>
+               <Box sx={{
+                        mt: { xs: 3, md: 0 },
+                        ml: { md: 3 },
+                        position: { md: 'sticky' },
+                        top: { md: '5rem' },
+                        width: { md: '300px' },
+                        alignSelf: { md: 'flex-start' }
+                }}>
                 <Advertisement />
             </Box>
         </Box>
