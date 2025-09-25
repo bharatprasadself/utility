@@ -4,9 +4,9 @@ import type { Article } from '../types/Article';
 import { ArticleCategory } from '../types/Article';
 
 interface ArticleContextType {
-  getArticleById: (id: number) => Promise<Article | undefined>;
-  getDynamicArticleById: (id: number) => Promise<Article | undefined>;
-  isStaticArticle: (id: number) => boolean;
+  getArticleById: (id: string) => Promise<Article | undefined>;
+  getDynamicArticleById: (id: string) => Promise<Article | undefined>;
+  isStaticArticle: (id: string) => boolean;
 }
 
 const ArticleContext = createContext<ArticleContextType | undefined>(undefined);
@@ -14,7 +14,7 @@ const ArticleContext = createContext<ArticleContextType | undefined>(undefined);
 // Static articles data
 const staticArticles: Article[] = [
   {
-    id: 1001,
+    id: "1001",
     title: "Getting Started with Spring Boot 3",
     description: "Learn how to create your first Spring Boot application with the latest version. Covers basic setup, configuration, and best practices.",
     content: `# Getting Started with Spring Boot 3
@@ -77,7 +77,7 @@ public class HelloController {
     updatedAt: "2025-09-15T10:00:00Z"
   },
   {
-    id: 1002,
+    id: "1002",
     title: "Spring Boot Security: A Complete Guide",
     description: "Comprehensive guide to implementing security in your Spring Boot applications. Learn about authentication, authorization, and JWT.",
     content: "# Spring Boot Security Guide\n\nDetailed content about Spring Security...",
@@ -91,11 +91,11 @@ public class HelloController {
 ];
 
 export const ArticleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isStaticArticle = (id: number) => {
+  const isStaticArticle = (id: string) => {
     return staticArticles.some(article => article.id === id);
   };
 
-  const getDynamicArticleById = async (id: number) => {
+  const getDynamicArticleById = async (id: string) => {
     try {
       const response = await ArticleService.getArticleById(id);
       console.log('Found dynamic article:', response.data);
@@ -106,7 +106,7 @@ export const ArticleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const getArticleById = async (id: number) => {
+  const getArticleById = async (id: string) => {
     console.log('Getting article by ID:', id);
     
     // Try static articles first

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ArticleLayout } from './ArticleLayout';
+import ArticleLayout from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Static data as fallback while API is being set up
 const staticArticles: Article[] = [
   {
-    id: 4001,
+  id: "4001",
     title: "PostgreSQL Performance Optimization",
     description: "Learn advanced techniques for optimizing PostgreSQL POSTGRESQL performance, including indexing strategies and query optimization.",
     content: `# PostgreSQL Performance Optimization
@@ -95,7 +96,7 @@ maintenance_work_mem = 256MB
     updatedAt: new Date().toISOString()
   },
   {
-    id: 4002,
+  id: "4002",
     title: "POSTGRESQL Design Best Practices",
     description: "Discover best practices for designing efficient and scalable PostgreSQL POSTGRESQL schemas.",
     content: `# POSTGRESQL Design Best Practices
@@ -182,7 +183,7 @@ CREATE TABLE products (
     updatedAt: new Date().toISOString()
   },
   {
-    id: 4003,
+  id: "4003",
     title: "PostgreSQL Backup and Recovery",
     description: "Comprehensive guide to implementing robust backup and recovery strategies for PostgreSQL POSTGRESQLs.",
     content: `# PostgreSQL Backup and Recovery
@@ -266,6 +267,8 @@ find $BACKUP_DIR -type f -mtime +7 -delete
 ];
 
 function PostgreSQLArticles() {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
   const [loading, setLoading] = useState(true);
 
@@ -295,12 +298,13 @@ function PostgreSQLArticles() {
   return (
     <ArticleLayout
       title="PostgreSQL Articles"
-      description="Explore articles about PostgreSQL POSTGRESQL management, optimization, and best practices."
+      description="Learn about PostgreSQL performance, schema design, and best practices."
       articles={articles}
-      breadcrumbLabel="PostgreSQL"
-      loading={loading}
-    />
-  );
+      isAdmin={isAdmin}
+      handleEdit={() => {}}
+      handleDelete={() => {}}
+    /> 
+  );     
 }
 
 export default PostgreSQLArticles;

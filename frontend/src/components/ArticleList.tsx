@@ -17,6 +17,7 @@ import {
   Stack,
   Alert
 } from '@mui/material';
+import Paper from '@mui/material/Paper';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -217,176 +218,150 @@ export const ArticleList: React.FC = () => {
 
   if (!user) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="md" sx={{ py: 4 }}>
         <Typography>Please log in to view articles</Typography>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        {/* Breadcrumb */}
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              color: 'text.secondary',
-              '& > span': { mx: 1 }
-            }}
-          >
-            Articles <span>/</span> {selectedCategory !== 'ALL' ? selectedCategory.replace(/_/g, ' ') : 'All Categories'}
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+      {/* Header Section */}
+      <Stack 
+        direction={{ xs: 'column', md: 'row' }} 
+        alignItems={{ xs: 'flex-start', md: 'center' }} 
+        justifyContent="space-between" 
+        spacing={2} 
+        mb={4}
+      >
+        <Box>
+          <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 1 }}>
+            Discover articles about development, best practices, and advanced techniques.
           </Typography>
-        </Box>
-
-        {/* Header Section */}
-        <Stack 
-          direction={{ xs: 'column', md: 'row' }} 
-          alignItems={{ xs: 'flex-start', md: 'center' }} 
-          justifyContent="space-between" 
-          spacing={2} 
-          mb={4}
-        >
-          <Box>
-            <Typography 
-              variant="h3" 
-              component="h1" 
-              sx={{ 
-                color: 'primary.main', 
-                mb: 1,
-                fontWeight: 'bold'
-              }}
-            >
-              {selectedCategory !== 'ALL' 
-                ? `${selectedCategory.replace(/_/g, ' ')} Articles`
-                : 'Technical Articles'
-              }
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 1 }}>
-              Discover articles about development, best practices, and advanced techniques.
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Logged in as: {user?.username}
-              </Typography>
-              {isAdmin && (
-                <Chip
-                  label="Admin"
-                  color="primary"
-                  size="small"
-                  sx={{
-                    borderRadius: 1,
-                    fontWeight: 500
-                  }}
-                />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {user?.username && (
+                <>Logged in as: {user.username}</>
               )}
-            </Box>
-          </Box>
-          {isAdmin && (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setIsFormOpen(true)}
-              startIcon={<AddIcon />}
-              sx={{
-                px: 3,
-                py: 1,
-                borderRadius: 2,
-                boxShadow: 2,
-                '&:hover': {
-                  boxShadow: 4,
-                }
-              }}
-            >
-              Create Article
-            </Button>
-          )}
-        </Stack>
-        {/* Debug Button */}
-        <Button
-          onClick={logDebugInfo}
-          variant="outlined"
-          size="small"
-          sx={{ mb: 2 }}
-        >
-          Debug Info
-        </Button>
-
-        {/* Alert Messages */}
-        {alert && (
-          <Alert 
-            severity={alert.type}
-            onClose={() => setAlert(null)}
-            sx={{ 
-              mb: 3,
-              borderRadius: 2,
-              boxShadow: 1
-            }}
-          >
-            {alert.message}
-          </Alert>
-        )}
-
-        {/* Filters Section */}
-        <Box 
-          sx={{ 
-            bgcolor: 'background.paper',
-            p: 3,
-            borderRadius: 2,
-            boxShadow: 1,
-            mb: 4
-          }}
-        >
-          <Typography variant="h6" sx={{ mb: 2 }}>Filter Articles</Typography>
-          <Stack spacing={3}>
-            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={selectedCategory}
-                  label="Category"
-                  onChange={(e) => setSelectedCategory(e.target.value as ArticleCategory | 'ALL')}
-                >
-                  <MenuItem value="ALL">All Categories</MenuItem>
-                  {Object.values(ArticleCategory).map((category) => (
-                    <MenuItem key={category} value={category}>
-                      {category.replace(/_/g, ' ')}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                fullWidth
+            </Typography>
+            {isAdmin && (
+              <Chip
+                label="Admin"
+                color="primary"
                 size="small"
-                label="Search by tag"
-                value={searchTag}
-                onChange={(e) => setSearchTag(e.target.value)}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1
-                  }
+                  borderRadius: 1,
+                  fontWeight: 500
                 }}
               />
-            </Box>
-            {searchTag && (
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Typography variant="body2" sx={{ color: 'text.secondary', mr: 1 }}>
-                  Active Filters:
-                </Typography>
-                <Chip
-                  label={searchTag}
-                  onDelete={() => setSearchTag('')}
-                  size="small"
-                  sx={{ borderRadius: 1 }}
-                />
-              </Box>
             )}
-          </Stack>
+          </Box>
         </Box>
+        {isAdmin && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setIsFormOpen(true)}
+            startIcon={<AddIcon />}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4,
+              }
+            }}
+          >
+            Create Article
+          </Button>
+        )}
+      </Stack>
+      {/* Debug Button */}
+      <Button
+        onClick={logDebugInfo}
+        variant="outlined"
+        size="small"
+        sx={{ mb: 2 }}
+      >
+        Debug Info
+      </Button>
+
+      {/* Alert Messages */}
+      {alert && (
+        <Alert 
+          severity={alert.type}
+          onClose={() => setAlert(null)}
+          sx={{ 
+            mb: 3,
+            borderRadius: 2,
+            boxShadow: 1
+          }}
+        >
+          {alert.message}
+        </Alert>
+      )}
+
+      {/* Filters Section */}
+      <Box 
+        sx={{ 
+          bgcolor: 'background.paper',
+          p: 3,
+          borderRadius: 2,
+          boxShadow: 1,
+          mb: 4
+        }}
+      >
+        <Typography variant="h6" sx={{ mb: 2 }}>Filter Articles</Typography>
+        <Stack spacing={3}>
+          <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={selectedCategory}
+                label="Category"
+                onChange={(e) => setSelectedCategory(e.target.value as ArticleCategory | 'ALL')}
+              >
+                <MenuItem value="ALL">All Categories</MenuItem>
+                {Object.values(ArticleCategory).map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category.replace(/_/g, ' ')}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              size="small"
+              label="Search by tag"
+              value={searchTag}
+              onChange={(e) => setSearchTag(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1
+                }
+              }}
+            />
+          </Box>
+          {searchTag && (
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mr: 1 }}>
+                Active Filters:
+              </Typography>
+              <Chip
+                label={searchTag}
+                onDelete={() => setSearchTag('')}
+                size="small"
+                sx={{ borderRadius: 1 }}
+              />
+            </Box>
+          )}
+        </Stack>
       </Box>
 
-      {/* Articles Grid */}
-      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+  {/* Articles Grid */}
+  <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
         {loading ? (
           <Box sx={{ textAlign: 'center', py: 4, gridColumn: '1 / -1' }}>
             <Typography variant="body1" color="text.secondary">
@@ -413,12 +388,7 @@ export const ArticleList: React.FC = () => {
             <CardContent sx={{ flex: 1, p: 3 }}>
               {/* Category and Read Time */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Chip 
-                  label={article.category.replace(/_/g, ' ')} 
-                  color="primary" 
-                  size="small"
-                  sx={{ borderRadius: 1, fontWeight: 500 }}
-                />
+                
                 <Typography 
                   variant="caption" 
                   sx={{ 
@@ -553,7 +523,7 @@ export const ArticleList: React.FC = () => {
           onSubmit={selectedArticle ? handleUpdateArticle : handleCreateArticle}
           onCancel={handleCloseForm}
         />
-      </Dialog>
+  </Dialog>
 
       <Dialog
         open={isDeleteDialogOpen}
@@ -576,6 +546,7 @@ export const ArticleList: React.FC = () => {
           </Stack>
         </Box>
       </Dialog>
+      </Paper>
     </Container>
   );
 };

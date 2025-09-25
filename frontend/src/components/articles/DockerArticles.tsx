@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ArticleLayout } from './ArticleLayout';
+import  ArticleLayout  from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Static data as fallback while API is being set up
 const staticArticles: Article[] = [
   {
-    id: 3001,
+    id: "3001",
     title: "Docker Containers for Beginners",
     description: "Get started with Docker containers. Learn about basic concepts, commands, and how to create your first container.",
     content: `# Docker Containers for Beginners
@@ -42,7 +43,7 @@ docker ps
     updatedAt: new Date().toISOString()
   },
   {
-    id: 3002,
+    id: "3002",
     title: "Docker Compose in Production",
     description: "Learn how to use Docker Compose to manage multi-container applications in production environments.",
     content: `# Docker Compose in Production
@@ -86,7 +87,7 @@ volumes:
     updatedAt: new Date().toISOString()
   },
   {
-    id: 3003,
+    id: "3003",
     title: "Docker Security Best Practices",
     description: "Essential security practices for Docker containers including image scanning, resource limits, and network security.",
     content: `# Docker Security Best Practices
@@ -128,6 +129,8 @@ docker run --user 1000:1000 my-app
 ];
 
 function DockerArticles() {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
   const [loading, setLoading] = useState(true);
 
@@ -155,13 +158,15 @@ function DockerArticles() {
     loadArticles();
   }, []);
 
+ 
   return (
     <ArticleLayout
       title="Docker Articles"
       description="Learn about container technology, Docker best practices, and deployment strategies."
       articles={articles}
-      breadcrumbLabel="Docker"
-      loading={loading}
+      isAdmin={isAdmin}
+      handleEdit={() => {}}
+      handleDelete={() => {}}
     />
   );
 }
