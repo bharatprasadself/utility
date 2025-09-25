@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**",
                     "/h2-console/**",
+                    "/games/falling-ball/**",
                     "/api/currency/**",
                     "/api/timezone/**",
                     "/api/converter/**",

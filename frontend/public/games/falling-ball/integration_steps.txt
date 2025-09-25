@@ -1,0 +1,50 @@
+Integration steps for Spring Boot (backend) + React (frontend)
+=====================================================================
+
+You have two main, common options to integrate the web game into your Utility project:
+
+A) Serve as static assets inside the React app (recommended)
+-------------------------------------------------------------
+1. Copy files:
+   - Place `index.html`, `style.css`, `app.js` (and any assets) into your React app's `public/falling-ball/` folder.
+     Example: <react-project>/public/falling-ball/index.html
+
+2. Link from your React app:
+   - Create a route or link that opens the game. For example, in React Router:
+     <Route path="/games/falling-ball">
+       <iframe src="/falling-ball/index.html" style={{width:'100%',height:'700px',border:'0'}} title="Falling Ball"></iframe>
+     </Route>
+
+   - Or navigate directly to `/falling-ball/index.html` which will load the static page from `public`.
+
+3. Advantages:
+   - Simple, no build changes needed.
+   - Keeps the game sandboxed (iframe) and avoids React build issues.
+
+B) Bundle into React build (alternative)
+-----------------------------------------
+1. Put files into `public/` or `src/assets/` and reference them.
+2. If you want the game inside a React component (control it), consider refactoring `app.js` to export functions or convert the canvas logic into a React component (using useRef/useEffect).
+
+C) Serve from Spring Boot (back-end) as static resources
+-------------------------------------------------------
+1. Place the game files in resources/static (Maven):
+   src/main/resources/static/falling-ball/index.html
+   src/main/resources/static/falling-ball/style.css
+   src/main/resources/static/falling-ball/app.js
+
+   Spring Boot will serve them at:
+   http://your-server/context-path/falling-ball/index.html
+
+2. You can link to that URL from your React frontend (or open in new tab / iframe).
+
+Notes on integration choices:
+- Use iframe embedding if you want separation between the React app styling and the game (recommended).
+- If you need communication between React and the game (score reporting, user auth), implement postMessage-based messaging:
+  - From React: iframe.contentWindow.postMessage({ type: 'AUTH', token: '...' }, '*')
+  - From game: window.parent.postMessage({ type: 'SCORE', score: 42 }, '*')
+  - Add message event listeners on both sides and validate origins for security.
+
+Security & deployment:
+- If serving from Spring Boot: verify static resource URLs and set proper cache headers.
+- If using iframe, set sandbox attributes if needed, and use `allow="fullscreen"` only if required.
