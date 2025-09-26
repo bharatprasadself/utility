@@ -11,14 +11,14 @@ type Props = {
 
 const GameEmbed: React.FC<Props> = ({ slug, onMessage, style, fullScreen=false }) => {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [status, setStatus] = useState({ score:0, highScore:0, difficulty:'normal', humanMode:true, paused:false });
+  const [status, setStatus] = useState({ score:0, highScore:0, difficulty:'normal', paused:false });
 
   const handleMessage = useCallback((ev: MessageEvent) => {
     // accept same-origin messages only
     if (ev.origin !== window.location.origin) return;
     const msg = ev.data || {};
     if (msg.type === 'STATUS'){
-      setStatus({ score: msg.score || 0, highScore: msg.highScore || 0, difficulty: msg.difficulty || 'normal', humanMode: !!msg.humanMode, paused: !!msg.paused });
+      setStatus({ score: msg.score || 0, highScore: msg.highScore || 0, difficulty: msg.difficulty || 'normal', paused: !!msg.paused });
     }
     if (onMessage) onMessage(ev.data);
   }, [onMessage]);
@@ -36,7 +36,7 @@ const GameEmbed: React.FC<Props> = ({ slug, onMessage, style, fullScreen=false }
   // helpers for UI actions
   const sendPause = () => postToChild({ type: 'PAUSE' });
   const sendResume = () => postToChild({ type: 'RESUME' });
-  const sendToggleMode = () => postToChild({ type: 'TOGGLE_MODE' });
+  // mode toggle removed; always human mode
   const sendSetDifficulty = (value: string) => postToChild({ type: 'SET_DIFFICULTY', value });
   const sendReset = () => postToChild({ type: 'RESET' });
 
@@ -54,7 +54,7 @@ const GameEmbed: React.FC<Props> = ({ slug, onMessage, style, fullScreen=false }
         <Button href="/" variant="outlined" sx={{ color: '#60a5fa', borderColor: 'rgba(96,165,250,0.14)', bgcolor: 'transparent', textTransform: 'none', '&:hover': { borderColor: 'rgba(96,165,250,0.22)' } }}>← Back</Button>
         <Button onClick={() => sendPause()} variant="outlined" sx={{ color: '#60a5fa', borderColor: 'rgba(96,165,250,0.14)', bgcolor: 'transparent', textTransform: 'none', '&:hover': { borderColor: 'rgba(96,165,250,0.22)' } }}>Pause</Button>
         <Button onClick={() => sendResume()} variant="outlined" sx={{ color: '#60a5fa', borderColor: 'rgba(96,165,250,0.14)', bgcolor: 'transparent', textTransform: 'none', '&:hover': { borderColor: 'rgba(96,165,250,0.22)' } }}>Resume</Button>
-        <Button onClick={() => sendToggleMode()} variant="outlined" sx={{ color: '#60a5fa', borderColor: 'rgba(96,165,250,0.14)', bgcolor: 'transparent', textTransform: 'none', '&:hover': { borderColor: 'rgba(96,165,250,0.22)' } }}>{status.humanMode ? 'Mode: Human' : 'Mode: AI'}</Button>
+  {/* Mode toggle removed - game is always human-controlled */}
         <Select
           value={status.difficulty}
           onChange={(e) => sendSetDifficulty(String(e.target.value))}

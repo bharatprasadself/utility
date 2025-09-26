@@ -22,7 +22,8 @@ const navItems: NavItem[] = [
     label: 'Games',
     path: '/games',
     subItems: [
-      { label: 'Falling Ball', path: '/games/falling-ball' }
+      { label: 'Falling Ball', path: '/games/falling-ball' },
+      { label: 'Dino Runner', path: '/games/dino-runner' }
     ]
   },
   { 

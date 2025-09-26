@@ -15,6 +15,7 @@ import DockerArticles from './components/articles/DockerArticles';
 import JavaArticles from './components/articles/JavaArticles';
 import MicroservicesArticles from './components/articles/MicroservicesArticles';
 import FallingBall from './components/FallingBall';
+import DinoRunner from './components/DinoRunner';
 import theme from './theme';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
                     <Route path="/articles/microservices/*" element={<MicroservicesArticles />} />
                     <Route path="/articles/java/*" element={<JavaArticles />} />
                     <Route path="/games/falling-ball" element={<FallingBall />} />
+                    <Route path="/games/dino-runner" element={<DinoRunner />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>

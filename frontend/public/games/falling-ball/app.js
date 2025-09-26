@@ -95,23 +95,21 @@
     // On resize, recompute canvas size and reinitialize entities in-place while preserving score/mode.
     function handleResize(){
       const saved = {
-        score: gameState.score,
-        highScore: gameState.highScore,
-        humanMode: gameState.humanMode,
-        paused: gameState.paused,
-        difficulty: gameState.difficulty
-      };
+          score: gameState.score,
+          highScore: gameState.highScore,
+          paused: gameState.paused,
+          difficulty: gameState.difficulty
+        };
   computeAndSetCanvasSize();
   // Ensure logical units remain CSS pixels (not device pixels)
   WIDTH = canvas.clientWidth || canvas.width;
   HEIGHT = canvas.clientHeight || canvas.height;
       // reset entities to fit new sizes
       resetEntities();
-      gameState.score = saved.score;
-      gameState.highScore = saved.highScore;
-      gameState.humanMode = saved.humanMode;
-      gameState.paused = saved.paused;
-      gameState.difficulty = saved.difficulty;
+  gameState.score = saved.score;
+  gameState.highScore = saved.highScore;
+  gameState.paused = saved.paused;
+  gameState.difficulty = saved.difficulty;
       // update UI
       if (scoreEl) scoreEl.textContent = gameState.score;
       if (highScoreEl) highScoreEl.textContent = gameState.highScore;
@@ -123,7 +121,6 @@
     });
 
   // UI elements
-  const btnToggleMode = document.getElementById('btnToggleMode');
   const btnPause = document.getElementById('btnPause');
   const selectDifficulty = document.getElementById('selectDifficulty');
   const btnSave = document.getElementById('btnSave');
@@ -133,8 +130,7 @@
   const scoreEl = document.getElementById('score');
   const highScoreEl = document.getElementById('highScore');
   const aiDepthEl = document.getElementById('aiDepth');
-  const modeLabelEl = document.getElementById('modeLabel');
-  const predXEl = document.getElementById('predX');
+  // modeLabel and predX elements removed (human-only)
 
   // Post status to parent (if embedded). Keeps parent React in sync with score/state.
   function postStatus(){
@@ -142,10 +138,9 @@
       if (window.parent && window.parent !== window){
         window.parent.postMessage({
           type: 'STATUS',
-          score: gameState.score,
-          highScore: gameState.highScore,
-          difficulty: gameState.difficulty,
-          humanMode: gameState.humanMode
+            score: gameState.score,
+            highScore: gameState.highScore,
+            difficulty: gameState.difficulty
         }, window.location.origin);
       }
     }catch(e){ /* ignore */ }
@@ -188,13 +183,13 @@
     paddle: null,
     score: 0,
     highScore: Number(localStorage.getItem('bb_high_score') || 0),
-    humanMode: true,
+    // humanMode removed — game is always human-controlled
     paused: false,
     difficulty: 'normal'
   };
 
   if (highScoreEl) highScoreEl.textContent = gameState.highScore;
-  if (modeLabelEl) modeLabelEl.textContent = gameState.humanMode ? 'Human' : 'AI';
+  // modeLabel removed (always Human)
   // notify parent on load
   postStatus();
 
@@ -304,7 +299,6 @@
   // Pointer (mouse/touch) movement control: move paddle to pointer x when in human mode
   canvas.addEventListener('pointermove', (ev) => {
     try{
-      if (!gameState.humanMode) return;
       if (!gameState.paddle) return;
       const rect = canvas.getBoundingClientRect();
       const px = ev.clientX - rect.left; // CSS pixels relative to canvas
@@ -341,17 +335,10 @@
 
   function stepUpdate(dt){
     // Decide action
-    if (gameState.humanMode){
-      if (keys.left && !keys.right) gameState.paddle.setAction('LEFT');
-      else if (keys.right && !keys.left) gameState.paddle.setAction('RIGHT');
-      else gameState.paddle.setAction('STAY');
-    } else {
-      // AI: call minimax to pick action
-      const preset = DIFFICULTY_PRESETS[gameState.difficulty];
-      const depth = preset.depth;
-      const action = MinimaxAI.chooseAction(gameState.ball, gameState.paddle, depth);
-      gameState.paddle.setAction(action);
-    }
+    // Human control only
+    if (keys.left && !keys.right) gameState.paddle.setAction('LEFT');
+    else if (keys.right && !keys.left) gameState.paddle.setAction('RIGHT');
+    else gameState.paddle.setAction('STAY');
 
     // update entities
     gameState.paddle.update(dt);
@@ -394,7 +381,6 @@
   // update UI score
   if (scoreEl) scoreEl.textContent = gameState.score;
   if (aiDepthEl) aiDepthEl.textContent = DIFFICULTY_PRESETS[gameState.difficulty].depth;
-  if (modeLabelEl) modeLabelEl.textContent = gameState.humanMode ? 'Human' : 'AI';
   }
 
   // Rendering
@@ -408,20 +394,7 @@
     }
 
     // predicted landing marker for AI (dotted line)
-    if (!gameState.humanMode){
-      const pred = MinimaxAI.predictLandingX(gameState.ball);
-      if (pred !== null){
-        ctx.beginPath();
-        ctx.setLineDash([4,6]);
-        ctx.moveTo(pred,0);
-        ctx.lineTo(pred,HEIGHT);
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.setLineDash([]);
-        if (predXEl) predXEl.textContent = Math.round(pred);
-      } else if (predXEl) predXEl.textContent = '-';
-  } else if (predXEl) predXEl.textContent = '-';
+  // AI prediction removed (human-only mode)
 
     // ball
     ctx.beginPath();
@@ -440,7 +413,7 @@
     // HUD small
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.font = '12px system-ui';
-    ctx.fillText(`Mode: ${gameState.humanMode ? 'Human' : 'AI'}`, 10, 18);
+  ctx.fillText(`Mode: Human`, 10, 18);
     ctx.fillText(`Difficulty: ${gameState.difficulty}`, 10, 34);
     ctx.fillText(`Ball x: ${Math.round(gameState.ball.x)} y:${Math.round(gameState.ball.y)}`, 10, 50);
   }
@@ -614,14 +587,7 @@
   function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
   // Buttons behavior
-  if (btnToggleMode){
-    btnToggleMode.addEventListener('click', () => {
-      gameState.humanMode = !gameState.humanMode;
-      if (btnToggleMode) btnToggleMode.textContent = `Mode: ${gameState.humanMode ? 'Human' : 'AI'}`;
-      if (modeLabelEl) modeLabelEl.textContent = gameState.humanMode ? 'Human' : 'AI';
-      postStatus();
-    });
-  }
+  // btnToggleMode removed - no mode switch (always human)
 
   if (btnPause){
     btnPause.addEventListener('click', () => {
@@ -709,8 +675,7 @@
           gameState.paused = true; if (btnPause) btnPause.textContent = 'Resume'; postStatus(); break;
         case 'RESUME':
           gameState.paused = false; if (btnPause) btnPause.textContent = 'Pause'; postStatus(); break;
-        case 'TOGGLE_MODE':
-          gameState.humanMode = !gameState.humanMode; if (btnToggleMode) btnToggleMode.textContent = `Mode: ${gameState.humanMode ? 'Human' : 'AI'}`; postStatus(); break;
+        // TOGGLE_MODE removed - always human-controlled
         case 'SET_DIFFICULTY':
           if (msg.value){
             gameState.difficulty = msg.value;
