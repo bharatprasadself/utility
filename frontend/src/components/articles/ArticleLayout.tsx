@@ -12,25 +12,18 @@ import {
   Stack,
   Box,
   Container,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import Paper from '@mui/material/Paper';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Advertisement from '../Advertisement';
-
-interface Article {
-  id: string;
-  title: string;
-  description: string;
-  content: string;
-  tags: string[];
-  readTime: string;
-  category: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import type { Article } from '../../types/Article';
+import { ArticleCategory } from '../../types/Article';
 
 interface ArticleLayoutProps {
   title: string;
@@ -39,6 +32,7 @@ interface ArticleLayoutProps {
   isAdmin: boolean;
   handleEdit: (article: Article) => void;
   handleDelete: (id: string) => void;
+  handleCreate?: (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
 }
 
 const ArticleLayout: React.FC<ArticleLayoutProps> = ({
@@ -47,27 +41,111 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   articles,
   isAdmin,
   handleEdit,
-  handleDelete
+  handleDelete,
+  handleCreate
 }) => {
   // Local state for dialogs and form fields
   const [open, setOpen] = useState(false);
   const [editArticleId, setEditArticleId] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState('');
   const [descInput, setDescInput] = useState('');
+  const [contentInput, setContentInput] = useState('');
+  const [tagsInput, setTagsInput] = useState<string[]>(['Spring Boot']); // Default tag
+  const [readTimeInput, setReadTimeInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Track which articles have their content expanded
+  const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
+
+  // Function to open edit mode for a specific article
+  const openEditDialog = (article: Article) => {
+    setEditArticleId(article.id);
+    setTitleInput(article.title || '');
+    setDescInput(article.description || '');
+    setContentInput(article.content || '');
+    setTagsInput(article.tags || ['Spring Boot']);
+    setReadTimeInput(article.readTime || '');
+    setOpen(true);
+  };
 
   const handleClose = () => {
     setOpen(false);
     setEditArticleId(null);
     setTitleInput('');
     setDescInput('');
+    setContentInput('');
+    setTagsInput(['Spring Boot']); // Reset to default tag
+    setReadTimeInput('');
     setError('');
   };
+  
+  // Toggle content expansion for an article
+  const toggleArticleContent = (articleId: string) => {
+    setExpandedArticles(prevState => {
+      const newState = new Set(prevState);
+      if (newState.has(articleId)) {
+        newState.delete(articleId);
+      } else {
+        newState.add(articleId);
+      }
+      return newState;
+    });
+  };
 
-  const handleSubmit = () => {
-    // Placeholder for submit logic
-    handleClose();
+  const handleSubmit = async () => {
+    if (!titleInput || !descInput) {
+      setError('Title and description are required');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Get category from articles or default to SPRING_BOOT
+      const categoryValue = articles.length > 0 ? articles[0].category : ArticleCategory.SPRING_BOOT;
+      
+      // Common article data for both create and update
+      const articleData = {
+        title: titleInput,
+        description: descInput,
+        content: contentInput,
+        tags: tagsInput.length ? tagsInput : ['Spring Boot'], // Ensure we have at least one tag
+        readTime: readTimeInput || '5 min read',
+        category: categoryValue
+      };
+      
+      if (editArticleId) {
+        // Handle edit logic by finding the article to update
+        const articleToEdit = articles.find(a => a.id === editArticleId);
+        
+        if (articleToEdit && handleEdit) {
+          console.log('Updating article with ID:', editArticleId);
+          
+          // Call the parent component's handleEdit function with the updated article
+          handleEdit({
+            ...articleToEdit,
+            ...articleData
+          });
+        } else {
+          console.error('Article not found for editing or handleEdit not provided');
+          setError('Could not find article to edit');
+        }
+      } else if (handleCreate) {
+        console.log('Creating new article with data:', articleData);
+        
+        // Create new article
+        await handleCreate(articleData);
+      }
+      
+      handleClose();
+    } catch (error: any) {
+      console.error('Error in form submission:', error);
+      setError(error?.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -184,18 +262,45 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   >
                     {article.description}
                   </Typography>
-                  {article.content && (
+                  
+                  {/* Show content only if article is expanded */}
+                  {article.content && expandedArticles.has(article.id) && (
                     <Typography
                       variant="body2"
                       sx={{
                         color: '#555',
                         lineHeight: 1.6,
                         whiteSpace: 'pre-line',
-                        mt: 1
+                        mt: 1,
+                        mb: 2,
+                        p: 2,
+                        borderLeft: '4px solid #e0e0e0',
+                        backgroundColor: 'rgba(0,0,0,0.02)',
+                        borderRadius: '0 4px 4px 0'
                       }}
                     >
                       {article.content}
                     </Typography>
+                  )}
+                  
+                  {/* Show Read More/Show Less button if article has content */}
+                  {article.content && (
+                    <Button
+                      color="primary"
+                      onClick={() => toggleArticleContent(article.id)}
+                      endIcon={expandedArticles.has(article.id) ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                      sx={{ 
+                        textTransform: 'none',
+                        mt: 1,
+                        fontWeight: 'medium',
+                        '&:hover': { 
+                          backgroundColor: 'transparent',
+                          textDecoration: 'underline' 
+                        }
+                      }}
+                    >
+                      {expandedArticles.has(article.id) ? 'Show Less' : 'Read More'}
+                    </Button>
                   )}
                 </Box>
                 <Box sx={{
@@ -209,7 +314,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     <Box>
                       <Button
                         startIcon={<EditIcon />}
-                        onClick={() => handleEdit(article)}
+                        onClick={() => openEditDialog(article)}
                         color="primary"
                         variant="contained"
                         size="small"
@@ -277,7 +382,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                 value={descInput}
                 onChange={(e) => setDescInput(e.target.value)}
                 multiline
-                rows={4}
+                rows={2}
                 fullWidth
                 required
                 variant="outlined"
@@ -287,6 +392,69 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   }
                 }}
               />
+              <TextField
+                label="Content (Markdown supported)"
+                value={contentInput}
+                onChange={(e) => setContentInput(e.target.value)}
+                multiline
+                rows={6}
+                fullWidth
+                variant="outlined"
+                placeholder="# Heading\n\nParagraph text\n\n- List item\n- Another item"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1
+                  }
+                }}
+              />
+              <TextField
+                label="Read Time (e.g., '5 min read')"
+                value={readTimeInput}
+                onChange={(e) => setReadTimeInput(e.target.value)}
+                fullWidth
+                variant="outlined"
+                placeholder="5 min read"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1
+                  }
+                }}
+              />
+              <Box>
+                <TextField
+                  label="Tags (comma separated)"
+                  placeholder="Spring, REST, API"
+                  fullWidth
+                  variant="outlined"
+                  // Display current tags as comma-separated string in the input field
+                  value={tagsInput.join(', ')}
+                  onChange={(e) => {
+                    const tagInput = e.target.value;
+                    const tagArray = tagInput
+                      .split(',')
+                      .map(tag => tag.trim())
+                      .filter(tag => tag.length > 0);
+                    setTagsInput(tagArray);
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1
+                    }
+                  }}
+                />
+                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {tagsInput.map((tag, index) => (
+                    <Chip 
+                      key={index} 
+                      label={tag} 
+                      size="small" 
+                      onDelete={() => {
+                        setTagsInput(tagsInput.filter((_, i) => i !== index));
+                      }} 
+                    />
+                  ))}
+                </Box>
+              </Box>
             </Stack>
           </DialogContent>
           <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0' }}>
@@ -297,9 +465,10 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               onClick={handleSubmit}
               variant="contained"
               color="primary"
+              disabled={loading || !titleInput || !descInput}
               sx={{ borderRadius: 1, px: 3 }}
             >
-              {editArticleId ? 'Update' : 'Create'}
+              {loading ? 'Saving...' : editArticleId ? 'Update' : 'Create'}
             </Button>
           </DialogActions>
         </Dialog>
