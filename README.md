@@ -11,6 +11,29 @@ A Spring Boot + React application providing utility features such as file conver
 - Maven 3.8+
 - (Optional) PostgreSQL 14+ (for production with PostgreSQL profile)
 
+## Database Options
+The application supports both PostgreSQL and H2 file-based database for production use.
+See [DATABASE-CONFIG.md](DATABASE-CONFIG.md) for details on how to switch between databases.
+
+### Application Management
+
+To manage the application, use the provided utility manager:
+
+```bash
+# Windows
+utility-manager.bat  # Opens the utility manager menu
+
+# Linux/Mac
+./utility-manager.sh  # Opens the utility manager menu
+```
+
+This utility allows you to:
+- Choose between local or Docker deployment
+- Switch between database types (H2 or PostgreSQL)
+- Initialize and reset databases
+- Configure security settings
+- Start, stop, and monitor the application
+
 ---
 
 ## Build Instructions
@@ -55,12 +78,26 @@ java -jar target/utility-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 java -jar target/utility-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod-h2
 ```
 
+#### 3. Deploying to Render Cloud
+- For detailed deployment instructions to Render using H2 database, see [RENDER-DEPLOYMENT.md](RENDER-DEPLOYMENT.md)
+- A `render.yaml` file is included for easy deployment configuration
+
 
 #### 3. First-time Schema/Data Initialization (Local & Production)
 - Use the `init` profile the very first time you set up your database, both for local development and production:
 ```
 java -jar target/utility-0.0.1-SNAPSHOT.jar --spring.profiles.active=init
 ```
+
+- For Docker deployment, use Docker Compose for initialization:
+```
+# Initialize the database (first time)
+docker-compose run init
+
+# Start the application
+docker-compose up -d
+```
+
 - After initialization, switch to your normal profile (e.g., `dev`, `prod`, or `prod-h2`) for regular use.
 
 ---
@@ -75,6 +112,35 @@ java -jar target/utility-0.0.1-SNAPSHOT.jar --spring.profiles.active=init
 ## Environment Variables (Optional)
 - `SERVER_PORT`: Override default port.
 - `SPRING_PROFILES_ACTIVE`: Set active profile.
+
+---
+
+## Docker Deployment
+
+### Option 1: Using the Utility Manager
+```
+# Windows
+utility-manager.bat
+# Then select: 2. Docker Deployment
+
+# Linux/Mac
+./utility-manager.sh
+# Then select: 2. Docker Deployment
+```
+
+### Option 2: Using Docker Compose Directly
+```
+# For first-time initialization
+docker-compose run init
+
+# To start the application
+docker-compose up -d
+```
+
+### 3. Database Persistence
+- H2 database files are stored in the `./data` directory
+- This directory is mounted as a volume in the Docker container
+- Make regular backups of this directory to prevent data loss
 
 ---
 

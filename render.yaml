@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: utility-zone
+    env: java
+    plan: starter
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/utility-1.2.0-SNAPSHOT.jar
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod-h2
+      - key: utility.database.type
+        value: h2
+      - key: JAVA_OPTS
+        value: -Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+
+  # Optional: If you want to serve frontend separately as a static site
+  # - type: static
+  #   name: utility-zone-frontend
+  #   buildCommand: cd frontend && npm install && npm run build
+  #   publishDir: frontend/dist
+  #   envVars:
+  #     - key: API_URL
+  #       fromService:
+  #         name: utility-zone
+  #         type: web
+  #         property: url

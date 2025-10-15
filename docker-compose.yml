@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod-h2
+      - JAVA_OPTS=-Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom
+
+  # Use this service for first-time initialization only
+  # docker-compose run init
+  init:
+    build: .
+    volumes:
+      - ./data:/app/data
+    environment:
+      - SPRING_PROFILES_ACTIVE=init
+    command: ["java", "-jar", "/app/app.jar"]
