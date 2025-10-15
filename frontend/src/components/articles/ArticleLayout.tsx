@@ -53,6 +53,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   const [tagsInput, setTagsInput] = useState<string[]>(['Spring Boot']); // Default tag
   const [readTimeInput, setReadTimeInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false); // Add loading state for delete action
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   // Track which articles have their content expanded
@@ -499,12 +500,23 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={() => confirmDelete && handleDelete(confirmDelete)}
+              onClick={() => {
+                if (confirmDelete) {
+                  setDeleteLoading(true);
+                  // Call handleDelete and then close the dialog regardless of success/failure
+                  Promise.resolve(handleDelete(confirmDelete))
+                    .finally(() => {
+                      setDeleteLoading(false);
+                      setConfirmDelete(null); // Close the dialog after confirming delete
+                    });
+                }
+              }}
               color="error"
               variant="contained"
+              disabled={deleteLoading}
               sx={{ borderRadius: 1, px: 3 }}
             >
-              Delete
+              {deleteLoading ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogActions>
         </Dialog>

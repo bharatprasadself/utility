@@ -133,41 +133,174 @@ function DockerArticles() {
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadArticles = async () => {
+    setLoading(true);
+    try {
+      console.log('Loading Docker articles...');
+      const response = await ArticleService.getArticlesByCategory(ArticleCategory.DOCKER);
+      console.log('Docker articles response:', response);
+      if (response.data && response.data.length > 0) {
+        setArticles(response.data);
+      } else {
+        console.log('No articles found, using static content');
+        setArticles(staticArticles);
+      }
+    } catch (error) {
+      console.error('Failed to load Docker articles:', error);
+      console.log('Using static content due to error');
+      setArticles(staticArticles);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadArticles = async () => {
-      try {
-        console.log('Loading Docker articles...');
-        const response = await ArticleService.getArticlesByCategory(ArticleCategory.DOCKER);
-        console.log('Docker articles response:', response);
-        if (response.data && response.data.length > 0) {
-          setArticles(response.data);
-        } else {
-          console.log('No articles found, using static content');
-          setArticles(staticArticles);
-        }
-      } catch (error) {
-        console.error('Failed to load Docker articles:', error);
-        console.log('Using static content due to error');
-        setArticles(staticArticles);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadArticles();
   }, []);
 
- 
+  const handleCreateArticle = async (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!isAdmin) {
+      setError('You must be an admin to create articles');
+      return;
+    }
+    
+    setCreating(true);
+    setError(null);
+    
+    try {
+      console.log('Creating Docker article:', articleData);
+      
+      // Create a new article with the DOCKER category
+      const articleToCreate = {
+        ...articleData,
+        category: ArticleCategory.DOCKER
+      };
+      
+      console.log('Docker article to create:', articleToCreate);
+      
+      // Create a modified version for the API that has the raw enum name
+      const apiArticle = {
+        ...articleToCreate,
+        category: 'DOCKER', // Hard-coded for Docker articles
+        tags: articleToCreate.tags && Array.isArray(articleToCreate.tags) 
+          ? articleToCreate.tags 
+          : ['Docker'] // Default tag if none provided
+      };
+      
+      console.log('API article with raw enum name:', apiArticle);
+      // @ts-ignore - Ignoring type mismatch as we're manually formatting for the API
+      await ArticleService.createArticle(apiArticle);
+      console.log('Docker article created successfully');
+      
+      // Reload articles to include the new one
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to create Docker article:', error);
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to create article. Please try again.';
+      
+      console.error('Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: errorMessage
+      });
+      
+      setError(errorMessage);
+    } finally {
+      setCreating(false);
+    }
+  };
+  
+  const handleEdit = async (article: Article) => {
+    if (!isAdmin) {
+      setError('You must be an admin to edit articles');
+      return;
+    }
+    
+    console.log('Editing Docker article:', article);
+    setCreating(true); // Reusing the creating state for edit operation
+    setError(null);
+    
+    try {
+      // Convert category to backend format if needed
+      const updatedArticle = {
+        ...article,
+        category: 'DOCKER' // Hard-coded for Docker articles
+      };
+      
+      // Make sure tags is always an array
+      if (!updatedArticle.tags || !Array.isArray(updatedArticle.tags)) {
+        updatedArticle.tags = ['Docker'];
+      }
+      
+      console.log('Sending updated Docker article:', updatedArticle);
+      
+      // @ts-ignore - Ignoring type issues with the category
+      await ArticleService.updateArticle(article.id, updatedArticle);
+      console.log('Docker article updated successfully');
+      
+      // Reload articles to reflect changes
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to update Docker article:', error);
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to update article. Please try again.';
+      
+      console.error('Update error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: errorMessage
+      });
+      
+      setError(errorMessage);
+    } finally {
+      setCreating(false);
+    }
+  };
+  
+  const handleDelete = async (id: string) => {
+    if (!isAdmin) {
+      setError('You must be an admin to delete articles');
+      return;
+    }
+    
+    try {
+      console.log('Deleting Docker article:', id);
+      await ArticleService.deleteArticle(id);
+      await loadArticles(); // Refresh the articles list
+    } catch (error: any) {
+      console.error('Failed to delete Docker article:', error);
+      setError(error?.response?.data?.message || 'Failed to delete article. Please try again.');
+    }
+  };
+
   return (
-    <ArticleLayout
-      title="Docker Articles"
-      description="Learn about container technology, Docker best practices, and deployment strategies."
-      articles={articles}
-      isAdmin={isAdmin}
-      handleEdit={() => {}}
-      handleDelete={() => {}}
-    />
+    <>
+      {error && (
+        <div style={{ color: 'red', padding: '10px', marginBottom: '10px' }}>
+          Error: {error}
+        </div>
+      )}
+      <ArticleLayout
+        title="Docker Articles"
+        description="Learn about container technology, Docker best practices, and deployment strategies."
+        articles={articles}
+        isAdmin={isAdmin}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+        handleCreate={handleCreateArticle}
+      />
+      {creating && <div>Processing article action...</div>}
+    </>
   );
 }
 
