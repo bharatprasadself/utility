@@ -30,10 +30,17 @@ WORKDIR /app
 # This assumes standard maven target/*.jar output (spring-boot fat jar)
 COPY --from=build /workspace/target/*.jar /app/app.jar
 
+# Create a directory for H2 database files
+RUN mkdir -p /app/data
+
+# Create a volume mount point for H2 database
+VOLUME /app/data
+
 # Expose the common Spring Boot port (change if needed)
 EXPOSE 8080
 
-# Recommended JVM options as environment variables (adjust to your needs)
+# Set Spring profile and JVM options
+ENV SPRING_PROFILES_ACTIVE="prod-h2"
 ENV JAVA_OPTS="-Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom"
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
