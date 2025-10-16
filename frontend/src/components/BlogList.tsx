@@ -11,8 +11,10 @@ import {
     Stack,
     Alert,
     Container,
-    Box
+    Box,
+    Paper,
 } from '@mui/material';
+import ReactMarkdown from 'react-markdown';
 import Advertisement from './Advertisement';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -21,63 +23,64 @@ import blogService from '../services/blog';
 import type { Blog, BlogRequest } from '../services/blog';
 import { useAuth } from '../contexts/AuthContext';
 
-interface FormattedContent {
-    type: 'paragraph' | 'list';
-    items: string[];
-}
-
-const formatContent = (content: string) => {
-    // Normalize line endings and consolidate spaces
-    const normalizedContent = content
-        .replace(/\r\n/g, '\n')
-        .replace(/\n\s+\n/g, '\n\n')
-        .replace(/\n{2,}/g, '\n')
-        .trim();
-
-    const lines = normalizedContent
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-
-    const formattedContent: FormattedContent[] = [];
-    let currentList: string[] = [];
-
-    lines.forEach(line => {
-        if (line.startsWith('- ')) {
-            // List item
-            currentList.push(formatLine(line.substring(2)));
-        } else {
-            // If we were building a list, add it to the content
-            if (currentList.length > 0) {
-                formattedContent.push({ type: 'list', items: [...currentList] });
-                currentList = [];
+const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => (
+    <Box sx={{
+        '& hr': {
+            my: 3,
+            border: 'none',
+            height: '1px',
+            bgcolor: 'grey.300'
+        },
+        '& p': {
+            mb: 2,
+            lineHeight: 1.6
+        },
+        '& h1, & h2, & h3, & h4, & h5, & h6': {
+            mt: 3,
+            mb: 2,
+            color: 'primary.main'
+        },
+        '& a': {
+            color: 'primary.main',
+            textDecoration: 'none',
+            '&:hover': {
+                textDecoration: 'underline'
             }
-            // Add paragraph
-            formattedContent.push({ type: 'paragraph', items: [formatLine(line)] });
+        },
+        '& img': {
+            maxWidth: '100%',
+            height: 'auto',
+            borderRadius: 1
+        },
+        '& blockquote': {
+            borderLeft: '4px solid',
+            borderColor: 'primary.main',
+            pl: 2,
+            py: 1,
+            my: 2,
+            bgcolor: 'grey.50',
+            fontStyle: 'italic'
+        },
+        '& ul, & ol': {
+            mb: 2,
+            pl: 3
+        },
+        '& li': {
+            mb: 1
+        },
+        '& code': {
+            bgcolor: 'grey.100',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            fontFamily: 'monospace'
         }
-    });
+    }}>
+        <ReactMarkdown>{content}</ReactMarkdown>
+    </Box>
+);
 
-    // Add any remaining list items
-    if (currentList.length > 0) {
-        formattedContent.push({ type: 'list', items: currentList });
-    }
 
-    return formattedContent;
-};
-
-// Helper function to format text within a line
-const formatLine = (text: string) => {
-    return text
-        // Format links
-        .replace(
-            /(https?:\/\/[^\s]+)/g,
-            '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #1976d2; text-decoration: none;">$1</a>'
-        )
-        // Format bold text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        // Format italic text
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');
-};
 
 export default function BlogList() {
     const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -307,19 +310,7 @@ export default function BlogList() {
                                     >
                                         {expandedPosts.includes(blog.id) ? (
                                             <Box>
-                                                <div className="blog-content">
-                                                    {formatContent(blog.content).map((section, index) => (
-                                                        section.type === 'list' ? (
-                                                            <ul key={index} className="blog-list">
-                                                                {section.items.map((item, itemIndex) => (
-                                                                    <li key={itemIndex} dangerouslySetInnerHTML={{ __html: item }} />
-                                                                ))}
-                                                            </ul>
-                                                        ) : (
-                                                            <p key={index} className="blog-paragraph" dangerouslySetInnerHTML={{ __html: section.items[0] }} />
-                                                        )
-                                                    ))}
-                                                </div>
+                                                <MarkdownPreview content={blog.content} />
                                                 <Button
                                                     onClick={() => setExpandedPosts(prev => prev.filter(id => id !== blog.id))}
                                                     sx={{ 
@@ -334,19 +325,7 @@ export default function BlogList() {
                                             </Box>
                                         ) : (
                                             <Box>
-                                                <div className="blog-content">
-                                                    {formatContent(blog.content.slice(0, 200) + (blog.content.length > 200 ? '...' : '')).map((section, index) => (
-                                                        section.type === 'list' ? (
-                                                            <ul key={index} className="blog-list">
-                                                                {section.items.map((item, itemIndex) => (
-                                                                    <li key={itemIndex} dangerouslySetInnerHTML={{ __html: item }} />
-                                                                ))}
-                                                            </ul>
-                                                        ) : (
-                                                            <p key={index} className="blog-paragraph" dangerouslySetInnerHTML={{ __html: section.items[0] }} />
-                                                        )
-                                                    ))}
-                                                </div>
+                                                <MarkdownPreview content={blog.content.slice(0, 200) + (blog.content.length > 200 ? '...' : '')} />
                                                 <Button
                                                     onClick={() => setExpandedPosts(prev => [...prev, blog.id])}
                                                     sx={{ 
@@ -415,7 +394,7 @@ export default function BlogList() {
                             {editBlogId ? 'Edit Blog Post' : 'Create New Blog Post'}
                         </Typography>
                     </DialogTitle>
-                    <DialogContent sx={{ px: 3, py: 3 }}>
+                    <DialogContent sx={{ px: 3, py: 3, mt: 2 }}>
                         <Stack spacing={3}>
                             {error && (
                                 <Alert severity="error" onClose={() => setError('')} sx={{ borderRadius: 1 }}>
@@ -429,27 +408,131 @@ export default function BlogList() {
                                 fullWidth
                                 required
                                 variant="outlined"
+                                margin="normal"
                                 sx={{
+                                    '& .MuiInputLabel-root': {
+                                        background: '#ffffff',
+                                        padding: '0 8px'
+                                    },
                                     '& .MuiOutlinedInput-root': {
                                         borderRadius: 1
                                     }
                                 }}
                             />
-                            <TextField
-                                label="Content"
-                                value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                                multiline
-                                rows={6}
-                                fullWidth
-                                required
-                                variant="outlined"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1
-                                    }
-                                }}
-                            />
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <Box>
+                                    <TextField
+                                        label="Content (Markdown supported)"
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        multiline
+                                        rows={6}
+                                        fullWidth
+                                        required
+                                        variant="outlined"
+                                        inputProps={{
+                                            ref: (input: HTMLTextAreaElement | null) => {
+                                                if (input) {
+                                                    input.addEventListener('select', (e) => {
+                                                        e.preventDefault();
+                                                    });
+                                                }
+                                            }
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 1
+                                            }
+                                        }}
+                                    />
+                                    <Stack direction="row" spacing={1} mt={1}>
+                                        <Button
+                                            onClick={() => {
+                                                // Insert divider at cursor position or at the end if no cursor position
+                                                const textArea = document.querySelector('textarea');
+                                                const start = textArea ? textArea.selectionStart : content.length;
+                                                const end = textArea ? textArea.selectionEnd : content.length;
+                                                
+                                                // Add spacing around divider if not already present
+                                                let divider = '\n---\n';
+                                                if (!content.endsWith('\n\n')) {
+                                                    divider = '\n\n' + divider;
+                                                }
+                                                if (!content.substring(end).startsWith('\n')) {
+                                                    divider = divider + '\n';
+                                                }
+                                                
+                                                const newContent = content.substring(0, start) + divider + content.substring(end);
+                                                setContent(newContent);
+                                                
+                                                // Focus and move cursor after the divider
+                                                setTimeout(() => {
+                                                    if (textArea) {
+                                                        const newPosition = start + divider.length;
+                                                        textArea.focus();
+                                                        textArea.selectionStart = textArea.selectionEnd = newPosition;
+                                                    }
+                                                }, 0);
+                                            }}
+                                            variant="text"
+                                            size="small"
+                                        >
+                                            Insert Divider
+                                        </Button>
+                                        <Button
+                                            onClick={() => {
+                                                const textArea = document.querySelector('textarea');
+                                                if (!textArea) return;
+                                                
+                                                const start = textArea.selectionStart;
+                                                const end = textArea.selectionEnd;
+                                                const selectedText = content.substring(start, end);
+                                                
+                                                // If text is selected, wrap it in bold markers
+                                                // If no text is selected, insert bold markers and place cursor between them
+                                                const newContent = content.substring(0, start) + 
+                                                    '**' + (selectedText || '') + '**' + 
+                                                    content.substring(end);
+                                                
+                                                setContent(newContent);
+                                                
+                                                // Position cursor after the bold text if text was selected,
+                                                // or between the ** marks if no text was selected
+                                                setTimeout(() => {
+                                                    textArea.focus();
+                                                    if (selectedText) {
+                                                        textArea.selectionStart = textArea.selectionEnd = start + selectedText.length + 4;
+                                                    } else {
+                                                        textArea.selectionStart = textArea.selectionEnd = start + 2;
+                                                    }
+                                                }, 0);
+                                            }}
+                                            variant="text"
+                                            size="small"
+                                        >
+                                            Bold Text
+                                        </Button>
+                                    </Stack>
+                                </Box>
+
+                                {content && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                                            Preview
+                                        </Typography>
+                                        <Paper
+                                            variant="outlined"
+                                            sx={{
+                                                p: 2,
+                                                minHeight: '200px',
+                                                bgcolor: 'grey.50'
+                                            }}
+                                        >
+                                            <MarkdownPreview content={content} />
+                                        </Paper>
+                                    </Box>
+                                )}
+                            </Box>
                         </Stack>
                     </DialogContent>
                     <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0' }}>
