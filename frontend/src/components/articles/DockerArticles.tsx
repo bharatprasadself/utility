@@ -132,8 +132,7 @@ function DockerArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
-  const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     const loadArticles = async () => {
       try {
@@ -145,20 +144,17 @@ function DockerArticles() {
         } else {
           console.log('No articles found, using static content');
           setArticles(staticArticles);
-        }
+        }      
       } catch (error) {
         console.error('Failed to load Docker articles:', error);
         console.log('Using static content due to error');
         setArticles(staticArticles);
-      } finally {
-        setLoading(false);
       }
     };
 
     loadArticles();
   }, []);
-
- 
+  
   return (
     <ArticleLayout
       title="Docker Articles"
