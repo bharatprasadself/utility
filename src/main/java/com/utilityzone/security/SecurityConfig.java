@@ -63,6 +63,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/blogs/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/blogs/**").authenticated()
+                // Article endpoints
+                .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/articles/**").hasRole("ADMIN")
                 // All other endpoints are public
                 .anyRequest().permitAll()
             )

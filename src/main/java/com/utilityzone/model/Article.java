@@ -22,7 +22,7 @@ public class Article {
     @Column(nullable = false, length = 10000)
     private String content;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER) // Use EAGER fetching to avoid lazy loading issues
     @CollectionTable(name = "article_tags", joinColumns = @JoinColumn(name = "article_id"))
     @Column(name = "tag")
     private Set<String> tags = new HashSet<>();

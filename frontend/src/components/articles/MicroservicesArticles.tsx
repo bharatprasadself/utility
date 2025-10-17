@@ -67,38 +67,171 @@ function MicroservicesArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadArticles = async () => {
-      try {
-        console.log('Loading Microservices articles...');
-        const response = await ArticleService.getArticlesByCategory(ArticleCategory.MICROSERVICES);
-        console.log('Microservices articles response:', response);
-        if (response.data && response.data.length > 0) {
-          setArticles(response.data);
-        } else {
-          console.log('No articles found, using static content');
-          setArticles(staticArticles);
-        }
-      } catch (error) {
-        console.error('Failed to load Microservices articles:', error);
-        console.log('Using static content due to error');
+  const loadArticles = async () => {
+    try {
+      console.log('Loading Microservices articles...');
+      const response = await ArticleService.getArticlesByCategory(ArticleCategory.MICROSERVICES);
+      console.log('Microservices articles response:', response);
+      if (response.data && response.data.length > 0) {
+        setArticles(response.data);
+      } else {
+        console.log('No articles found, using static content');
         setArticles(staticArticles);
       }
-    };
+    } catch (error) {
+      console.error('Failed to load Microservices articles:', error);
+      console.log('Using static content due to error');
+      setArticles(staticArticles);
+    }
+  };
 
+  useEffect(() => {
     loadArticles();
   }, []);
 
+  const handleCreateArticle = async (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!isAdmin) {
+      setError('You must be an admin to create articles');
+      return;
+    }
+    
+    setCreating(true);
+    setError(null);
+    
+    try {
+      console.log('Creating Microservices article:', articleData);
+      
+      // Create a new article with the MICROSERVICES category
+      const articleToCreate = {
+        ...articleData,
+        category: ArticleCategory.MICROSERVICES
+      };
+      
+      console.log('Microservices article to create:', articleToCreate);
+      
+      // Create a modified version for the API that has the raw enum name
+      const apiArticle = {
+        ...articleToCreate,
+        category: 'MICROSERVICES', // Hard-coded for Microservices articles
+        tags: articleToCreate.tags && Array.isArray(articleToCreate.tags) 
+          ? articleToCreate.tags 
+          : ['Microservices'] // Default tag if none provided
+      };
+      
+      console.log('API article with raw enum name:', apiArticle);
+      // @ts-ignore - Ignoring type mismatch as we're manually formatting for the API
+      await ArticleService.createArticle(apiArticle);
+      console.log('Microservices article created successfully');
+      
+      // Reload articles to include the new one
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to create Microservices article:', error);
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to create article. Please try again.';
+      
+      console.error('Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: errorMessage
+      });
+      
+      setError(errorMessage);
+    } finally {
+      setCreating(false);
+    }
+  };
+  
+  const handleEdit = async (article: Article) => {
+    if (!isAdmin) {
+      setError('You must be an admin to edit articles');
+      return;
+    }
+    
+    console.log('Editing Microservices article:', article);
+    setCreating(true); // Reusing the creating state for edit operation
+    setError(null);
+    
+    try {
+      // Convert category to backend format if needed
+      const updatedArticle = {
+        ...article,
+        category: 'MICROSERVICES' // Hard-coded for Microservices articles
+      };
+      
+      // Make sure tags is always an array
+      if (!updatedArticle.tags || !Array.isArray(updatedArticle.tags)) {
+        updatedArticle.tags = ['Microservices'];
+      }
+      
+      console.log('Sending updated Microservices article:', updatedArticle);
+      
+      // @ts-ignore - Ignoring type issues with the category
+      await ArticleService.updateArticle(article.id, updatedArticle);
+      console.log('Microservices article updated successfully');
+      
+      // Reload articles to reflect changes
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to update Microservices article:', error);
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to update article. Please try again.';
+      
+      console.error('Update error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: errorMessage
+      });
+      
+      setError(errorMessage);
+    } finally {
+      setCreating(false);
+    }
+  };
+  
+  const handleDelete = async (id: string) => {
+    if (!isAdmin) {
+      setError('You must be an admin to delete articles');
+      return;
+    }
+    
+    try {
+      console.log('Deleting Microservices article:', id);
+      await ArticleService.deleteArticle(id);
+      await loadArticles(); // Refresh the articles list
+    } catch (error: any) {
+      console.error('Failed to delete Microservices article:', error);
+      setError(error?.response?.data?.message || 'Failed to delete article. Please try again.');
+    }
+  };
+
   return (
-    <ArticleLayout
-      title="Microservices Articles"
-      description="Articles about microservices design, deployment, and observability."
-      articles={articles}
-      isAdmin={isAdmin}
-      handleEdit={() => {}}
-      handleDelete={() => {}}
-    />
+    <>
+      {error && (
+        <div style={{ color: 'red', padding: '10px', marginBottom: '10px' }}>
+          Error: {error}
+        </div>
+      )}
+      <ArticleLayout
+        title="Microservices Articles"
+        description="Articles about microservices design, deployment, and observability."
+        articles={articles}
+        isAdmin={isAdmin}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+        handleCreate={handleCreateArticle}
+      />
+      {creating && <div>Processing article action...</div>}
+    </>
   );
 }
 
