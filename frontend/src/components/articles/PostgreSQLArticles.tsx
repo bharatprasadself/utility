@@ -270,8 +270,7 @@ function PostgreSQLArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
-  const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     const loadArticles = async () => {
       try {
@@ -287,8 +286,6 @@ function PostgreSQLArticles() {
       } catch (e) {
         console.log('No articles returned from API, using static content');
         setArticles(staticArticles);
-      } finally {
-        setLoading(false);
       }
     };
 
