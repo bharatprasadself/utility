@@ -132,12 +132,13 @@ function DockerArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
-  const [loading, setLoading] = useState(true);
+  // Removed unused loading state to clean up warnings
+  // const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadArticles = async () => {
-    setLoading(true);
+  // no-op loading removed
     try {
       console.log('Loading Docker articles...');
       const response = await ArticleService.getArticlesByCategory(ArticleCategory.DOCKER);
@@ -153,7 +154,7 @@ function DockerArticles() {
       console.log('Using static content due to error');
       setArticles(staticArticles);
     } finally {
-      setLoading(false);
+      // no-op
     }
   };
 

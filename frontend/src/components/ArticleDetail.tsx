@@ -11,6 +11,8 @@ import {
   Link,
   Paper,
 } from '@mui/material';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShareIcon from '@mui/icons-material/Share';
 import EditIcon from '@mui/icons-material/Edit';
@@ -47,9 +49,8 @@ export const ArticleDetail: React.FC = () => {
       setLoading(true);
       console.log('Fetching article with ID:', id);
       
-      // Determine if we're on a static route
-      const isStaticRoute = window.location.pathname.includes('/static/');
-      console.log('Is static route:', isStaticRoute);
+  // Determine if we're on a static route (kept for future use)
+  // const isStaticRoute = window.location.pathname.includes('/static/');
       
       const foundArticle = await getArticleById(id);
       if (foundArticle) {
@@ -139,25 +140,16 @@ export const ArticleDetail: React.FC = () => {
               <Chip label={article.category} color="primary" size="small" />
             </Box>
 
-            <Typography variant="subtitle1" gutterBottom sx={{ mb: 3 }}>
-              {article.description}
-            </Typography>
+            <Box sx={{ mb: 3 }}>
+              <MarkdownContent content={article.description} hideLeadingH1 />
+            </Box>
 
-            <Typography 
-              variant="body1" 
-              component="div"
-              sx={{ 
-                mb: 3,
-                '& p': { mb: 2 },
-                '& a': { 
-                  color: 'primary.main',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' }
-                }
-              }}
-            >
-              {article.content}
-            </Typography>
+            <Box sx={{ mb: 3,
+              '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
+              '& .footnotes': { mt: 2, pt: 1, borderTop: '1px solid #e0e0e0' }
+            }}>
+              <MarkdownContent content={article.content} hideLeadingH1 />
+            </Box>
 
             <Box sx={{ mt: 4, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {article.tags.map((tag) => (
@@ -188,5 +180,54 @@ export const ArticleDetail: React.FC = () => {
         </Box>
       </Paper>
     </Container>
+  );
+};
+
+// Reusable markdown renderer with heading size constraints and optional H1 removal
+const MarkdownContent: React.FC<{ content: string; hideLeadingH1?: boolean }> = ({ content, hideLeadingH1 = false }) => {
+  const processed = hideLeadingH1 ? content.replace(/^\s*#\s+.*\n?/, '') : content;
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        h1: (props: any) => (
+          <Typography component="h1" variant="h4" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
+            {props.children}
+          </Typography>
+        ),
+        h2: (props: any) => (
+          <Typography component="h2" variant="h5" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
+            {props.children}
+          </Typography>
+        ),
+        h3: (props: any) => (
+          <Typography component="h3" variant="h6" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
+            {props.children}
+          </Typography>
+        ),
+        h4: (props: any) => (
+          <Typography component="h4" variant="subtitle1" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
+            {props.children}
+          </Typography>
+        ),
+        h5: (props: any) => (
+          <Typography component="h5" variant="subtitle2" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
+            {props.children}
+          </Typography>
+        ),
+        h6: (props: any) => (
+          <Typography component="h6" variant="body1" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
+            {props.children}
+          </Typography>
+        ),
+        p: (props: any) => (
+          <Typography component="p" variant="body1" sx={{ mb: 2, lineHeight: 1.7 }}>
+            {props.children}
+          </Typography>
+        )
+      }}
+    >
+      {processed}
+    </ReactMarkdown>
   );
 };

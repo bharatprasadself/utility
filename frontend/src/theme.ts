@@ -51,10 +51,11 @@ const theme = createTheme({
         },
       },
     },
+    // Keep IconButton default color; buttons can set their own bg/fg for contrast
     MuiIconButton: {
       styleOverrides: {
         root: {
-          color: '#ffffff', // White color for icon buttons
+          borderRadius: 8,
         },
       },
     },

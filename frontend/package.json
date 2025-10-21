@@ -23,7 +23,13 @@
     "dayjs": "^1.11.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+<<<<<<< Updated upstream
     "react-router-dom": "^6.15.0"
+=======
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^6.15.0",
+    "remark-gfm": "^4.0.1"
+>>>>>>> Stashed changes
   },
   "devDependencies": {
     "@eslint/js": "^8.49.0",

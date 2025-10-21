@@ -28,7 +28,10 @@ const navItems: NavItem[] = [
       { label: 'PostgreSQL', path: '/articles/postgresql' },
       { label: 'Docker', path: '/articles/docker' },
       { label: 'Microservices', path: '/articles/microservices' },
+<<<<<<< Updated upstream
       
+=======
+>>>>>>> Stashed changes
     ]
   }
 ];
