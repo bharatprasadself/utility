@@ -10,18 +10,28 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(@NonNull CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOrigins(
-                    "http://localhost:5173",  // Vite's default port
-                    "http://localhost:3000",  // React's default port
-                    "http://localhost:8080",  // Local Spring Boot
-                    "https://utilityzone.in", // Production domain
-                    "https://www.utilityzone.in" // Production www domain
-                )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "Accept", "Origin")
-                .exposedHeaders("Authorization")
-                .allowCredentials(true)
-                .maxAge(3600L);
+        String env = System.getenv("SPRING_PROFILES_ACTIVE");
+        boolean isProduction = "prod".equals(env);
+
+        if (isProduction) {
+            registry.addMapping("/api/**")
+                    .allowedOrigins(
+                        "https://utilityzone.in",
+                        "https://www.utilityzone.in"
+                    )
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowedHeaders("*")
+                    .exposedHeaders("Authorization")
+                    .allowCredentials(true)
+                    .maxAge(3600L);
+        } else {
+            registry.addMapping("/api/**")
+                    .allowedOrigins("http://localhost:5173")  // Vite development server
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowedHeaders("*")
+                    .exposedHeaders("Authorization")
+                    .allowCredentials(true)
+                    .maxAge(3600L);
+        }
     }
 }

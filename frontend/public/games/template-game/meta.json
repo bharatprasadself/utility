@@ -1,0 +1,6 @@
+{
+  "slug": "template-game",
+  "title": "Template Game",
+  "description": "A template folder for new games. Replace files and update meta.json.",
+  "thumbnail": "/games/template-game/assets/thumb.png"
+}

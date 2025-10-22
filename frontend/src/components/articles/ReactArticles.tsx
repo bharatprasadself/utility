@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ArticleLayout } from './ArticleLayout';
+import ArticleLayout from './ArticleLayout';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Static data as fallback
 const staticArticles: Article[] = [
   {
-    id: 2001,
+    id: "2001",
     title: "Modern React Development with Hooks",
     description: "Deep dive into React Hooks and how they revolutionize state management and side effects in functional components.",
     content: `# Modern React Development with Hooks
@@ -83,7 +84,7 @@ function useDebounce(value, delay) {
     updatedAt: new Date().toISOString()
   },
   {
-    id: 2002,
+    id: "2002",
     title: "Building Responsive UIs with Material-UI",
     description: "Learn how to create beautiful, responsive user interfaces using Material-UI components in React applications.",
     content: `# Building Responsive UIs with Material-UI
@@ -175,7 +176,7 @@ const styles = {
     updatedAt: new Date().toISOString()
   },
   {
-    id: 2003,
+    id: "2003",
     title: "State Management with Redux Toolkit",
     description: "Explore modern Redux development using Redux Toolkit. Simplify your state management with built-in best practices.",
     content: `# State Management with Redux Toolkit
@@ -280,39 +281,177 @@ export function Counter() {
 ];
 
 function ReactArticles() {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
-  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadArticles = async () => {
+    try {
+      console.log('Loading React articles...');
+      const response = await ArticleService.getArticlesByCategory(ArticleCategory.REACT);
+      console.log('React articles response:', response);
+      if (response.data && response.data.length > 0) {
+        setArticles(response.data);
+      } else {
+        console.log('No React articles found, using static content');
+        setArticles(staticArticles);
+      }
+    } catch (error) {
+      console.error('Failed to load React articles:', error);
+      console.log('Using static React content due to error');
+      setArticles(staticArticles);
+    }
+  };
 
   useEffect(() => {
-    const loadArticles = async () => {
-      try {
-        const response = await ArticleService.getArticlesByCategory(ArticleCategory.REACT);
-        if (response.data && response.data.length > 0) {
-          setArticles(response.data);
-        } else {
-          console.log('No articles returned from API, using static content');
-          setArticles(staticArticles);
-        }
-      } catch (error) {
-        console.error('Error loading React articles:', error);
-        console.log('Using static content as fallback');
-        setArticles(staticArticles);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadArticles();
   }, []);
 
+  const handleCreateArticle = async (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!isAdmin) {
+      setError('You must be an admin to create articles');
+      return;
+    }
+    
+    setCreating(true);
+    setError(null);
+    
+    try {
+      console.log('Creating article:', articleData);
+      
+      // Create a new article with the REACT category
+      const articleToCreate = {
+        ...articleData,
+        category: ArticleCategory.REACT
+      };
+      
+      console.log('Article to create with category:', articleToCreate);
+      
+      // Create a modified version for the API that has the raw enum name
+      const apiArticle = {
+        ...articleToCreate,
+        // We need to convert the ArticleCategory enum to a string for the API
+        category: 'REACT', // Hard-coded for now since we know this component is for React articles
+        // Make sure tags is always an array, not undefined or null
+        tags: articleToCreate.tags && Array.isArray(articleToCreate.tags) 
+          ? articleToCreate.tags 
+          : ['React'] // Default tag if none provided
+      };
+      
+      console.log('API article with raw enum name:', apiArticle);
+      // @ts-ignore - Ignoring type mismatch as we're manually formatting for the API
+      await ArticleService.createArticle(apiArticle);
+      console.log('Article created successfully');
+      
+      // Reload articles to include the new one
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to create article:', error);
+      // More detailed error reporting
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to create article. Please try again.';
+      
+      console.error('Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: errorMessage
+      });
+      
+      setError(errorMessage);
+    } finally {
+      setCreating(false);
+    }
+  };
+  
+  const handleEdit = async (article: Article) => {
+    if (!isAdmin) {
+      setError('You must be an admin to edit articles');
+      return;
+    }
+    
+    console.log('Starting article edit:', article);
+    setCreating(true); // Reusing the creating state for edit operation
+    setError(null);
+    
+    try {
+      // Convert category to backend format if needed
+      const updatedArticle = {
+        ...article,
+        category: 'REACT' // Hard-coded for React articles
+      };
+      
+      // Make sure tags is always an array
+      if (!updatedArticle.tags || !Array.isArray(updatedArticle.tags)) {
+        updatedArticle.tags = ['React'];
+      }
+      
+      console.log('Sending updated article:', updatedArticle);
+      
+      // @ts-ignore - Ignoring type issues with the category
+      await ArticleService.updateArticle(article.id, updatedArticle);
+      console.log('Article updated successfully');
+      
+      // Reload articles to reflect changes
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to update article:', error);
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to update article. Please try again.';
+      
+      console.error('Update error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: errorMessage
+      });
+      
+      setError(errorMessage);
+    } finally {
+      setCreating(false);
+    }
+  };
+  
+  const handleDelete = async (id: string) => {
+    if (!isAdmin) {
+      setError('You must be an admin to delete articles');
+      return;
+    }
+    
+    try {
+      console.log('Deleting article:', id);
+      await ArticleService.deleteArticle(id);
+      await loadArticles(); // Refresh the articles list
+    } catch (error: any) {
+      console.error('Failed to delete article:', error);
+      setError(error?.response?.data?.message || 'Failed to delete article. Please try again.');
+    }
+  };
+
   return (
-    <ArticleLayout
-      title="React JS Articles"
-      description="Learn about React development, modern practices, and popular libraries in the React ecosystem."
-      articles={articles}
-      breadcrumbLabel="React JS"
-      loading={loading}
-    />
+    <>
+      {error && (
+        <div style={{ color: 'red', padding: '10px', marginBottom: '10px' }}>
+          Error: {error}
+        </div>
+      )}
+      <ArticleLayout
+        title="React JS Articles"
+        description="Learn about React development, modern practices, and popular libraries in the React ecosystem."
+        articles={articles}
+        isAdmin={isAdmin}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+        handleCreate={handleCreateArticle}
+      />
+      {creating && <div>Processing article action...</div>}
+    </>
   );
 }
 

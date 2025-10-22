@@ -69,6 +69,9 @@ const authService = {
         const username = localStorage.getItem('username');
         const rolesString = localStorage.getItem('roles');
         
+        // Debug logs to help troubleshoot
+        console.log('Auth - getCurrentUser:', { token, username, rolesString });
+        
         // Debug logging
         console.log('Token from storage:', token);
         console.log('Username from storage:', username);

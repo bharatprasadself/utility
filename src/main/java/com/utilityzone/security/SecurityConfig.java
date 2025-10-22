@@ -1,51 +1,86 @@
 package com.utilityzone.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
-    @Autowired
-    UserDetailsServiceImpl userDetailsService;
 
-    @Autowired
-    private AuthEntryPointJwt unauthorizedHandler;
-
-    @Autowired
-    private JwtUtils jwtUtils;
+    private final UserDetailsServiceImpl userDetailsService;
+    private final JwtUtils jwtUtils;
 
     @Bean
-    public JwtAuthenticationFilter authenticationJwtTokenFilter() {
-        return new JwtAuthenticationFilter(jwtUtils, userDetailsService);
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exception -> exception.authenticationEntryPoint((req, res, ex) -> {
+                res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Not authorized");
+            }))
+            .authorizeHttpRequests(auth -> auth
+                // Public endpoints
+                .requestMatchers(
+                    "/api/auth/**",
+                    "/h2-console/**",
+                    "/games/falling-ball/**",
+                    "/api/currency/**",
+                    "/api/timezone/**",
+                    "/api/converter/**",
+                    "/api/qr/**",
+                    "/api/greeting/**",
+                    "/api/blogs",
+                    "/api/blogs/{id}"
+                ).permitAll()
+                // Protected blog management endpoints
+                .requestMatchers(
+                    "/api/blogs/*/edit",
+                    "/api/blogs/*/delete",
+                    "/api/blogs/create"
+                ).authenticated()
+                // Allow GET for blog endpoints
+                .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
+                // Require authentication for POST, PUT, DELETE on blog endpoints
+                .requestMatchers(HttpMethod.POST, "/api/blogs/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/blogs/**").authenticated()
+                // Article endpoints
+                .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/articles/**").hasRole("ADMIN")
+                // All other endpoints are public
+                .anyRequest().permitAll()
+            )
+            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+            .addFilterBefore(authTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
+    public AuthTokenFilter authTokenFilter() {
+        return new AuthTokenFilter(jwtUtils, userDetailsService);
     }
 
     @Bean
@@ -54,44 +89,29 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // Disable CSRF and frame options for H2 Console
-        http.csrf().disable()
-            .headers().frameOptions().disable()
-            .and()
-            // Enable CORS
-            .cors()
-            .and()
-            // Configure session management
-            .sessionManagement()
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            // Configure exception handling
-            .exceptionHandling()
-            .authenticationEntryPoint(unauthorizedHandler)
-            .and()
-            // Configure authorization
-            .authorizeHttpRequests()
-            // H2 Console access
-            .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).permitAll()
-            // Public endpoints
-            .requestMatchers("/api/auth/**").permitAll()
-            .requestMatchers("/api/currency/**").permitAll()
-            .requestMatchers("/api/timezone/**").permitAll()
-            .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
-            .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()  // Allow public access to article endpoints
-            // Protected endpoints
-            .requestMatchers(HttpMethod.POST, "/api/blogs/**").authenticated()
-            .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
-            .requestMatchers(HttpMethod.DELETE, "/api/blogs/**").authenticated()
-            .requestMatchers(HttpMethod.POST, "/api/articles/**").authenticated()
-            .requestMatchers(HttpMethod.PUT, "/api/articles/**").authenticated()
-            .requestMatchers(HttpMethod.DELETE, "/api/articles/**").authenticated()
-            .anyRequest().authenticated();
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.addAllowedOrigin("http://localhost:5173");
+        configuration.addAllowedOrigin("https://utilityzone.in");
+        configuration.addAllowedMethod("*");
+        configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 
-        http.authenticationProvider(authenticationProvider())
-            .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+    @SuppressWarnings("deprecation")
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setPasswordEncoder(passwordEncoder());
+        provider.setUserDetailsService(userDetailsService);
+        return provider;
+    }
 
-        return http.build();
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
     }
 }

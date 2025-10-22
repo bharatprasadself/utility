@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dino Runner</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="embedded-title">Dino Runner</div>
+  <div class="embedded-scoreboard" aria-hidden="false">
+    <div>Score: <strong><span id="score">0</span></strong></div>
+    <div>High Score: <strong><span id="highScore">0</span></strong></div>
+    <div>Speed: <strong><span id="speed">6</span></strong></div>
+  </div>
+  <main style="height:100vh;display:flex;align-items:center;justify-content:center;">
+    <div style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+      <canvas id="gameCanvas" width="900" height="260" aria-label="Dino Runner game canvas"></canvas>
+      <!-- Touch controls shown for small devices -->
+      <div class="touch-controls" aria-hidden="false" style="position:absolute;left:12px;bottom:12px;">
+        <button id="touchLeft" aria-label="Duck">⬇️</button>
+        <button id="touchJump" aria-label="Jump">⬆️</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Keep standalone controls in the DOM so the page works when opened directly -->
+  <div style="display:none;" class="standalone-controls">
+    <header>
+      <h1>Dino Runner</h1>
+      <div class="controls">
+        <button id="btnPause">Pause</button>
+        <button id="btnReset">Reset</button>
+        <label>Difficulty:
+          <select id="selectDifficulty">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+      </div>
+    </header>
+    <footer>
+      <p>Controls: Space/Up = Jump, Down = Duck. Click canvas or tap to jump on mobile.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // If running inside an iframe, hide duplicate standalone controls/status and maximize canvas area
+    if (window.self !== window.top) {
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.classList.add('embedded');
+        const leftStatus = document.querySelector('.left-col');
+        if (leftStatus) leftStatus.style.display = 'none';
+        const grid = document.querySelector('.content-grid');
+        if (grid) grid.style.gridTemplateColumns = '1fr';
+        const hdr = document.querySelector('header');
+        const ftr = document.querySelector('footer');
+        if (hdr) hdr.style.display = 'none';
+        if (ftr) ftr.style.display = 'none';
+        const cont = document.querySelector('.container');
+        if (cont) { cont.style.margin = '0'; cont.style.padding = '0'; }
+
+        // trigger a resize so the game recalculates canvas size after DOM changes
+        setTimeout(()=> window.dispatchEvent(new Event('resize')), 50);
+      });
+    }
+  </script>
+</body>
+</html>

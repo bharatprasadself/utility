@@ -3,13 +3,12 @@ import axios from 'axios';
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 
   (import.meta.env.MODE === 'production'
     ? 'https://utility-nrd7.onrender.com'
-    : 'http://localhost:8080');
+    : '');  // Empty string to use relative URLs in development
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
     baseURL: API_BASE_URL,
     headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json'
     },
     withCredentials: true, // Important for CORS with credentials
@@ -19,7 +18,10 @@ const axiosInstance = axios.create({
 // Request interceptor to add auth token
 axiosInstance.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        // Get token from localStorage - it could be stored directly or within user data
+        const token = localStorage.getItem('token') || 
+                     (localStorage.getItem('user') && JSON.parse(localStorage.getItem('user') || '{}').token);
+        
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

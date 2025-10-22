@@ -19,10 +19,11 @@ public class Article {
     @Column(nullable = false, length = 2000)
     private String description;
 
-    @Column(nullable = false, length = 10000)
+    @Lob
+    @Column(nullable = false)
     private String content;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER) // Use EAGER fetching to avoid lazy loading issues
     @CollectionTable(name = "article_tags", joinColumns = @JoinColumn(name = "article_id"))
     @Column(name = "tag")
     private Set<String> tags = new HashSet<>();
