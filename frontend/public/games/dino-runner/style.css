@@ -1,0 +1,175 @@
+:root{
+	--bg:#0f1724;
+	--panel:#0b1220;
+	--accent:#60a5fa;
+	--text:#dbeafe;
+}
+*{box-sizing:border-box;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+body{
+	margin:0;
+	background:linear-gradient(180deg,var(--bg),#071023);
+	color:var(--text);
+	-webkit-font-smoothing:antialiased;
+	-moz-osx-font-smoothing:grayscale;
+}
+html, body { height: 100%; }
+.container{
+	max-width:1600px;
+	/* make container fill viewport height minus small breathing room and center content */
+	min-height: calc(100vh - 36px);
+	margin:18px auto;
+	padding:12px;
+	display:flex;
+	flex-direction:column;
+	justify-content:flex-start;
+	align-items:stretch;
+}
+header{
+	display:flex;
+	align-items:center;
+	justify-content:space-between;
+	gap:12px;
+	margin-bottom:8px;
+}
+h1{margin:0;font-size:1.3rem}
+.controls{display:flex;gap:8px;align-items:center}
+.controls button{
+	background:transparent;
+	border:1px solid rgba(255,255,255,0.08);
+	color:var(--text);
+	padding:6px 10px;
+	border-radius:6px;
+	cursor:pointer;
+}
+.controls select{
+	background:transparent;
+	border:1px solid rgba(96,165,250,0.14); /* accent-ish border */
+	color:var(--accent);
+	padding:6px 10px;
+	border-radius:6px;
+	cursor:pointer;
+	-webkit-appearance: none;
+	appearance: none;
+}
+.content-grid{ display:grid; grid-template-columns: 340px 1fr; gap:24px; align-items:stretch; min-height: calc(100vh - 120px); }
+.left-col{ display:flex; flex-direction:column; gap:12px; }
+.right-col{ display:flex; flex-direction:column; align-items:center; justify-content:center; }
+main{display:block}
+canvas{
+	background:linear-gradient(180deg,#082533,#03212a);
+	border-radius:6px;
+	display:block;
+	margin:0 auto; /* center horizontally */
+	box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+	max-width: 100%;
+	height: auto; /* let JS set the pixel buffer height */
+}
+
+/* Embedded (iframe) tweaks */
+body.embedded .container{ min-height:100vh; padding:0; margin:0; }
+body.embedded .content-grid{ grid-template-columns: 1fr; gap:0; min-height:100vh; }
+body.embedded .right-col{ padding: 0; align-items:center; justify-content:center; }
+body.embedded canvas{ max-height: calc(100vh - 8px); width: auto; height: auto; }
+/* Force the canvas to be centered in the viewport when embedded (covers top-to-bottom) */
+body.embedded canvas{
+	position: fixed;
+	left: 50%;
+	top: 0; /* pin to top so height can span the viewport */
+	transform: translateX(-50%); /* only horizontal centering */
+	margin: 0 !important;
+	height: 100vh; /* span full browser height */
+	max-height: 100vh;
+	max-width: calc(100vw - 16px);
+	width: auto;
+}
+/* small fixed title in top-left inside iframe */
+.embedded-title{
+	position: fixed;
+	left: 12px;
+	top: 8px;
+	z-index: 1300;
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: var(--text);
+	background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15));
+	padding: 10px 12px;
+	border-radius: 8px;
+	pointer-events: none;
+}
+
+/* small scoreboard under the embedded title */
+.embedded-scoreboard{
+	position: fixed;
+	left: 12px;
+	top: 50%; /* vertically center in viewport */
+	transform: translateY(-50%);
+	z-index: 1300;
+	color: rgba(255,255,255,0.85);
+	background: rgba(0,0,0,0.12);
+	padding: 8px 10px;
+	border-radius: 8px;
+	font-size: 0.95rem;
+	line-height: 1.4;
+	pointer-events: none;
+}
+
+/* small embedded controls under the title */
+.embedded-controls{
+	position: fixed;
+	left: 12px;
+	top: 40px; /* below title */
+	z-index: 1300;
+	display:flex;
+	gap:8px;
+	align-items:center;
+	pointer-events: auto;
+}
+.embedded-controls select{
+	background: rgba(96,165,250,0.03);
+	color: var(--accent);
+	border: 1px solid rgba(96,165,250,0.14);
+	padding:4px 6px;
+	border-radius:6px;
+	-webkit-appearance: none;
+	appearance: none;
+}
+.embedded-controls button{
+	background: rgba(255,255,255,0.02);
+	color: var(--text);
+	border: 1px solid rgba(255,255,255,0.06);
+	padding:6px 8px;
+	border-radius:6px;
+	cursor:pointer;
+}
+.status{
+	min-width:220px;
+	padding:12px;
+	background:rgba(255,255,255,0.02);
+	border-radius:8px;
+	border:1px solid rgba(255,255,255,0.03);
+}
+
+/* Mobile: stack status under canvas and make buttons larger for touch */
+@media (max-width: 900px){
+	.content-grid{ grid-template-columns: 1fr; }
+	.left-col{ order: 1; }
+	.right-col{ order: 2; }
+	.status{ width: 100%; }
+	.container{ padding:8px; margin:8px auto; }
+	.controls button{ padding:10px 14px; font-size:1rem; }
+}
+
+/* Very small devices: allow page scrolling if content overflows */
+@media (max-height: 420px){
+	html, body { height: auto; }
+	.container{ min-height: auto; }
+}
+
+/* On-screen touch controls for mobile */
+.touch-controls{ display:none; gap:12px; margin-top:10px }
+@media (max-width:760px){
+	.touch-controls{ display:flex; }
+	.touch-controls button{ padding:12px 18px; border-radius:8px; font-size:1.1rem }
+}
+.status div{margin-bottom:8px;font-size:0.95rem}
+footer{margin-top:12px;color:rgba(255,255,255,0.55);font-size:0.9rem}

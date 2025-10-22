@@ -1,0 +1,14 @@
+Template Game Integration Steps
+
+1. Copy this folder to a new folder under frontend/public/games/<your-slug>
+2. Update meta.json with slug/title/thumbnail
+3. Replace index.html content or leave as-is (game-root is provided)
+4. Implement game logic in app.js using the GameShell API (init/resize/pause/resume/destroy/onMessage/postToParent)
+5. In React, use src/components/GameEmbed.tsx:
+   <GameEmbed slug="your-slug" onMessage={(msg)=>console.log(msg)} />
+6. Optionally add a route in App.tsx for /games/<slug> and navigation link.
+
+PostMessage protocol:
+Parent -> child: {type:'PAUSE'|'RESUME'|'INIT'|'SET_DIFFICULTY', ...}
+Child -> parent: {type:'READY'|'SCORE'|'HIGH_SCORE'|'STATE_SAVED'...}
+

@@ -6,7 +6,9 @@ const Advertisement = () => {
       elevation={2} 
       sx={{ 
         width: '200px',
-        minHeight: '600px',
+        minHeight: { xs: '240px', sm: '400px' },
+        maxHeight: 'calc(100vh - 120px)', /* responsive to viewport */
+        overflowY: 'auto',
         p: 2,
         display: 'flex',
         flexDirection: 'column',
