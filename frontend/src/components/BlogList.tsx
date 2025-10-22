@@ -233,7 +233,7 @@ export default function BlogList() {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-            <Container maxWidth="md" sx={{ mt: 4, mb: 4, flex: 1 }}>
+            <Container maxWidth="md" sx={{ mt: 4, mb: 4, flexGrow: 1, minWidth: 0 }}>
                 {/* ...existing blog list code (copied from above, minus the outer Container)... */}
                 <Box sx={{ mb: 4 }}>
                     <Box sx={{ 
@@ -719,14 +719,19 @@ export default function BlogList() {
                     </DialogActions>
                 </Dialog>
             </Container>
-               <Box sx={{
-                        mt: { xs: 3, md: 0 },
-                        ml: { md: 3 },
-                        position: { md: 'sticky' },
-                        top: { md: '5rem' },
-                        width: { md: '300px' },
-                        alignSelf: { md: 'flex-start' }
-                }}>
+            <Box
+                sx={{
+                    marginTop: '0',
+                    ml: 6,
+                    alignSelf: 'flex-start',
+                    position: 'sticky',
+                    top: '5rem',
+                    width: '200px',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    mr: 1
+                }}
+            >
                 <Advertisement />
             </Box>
         </Box>

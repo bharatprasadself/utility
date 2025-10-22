@@ -25,6 +25,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import ClearIcon from '@mui/icons-material/Clear';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Advertisement from '../Advertisement';
@@ -42,9 +43,17 @@ interface ArticleLayoutProps {
 }
 
 // Local markdown preview styled similarly to Blogs, with heading size constraints
-const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean }> = ({ content, hideLeadingH1 = false }) => {
+const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stripFootnotes?: boolean }> = ({ content, hideLeadingH1 = false, stripFootnotes = false }) => {
   // Optionally remove a top-level H1 to avoid giant duplicate title
-  const processed = hideLeadingH1 ? content.replace(/^\s*#\s+.*\n?/, '') : content;
+  let processed = hideLeadingH1 ? content.replace(/^\s*#\s+.*\n?/, '') : content;
+  // When rendering short descriptions, footnote references like [^1] often have no local definitions;
+  // strip them to avoid showing literal markers in previews.
+  if (stripFootnotes) {
+    // Remove definitions like: [^1]: some text
+    processed = processed.replace(/^\s*\[\^[^\]]+\]:.*$/gm, '');
+    // Remove references like: [^1]
+    processed = processed.replace(/\[\^[^\]]+\]/g, '');
+  }
   return (
     <Box sx={{
       '& hr': { my: 3, border: 'none', height: '1px', bgcolor: 'grey.300' },
@@ -59,7 +68,8 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean }> = 
       },
       '& ul, & ol': { mb: 2, pl: 3 },
       '& li': { mb: 1 },
-      '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'monospace' }
+      '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
+      '& pre': { bgcolor: 'grey.100', p: 2, borderRadius: 1, overflowX: 'auto' }
     }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -98,7 +108,55 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean }> = 
             <Typography component="p" variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
               {props.children}
             </Typography>
-          )
+          ),
+          code: (props: any) => {
+            const { inline, children } = props;
+            const text = String(children ?? '').replace(/\n$/, '');
+            if (inline) {
+              return (
+                <Box component="code" sx={{ bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' }}>
+                  {text}
+                </Box>
+              );
+            }
+            return (
+              <Box sx={{ position: 'relative', my: 2 }}>
+                <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace', fontSize: '0.9rem' }}>
+                  <code>{text}</code>
+                </Box>
+                <Tooltip title="Copy">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      // Best-effort clipboard copy
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).catch(() => {});
+                      }
+                    }}
+                    sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'background.paper', border: '1px solid', borderColor: 'grey.300', '&:hover': { bgcolor: 'grey.50' } }}
+                    aria-label="Copy code"
+                  >
+                    <ContentCopyIcon fontSize="inherit" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            );
+          },
+          img: (props: any) => {
+            const alt = props.alt as string | undefined;
+            const src = props.src as string | undefined;
+            return (
+              <Box sx={{ my: 2, textAlign: 'center' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }} />
+                {alt && (
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    {alt}
+                  </Typography>
+                )}
+              </Box>
+            );
+          }
         }}
       >
         {processed}
@@ -120,7 +178,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   const [open, setOpen] = useState(false);
   const [editArticleId, setEditArticleId] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState('');
-  const [descInput, setDescInput] = useState('');
   const [contentInput, setContentInput] = useState('');
   const [tagsInput, setTagsInput] = useState<string[]>(['Spring Boot']); // Default tag
   const [readTimeInput, setReadTimeInput] = useState('');
@@ -146,7 +203,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   const openEditDialog = (article: Article) => {
     setEditArticleId(article.id);
     setTitleInput(article.title || '');
-    setDescInput(article.description || '');
     setContentInput(article.content || '');
     setTagsInput(article.tags || ['Spring Boot']);
     setReadTimeInput(article.readTime || '');
@@ -157,7 +213,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     setOpen(false);
     setEditArticleId(null);
     setTitleInput('');
-    setDescInput('');
     setContentInput('');
     setTagsInput(['Spring Boot']); // Reset to default tag
     setReadTimeInput('');
@@ -188,11 +243,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
         const firstLine = text.split('\n')[0] || '';
         if (!titleInput && firstLine.startsWith('# ')) {
           setTitleInput(firstLine.substring(2).trim());
-        }
-        // Extract description from first paragraph if empty
-        const para = text.split('\n\n')[1]?.trim();
-        if (!descInput && para && !para.startsWith('#')) {
-          setDescInput(para);
         }
         // Estimate read time
         const words = text.trim().split(/\s+/).filter(Boolean).length;
@@ -237,29 +287,15 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     try {
       // Get category from articles or default to SPRING_BOOT
       const categoryValue = articles.length > 0 ? articles[0].category : ArticleCategory.SPRING_BOOT;
-      
-      // Derive description if empty from content (first paragraph / snippet)
-      let effectiveDescription = (descInput || '').trim();
-      if (!effectiveDescription) {
-        const contentNoH1 = contentInput.replace(/^#\s+.*\n?/, '');
-        const paragraphBlocks = contentNoH1.split(/\n{2,}/).map(b => b.trim()).filter(Boolean);
-        const firstNonHeading = paragraphBlocks.find(b => !b.startsWith('#')) || contentNoH1.split('\n').slice(0, 3).join(' ').trim();
-        // Preserve markdown so it can render in description areas; just trim and limit length
-        effectiveDescription = (firstNonHeading || '').trim();
-        if (effectiveDescription.length > 200) {
-          effectiveDescription = effectiveDescription.slice(0, 200).trim() + '…';
-        }
-      }
 
       // Common article data for both create and update
-      const articleData = {
+      const baseData = {
         title: titleInput.trim(),
-        description: effectiveDescription,
         content: contentInput,
         tags: tagsInput.length ? tagsInput : ['Spring Boot'], // Ensure we have at least one tag
         readTime: readTimeInput || '5 min read',
         category: categoryValue
-      };
+      } as const;
       
       if (editArticleId) {
         // Handle edit logic by finding the article to update
@@ -271,7 +307,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           // Call the parent component's handleEdit function with the updated article
           handleEdit({
             ...articleToEdit,
-            ...articleData
+            ...baseData,
+            // Preserve existing description on edit to avoid data loss
+            description: articleToEdit.description
           });
         } else {
           console.error('Article not found for editing or handleEdit not provided');
@@ -281,7 +319,10 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   // Debug log removed
         
         // Create new article
-        await handleCreate(articleData);
+        await handleCreate({
+          ...baseData,
+          description: ''
+        });
       }
       
       handleClose();
@@ -312,7 +353,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               {title}
             </Typography>
             <Box sx={{ mb: 2 }}>
-              <MarkdownPreview content={description} />
+              <MarkdownPreview content={description} stripFootnotes />
               {isAdmin && (
                 <Typography
                   component="span"
@@ -397,13 +438,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   )}
                 </Box>
                 <Box sx={{ position: 'relative' }}>
-                  <Box sx={{
-                    color: '#34495e',
-                    lineHeight: 1.5,
-                    mb: 2
-                  }}>
-                    <MarkdownPreview content={article.description} hideLeadingH1 />
-                  </Box>
 
                   {article.content && (
                     expandedArticles.has(article.id) ? (
@@ -517,34 +551,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   }
                 }}
               />
-              <TextField
-                label="Description"
-                value={descInput}
-                onChange={(e) => setDescInput(e.target.value)}
-                multiline
-                rows={2}
-                fullWidth
-                required
-                variant="outlined"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1
-                  }
-                }}
-              />
-              {descInput && (
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    Description Preview
-                  </Typography>
-                  <Paper
-                    variant="outlined"
-                    sx={{ p: 2, bgcolor: 'grey.50' }}
-                  >
-                    <MarkdownPreview content={descInput} hideLeadingH1 />
-                  </Paper>
-                </Box>
-              )}
+              
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                 <TextField
                   label="Content (Markdown supported)"
@@ -559,6 +566,11 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: 1
+                    },
+                    '& .MuiInputBase-input, & .MuiInputBase-inputMultiline': {
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
+                      fontSize: '0.95rem',
+                      lineHeight: 1.6
                     }
                   }}
                 />
@@ -607,12 +619,65 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   <UploadFileIcon fontSize="small" /> Imported from: {importedFileName}
                 </Typography>
               )}
-              {/* Size indicator and warnings */}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Toolbar: helpers on the left, size on the right */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    onClick={() => {
+                      const textArea = contentTextAreaRef.current;
+                      const start = textArea ? textArea.selectionStart : contentInput.length;
+                      const end = textArea ? textArea.selectionEnd : contentInput.length;
+                      let divider = '\n---\n';
+                      if (!contentInput.endsWith('\n\n')) {
+                        divider = '\n\n' + divider;
+                      }
+                      if (!contentInput.substring(end).startsWith('\n')) {
+                        divider = divider + '\n';
+                      }
+                      const newContent = contentInput.substring(0, start) + divider + contentInput.substring(end);
+                      setContentInput(newContent);
+                      setTimeout(() => {
+                        if (textArea) {
+                          const newPosition = start + divider.length;
+                          textArea.focus();
+                          textArea.selectionStart = textArea.selectionEnd = newPosition;
+                        }
+                      }, 0);
+                    }}
+                    variant="text"
+                    size="small"
+                  >
+                    Insert Divider
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const textArea = contentTextAreaRef.current;
+                      if (!textArea) return;
+                      const start = textArea.selectionStart;
+                      const end = textArea.selectionEnd;
+                      const selectedText = contentInput.substring(start, end);
+                      const newContent = contentInput.substring(0, start) + '**' + (selectedText || '') + '**' + contentInput.substring(end);
+                      setContentInput(newContent);
+                      setTimeout(() => {
+                        textArea.focus();
+                        if (selectedText) {
+                          textArea.selectionStart = textArea.selectionEnd = start + selectedText.length + 4;
+                        } else {
+                          textArea.selectionStart = textArea.selectionEnd = start + 2;
+                        }
+                      }, 0);
+                    }}
+                    variant="text"
+                    size="small"
+                  >
+                    Bold Text
+                  </Button>
+                </Stack>
                 <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
                   Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB limit)' : overSoft ? ' (getting large)' : ''}
                 </Typography>
               </Box>
+
               {overHard && (
                 <Alert severity="error" sx={{ mt: 1, borderRadius: 1 }}>
                   Content exceeds the 1 MB limit. Please remove images/sections or split into multiple articles.
@@ -623,59 +688,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   Your content is getting large (over 250 KB). Consider trimming or splitting for faster loads.
                 </Alert>
               )}
-              {/* Content helpers like Blogs */}
-              <Stack direction="row" spacing={1} mt={1}>
-                <Button
-                  onClick={() => {
-                    const textArea = contentTextAreaRef.current;
-                    const start = textArea ? textArea.selectionStart : contentInput.length;
-                    const end = textArea ? textArea.selectionEnd : contentInput.length;
-                    let divider = '\n---\n';
-                    if (!contentInput.endsWith('\n\n')) {
-                      divider = '\n\n' + divider;
-                    }
-                    if (!contentInput.substring(end).startsWith('\n')) {
-                      divider = divider + '\n';
-                    }
-                    const newContent = contentInput.substring(0, start) + divider + contentInput.substring(end);
-                    setContentInput(newContent);
-                    setTimeout(() => {
-                      if (textArea) {
-                        const newPosition = start + divider.length;
-                        textArea.focus();
-                        textArea.selectionStart = textArea.selectionEnd = newPosition;
-                      }
-                    }, 0);
-                  }}
-                  variant="text"
-                  size="small"
-                >
-                  Insert Divider
-                </Button>
-                <Button
-                  onClick={() => {
-                    const textArea = contentTextAreaRef.current;
-                    if (!textArea) return;
-                    const start = textArea.selectionStart;
-                    const end = textArea.selectionEnd;
-                    const selectedText = contentInput.substring(start, end);
-                    const newContent = contentInput.substring(0, start) + '**' + (selectedText || '') + '**' + contentInput.substring(end);
-                    setContentInput(newContent);
-                    setTimeout(() => {
-                      textArea.focus();
-                      if (selectedText) {
-                        textArea.selectionStart = textArea.selectionEnd = start + selectedText.length + 4;
-                      } else {
-                        textArea.selectionStart = textArea.selectionEnd = start + 2;
-                      }
-                    }, 0);
-                  }}
-                  variant="text"
-                  size="small"
-                >
-                  Bold Text
-                </Button>
-              </Stack>
 
               {/* Preview section like Blogs */}
               {contentInput && (

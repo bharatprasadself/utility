@@ -72,7 +72,7 @@ export const ArticleDetail: React.FC = () => {
     if (navigator.share) {
       navigator.share({
         title: article?.title,
-        text: article?.description,
+        text: stripFootnotes(getContentSnippet(article?.content || '')),
         url: window.location.href,
       }).catch(console.error);
     } else {
@@ -140,9 +140,7 @@ export const ArticleDetail: React.FC = () => {
               <Chip label={article.category} color="primary" size="small" />
             </Box>
 
-            <Box sx={{ mb: 3 }}>
-              <MarkdownContent content={article.description} hideLeadingH1 />
-            </Box>
+            {/* Description removed as per latest requirements */}
 
             <Box sx={{ mb: 3,
               '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
@@ -231,3 +229,37 @@ const MarkdownContent: React.FC<{ content: string; hideLeadingH1?: boolean }> = 
     </ReactMarkdown>
   );
 };
+
+// Remove footnote references/definitions for short snippets where definitions are not present
+function stripFootnotes(text: string): string {
+  let t = text || '';
+  // Remove definitions like: [^1]: some text
+  t = t.replace(/^\s*\[\^[^\]]+\]:.*$/gm, '');
+  // Remove references like: [^1]
+  t = t.replace(/\[\^[^\]]+\]/g, '');
+  return t;
+}
+
+// Build a short plain-text snippet from content for sharing
+function getContentSnippet(markdown: string, maxLen: number = 160): string {
+  if (!markdown) return '';
+  // Remove a leading H1 line
+  let text = markdown.replace(/^\s*#\s+.*\n?/, '');
+  // Remove markdown syntax to get a rough plain text
+  text = text
+    .replace(/`{1,3}[^`]*`{1,3}/g, '') // inline code
+    .replace(/\*\*|__/g, '') // bold markers
+    .replace(/\*|_/g, '') // emphasis markers
+    .replace(/!\[[^\]]*\]\([^\)]*\)/g, '') // images
+    .replace(/\[[^\]]*\]\([^\)]*\)/g, '$1') // links -> text
+    .replace(/^>\s?/gm, '') // blockquotes
+    .replace(/^\s*[-*+]\s+/gm, '') // list markers
+    .replace(/^\s*\d+\.\s+/gm, '') // ordered list markers
+    .replace(/#{1,6}\s+/g, '') // headings
+    .replace(/\r?\n+/g, ' ') // newlines to spaces
+    .trim();
+  if (text.length > maxLen) {
+    text = text.slice(0, maxLen).trim() + '…';
+  }
+  return text;
+}
