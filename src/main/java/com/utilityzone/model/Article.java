@@ -19,7 +19,8 @@ public class Article {
     @Column(nullable = false, length = 2000)
     private String description;
 
-    @Column(nullable = false, length = 10000)
+    @Lob
+    @Column(nullable = false)
     private String content;
 
     @ElementCollection(fetch = FetchType.EAGER) // Use EAGER fetching to avoid lazy loading issues

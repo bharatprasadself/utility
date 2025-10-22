@@ -13,72 +13,117 @@ import {
     Container,
     Box,
     Paper,
+    IconButton,
+    Tooltip,
 } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Advertisement from './Advertisement';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import blogService from '../services/blog';
 import type { Blog, BlogRequest } from '../services/blog';
 import { useAuth } from '../contexts/AuthContext';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import ClearIcon from '@mui/icons-material/Clear';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
-const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => (
+const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
+    // Clean up common inline HTML artifacts from pasted content
+    const cleaned = content
+        .replace(/<span[^>]*style=["'][^"']*display\s*:\s*none[^"']*["'][^>]*>.*?<\/span>/gis, '')
+        .replace(/<div[^>]*align=["']center["'][^>]*>.*?<\/div>/gis, '');
+    return (
     <Box sx={{
-        '& hr': {
-            my: 3,
-            border: 'none',
-            height: '1px',
-            bgcolor: 'grey.300'
-        },
-        '& p': {
-            mb: 2,
-            lineHeight: 1.6
-        },
-        '& h1, & h2, & h3, & h4, & h5, & h6': {
-            mt: 3,
-            mb: 2,
-            color: 'primary.main'
-        },
-        '& a': {
-            color: 'primary.main',
-            textDecoration: 'none',
-            '&:hover': {
-                textDecoration: 'underline'
-            }
-        },
-        '& img': {
-            maxWidth: '100%',
-            height: 'auto',
-            borderRadius: 1
-        },
-        '& blockquote': {
-            borderLeft: '4px solid',
-            borderColor: 'primary.main',
-            pl: 2,
-            py: 1,
-            my: 2,
-            bgcolor: 'grey.50',
-            fontStyle: 'italic'
-        },
-        '& ul, & ol': {
-            mb: 2,
-            pl: 3
-        },
-        '& li': {
-            mb: 1
-        },
-        '& code': {
-            bgcolor: 'grey.100',
-            px: 1,
-            py: 0.5,
-            borderRadius: 1,
-            fontFamily: 'monospace'
-        }
+        '& hr': { my: 3, border: 'none', height: '1px', bgcolor: 'grey.300' },
+        '& p': { mb: 2, lineHeight: 1.6 },
+        '& h1, & h2, & h3, & h4, & h5, & h6': { mt: 3, mb: 2, color: 'primary.main' },
+        '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
+        '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1 },
+        '& table': { width: '100%', borderCollapse: 'collapse', my: 2 },
+        '& th, & td': { border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' },
+        '& thead th': { bgcolor: 'grey.100', fontWeight: 600 },
+        '& blockquote': { borderLeft: '4px solid', borderColor: 'primary.main', pl: 2, py: 1, my: 2, bgcolor: 'grey.50', fontStyle: 'italic' },
+        '& ul, & ol': { mb: 2, pl: 3 },
+        '& li': { mb: 1 },
+        '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
+        '& pre': { bgcolor: 'grey.100', p: 2, borderRadius: 1, overflowX: 'auto' }
     }}>
-        <ReactMarkdown>{content}</ReactMarkdown>
+        <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+                code: (props: any) => {
+                    const { inline, children } = props;
+                    const text = String(children ?? '').replace(/\n$/, '');
+                    if (inline || (!text.includes('\n'))) {
+                        return (
+                            <Box component="code" sx={{ bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace' }}>
+                                {text}
+                            </Box>
+                        );
+                    }
+                    return (
+                        <Box sx={{ position: 'relative', my: 2 }}>
+                            <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
+                                <code>{text}</code>
+                            </Box>
+                            <Tooltip title="Copy">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => {
+                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                            navigator.clipboard.writeText(text).catch(() => {});
+                                        }
+                                    }}
+                                    sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'background.paper', border: '1px solid', borderColor: 'grey.300', '&:hover': { bgcolor: 'grey.50' } }}
+                                    aria-label="Copy code"
+                                >
+                                    <ContentCopyIcon fontSize="inherit" />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+                    );
+                },
+                img: (props: any) => {
+                    const alt = props.alt as string | undefined;
+                    const src = props.src as string | undefined;
+                    return (
+                        <Box sx={{ my: 2, textAlign: 'center' }}>
+                            <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }} />
+                            {alt && (
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                    {alt}
+                                </Typography>
+                            )}
+                        </Box>
+                    );
+                },
+                table: (props: any) => (
+                    <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', my: 2 }}>
+                        {props.children}
+                    </Box>
+                ),
+                thead: (props: any) => <Box component="thead">{props.children}</Box>,
+                tbody: (props: any) => <Box component="tbody">{props.children}</Box>,
+                tr: (props: any) => <Box component="tr">{props.children}</Box>,
+                th: (props: any) => (
+                    <Box component="th" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', bgcolor: 'grey.100', fontWeight: 600 }}>
+                        {props.children}
+                    </Box>
+                ),
+                td: (props: any) => (
+                    <Box component="td" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' }}>
+                        {props.children}
+                    </Box>
+                )
+            }}
+        >
+            {cleaned}
+        </ReactMarkdown>
     </Box>
-);
+    );
+};
 
 
 
@@ -92,6 +137,16 @@ export default function BlogList() {
     const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
     const [expandedPosts, setExpandedPosts] = useState<number[]>([]);
     const { user } = useAuth();
+    // Markdown import helpers
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [importedFileName, setImportedFileName] = useState('');
+
+    // Content size checks (soft 250KB, hard 1MB)
+    const SOFT_LIMIT = 250 * 1024; // 250KB
+    const HARD_LIMIT = 1024 * 1024; // 1MB
+    const contentBytes = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(content).length : content.length;
+    const overSoft = contentBytes > SOFT_LIMIT;
+    const overHard = contentBytes > HARD_LIMIT;
 
     const isAdmin = user?.roles?.includes("ROLE_ADMIN") ?? false;
 
@@ -121,6 +176,14 @@ export default function BlogList() {
     const handleSubmit = async () => {
         if (!isAdmin) {
             setError('You must be an admin to manage blogs');
+            return;
+        }
+        if (!title.trim() || !content.trim()) {
+            setError('Title and content are required');
+            return;
+        }
+        if (overHard) {
+            setError('Content exceeds the 1 MB limit. Please reduce the size before saving.');
             return;
         }
         try {
@@ -173,11 +236,44 @@ export default function BlogList() {
         setTitle('');
         setContent('');
         setError('');
+        setImportedFileName('');
+    };
+
+    const handleMarkdownImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.name.toLowerCase().endsWith('.md')) {
+            setError('Please select a Markdown (.md) file');
+            e.target.value = '';
+            return;
+        }
+
+        if (file.size > HARD_LIMIT) {
+            setError('Selected file exceeds the 1 MB limit. Please choose a smaller Markdown file.');
+            e.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const text = (ev.target?.result as string) || '';
+            setContent(text);
+            setImportedFileName(file.name);
+            // If title is empty, attempt to derive from first markdown H1
+            const firstLine = text.split('\n')[0] || '';
+            if (!title && firstLine.startsWith('# ')) {
+                setTitle(firstLine.substring(2).trim());
+            }
+        };
+        reader.readAsText(file);
+        // allow reselecting same file
+        e.target.value = '';
     };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-            <Container maxWidth="md" sx={{ mt: 4, mb: 4, flex: 1 }}>
+            <Container maxWidth="md" sx={{ mt: 4, mb: 4, flexGrow: 1, minWidth: 0 }}>
                 {/* ...existing blog list code (copied from above, minus the outer Container)... */}
                 <Box sx={{ mb: 4 }}>
                     <Box sx={{ 
@@ -421,30 +517,163 @@ export default function BlogList() {
                             />
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <Box>
-                                    <TextField
-                                        label="Content (Markdown supported)"
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        multiline
-                                        rows={6}
-                                        fullWidth
-                                        required
-                                        variant="outlined"
-                                        inputProps={{
-                                            ref: (input: HTMLTextAreaElement | null) => {
-                                                if (input) {
-                                                    input.addEventListener('select', (e) => {
-                                                        e.preventDefault();
-                                                    });
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                                        <TextField
+                                            label="Content (Markdown supported)"
+                                            value={content}
+                                            onChange={(e) => setContent(e.target.value)}
+                                            multiline
+                                            rows={6}
+                                            fullWidth
+                                            required
+                                            variant="outlined"
+                                            inputProps={{
+                                                ref: (input: HTMLTextAreaElement | null) => {
+                                                    if (input) {
+                                                        input.addEventListener('select', (e) => {
+                                                            e.preventDefault();
+                                                        });
+                                                    }
                                                 }
-                                            }
-                                        }}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                borderRadius: 1
-                                            }
-                                        }}
-                                    />
+                                            }}
+                                            sx={{
+                                                flex: 1,
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 1
+                                                },
+                                                '& .MuiInputBase-input, & .MuiInputBase-inputMultiline': {
+                                                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
+                                                    fontSize: '0.95rem',
+                                                    lineHeight: 1.6
+                                                }
+                                            }}
+                                        />
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 1 }}>
+                                            <input
+                                                type="file"
+                                                accept=".md"
+                                                onChange={handleMarkdownImport}
+                                                style={{ display: 'none' }}
+                                                ref={fileInputRef}
+                                            />
+                                            <Tooltip title="Import Markdown File" placement="left">
+                                                <IconButton
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    size="medium"
+                                                    sx={{
+                                                        width: 40,
+                                                        height: 40,
+                                                        borderRadius: 2,
+                                                        bgcolor: 'primary.main',
+                                                        color: 'common.white',
+                                                        boxShadow: 1,
+                                                        '&:hover': { bgcolor: 'primary.dark' }
+                                                    }}
+                                                >
+                                                    <UploadFileIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                            {importedFileName && (
+                                                <Tooltip title="Clear imported content" placement="left">
+                                                    <IconButton
+                                                        onClick={() => {
+                                                            setContent('');
+                                                            setImportedFileName('');
+                                                        }}
+                                                        size="medium"
+                                                        sx={{
+                                                            width: 40,
+                                                            height: 40,
+                                                            borderRadius: 2,
+                                                            bgcolor: 'error.main',
+                                                            color: 'common.white',
+                                                            boxShadow: 1,
+                                                            '&:hover': { bgcolor: 'error.dark' }
+                                                        }}
+                                                    >
+                                                        <ClearIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                    {importedFileName && (
+                                        <Typography 
+                                            variant="caption" 
+                                            color="text.secondary"
+                                            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}
+                                        >
+                                            <UploadFileIcon fontSize="inherit" /> Imported from: {importedFileName}
+                                        </Typography>
+                                    )}
+                                    {/* Toolbar: helpers on the left, size on the right */}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                                        <Stack direction="row" spacing={1}>
+                                            <Button
+                                                onClick={() => {
+                                                    const textArea = document.querySelector('textarea');
+                                                    const start = textArea ? (textArea as HTMLTextAreaElement).selectionStart : content.length;
+                                                    const end = textArea ? (textArea as HTMLTextAreaElement).selectionEnd : content.length;
+                                                    let divider = '\n---\n';
+                                                    if (!content.endsWith('\n\n')) {
+                                                        divider = '\n\n' + divider;
+                                                    }
+                                                    if (!content.substring(end).startsWith('\n')) {
+                                                        divider = divider + '\n';
+                                                    }
+                                                    const newContent = content.substring(0, start) + divider + content.substring(end);
+                                                    setContent(newContent);
+                                                    setTimeout(() => {
+                                                        if (textArea) {
+                                                            const newPosition = start + divider.length;
+                                                            (textArea as HTMLTextAreaElement).focus();
+                                                            (textArea as HTMLTextAreaElement).selectionStart = (textArea as HTMLTextAreaElement).selectionEnd = newPosition;
+                                                        }
+                                                    }, 0);
+                                                }}
+                                                variant="text"
+                                                size="small"
+                                            >
+                                                Insert Divider
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    const textArea = document.querySelector('textarea') as HTMLTextAreaElement | null;
+                                                    if (!textArea) return;
+                                                    const start = textArea.selectionStart;
+                                                    const end = textArea.selectionEnd;
+                                                    const selectedText = content.substring(start, end);
+                                                    const newContent = content.substring(0, start) + '**' + (selectedText || '') + '**' + content.substring(end);
+                                                    setContent(newContent);
+                                                    setTimeout(() => {
+                                                        textArea.focus();
+                                                        if (selectedText) {
+                                                            textArea.selectionStart = textArea.selectionEnd = start + selectedText.length + 4;
+                                                        } else {
+                                                            textArea.selectionStart = textArea.selectionEnd = start + 2;
+                                                        }
+                                                    }, 0);
+                                                }}
+                                                variant="text"
+                                                size="small"
+                                            >
+                                                Bold Text
+                                            </Button>
+                                        </Stack>
+                                        <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
+                                            Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB limit)' : overSoft ? ' (getting large)' : ''}
+                                        </Typography>
+                                    </Box>
+                                    {overHard && (
+                                        <Alert severity="error" sx={{ mt: 1, borderRadius: 1 }}>
+                                            Content exceeds the 1 MB limit. Please remove images/sections or split into multiple posts.
+                                        </Alert>
+                                    )}
+                                    {!overHard && overSoft && (
+                                        <Alert severity="warning" sx={{ mt: 1, borderRadius: 1 }}>
+                                            Your content is getting large (over 250 KB). Consider trimming or splitting for faster loads.
+                                        </Alert>
+                                    )}
                                     <Stack direction="row" spacing={1} mt={1}>
                                         <Button
                                             onClick={() => {
@@ -543,6 +772,7 @@ export default function BlogList() {
                             onClick={handleSubmit} 
                             variant="contained" 
                             color="primary"
+                            disabled={!title.trim() || !content.trim() || overHard}
                             sx={{ borderRadius: 1, px: 3 }}
                         >
                             {editBlogId ? 'Update' : 'Create'}
@@ -586,16 +816,31 @@ export default function BlogList() {
                     </DialogActions>
                 </Dialog>
             </Container>
-               <Box sx={{
-                        mt: { xs: 3, md: 0 },
-                        ml: { md: 3 },
-                        position: { md: 'sticky' },
-                        top: { md: '5rem' },
-                        width: { md: '300px' },
-                        alignSelf: { md: 'flex-start' }
-                }}>
+            <Box
+                sx={{
+                    marginTop: '0',
+                    ml: 6,
+                    alignSelf: 'flex-start',
+                    position: 'sticky',
+                    top: '5rem',
+                    width: '200px',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    mr: 1
+                }}
+            >
                 <Advertisement />
             </Box>
         </Box>
     );
+}
+
+// Helper to format bytes nicely
+function formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const value = bytes / Math.pow(k, i);
+    return `${value.toFixed(value >= 100 || i === 0 ? 0 : value >= 10 ? 1 : 2)} ${sizes[i]}`;
 }

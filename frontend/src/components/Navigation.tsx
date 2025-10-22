@@ -18,19 +18,18 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/' },
   { label: 'Blogs', path: '/blogs' },
-  // Articles section hidden for future release
-  // { 
-  //   label: 'Articles',
-  //   path: '/articles',
-  //   subItems: [
-  //     { label: 'Spring Boot', path: '/articles/spring-boot' },
-  //     { label: 'React JS', path: '/articles/react' },
-  //     { label: 'Java', path: '/articles/java' },
-  //     { label: 'PostgreSQL', path: '/articles/postgresql' },
-  //     { label: 'Docker', path: '/articles/docker' },
-  //     { label: 'Microservices', path: '/articles/microservices' },
-  //   ]
-  // }
+  { 
+    label: 'Articles',
+    path: '/articles',
+    subItems: [
+      { label: 'Spring Boot', path: '/articles/spring-boot' },
+      { label: 'React JS', path: '/articles/react' },
+      { label: 'Java', path: '/articles/java' },
+      { label: 'PostgreSQL', path: '/articles/postgresql' },
+      { label: 'Docker', path: '/articles/docker' },
+      { label: 'Microservices', path: '/articles/microservices' },
+    ]
+  }
 ];
 
 const Navigation = () => {
