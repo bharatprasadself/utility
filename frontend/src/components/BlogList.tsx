@@ -674,74 +674,7 @@ export default function BlogList() {
                                             Your content is getting large (over 250 KB). Consider trimming or splitting for faster loads.
                                         </Alert>
                                     )}
-                                    <Stack direction="row" spacing={1} mt={1}>
-                                        <Button
-                                            onClick={() => {
-                                                // Insert divider at cursor position or at the end if no cursor position
-                                                const textArea = document.querySelector('textarea');
-                                                const start = textArea ? textArea.selectionStart : content.length;
-                                                const end = textArea ? textArea.selectionEnd : content.length;
-                                                
-                                                // Add spacing around divider if not already present
-                                                let divider = '\n---\n';
-                                                if (!content.endsWith('\n\n')) {
-                                                    divider = '\n\n' + divider;
-                                                }
-                                                if (!content.substring(end).startsWith('\n')) {
-                                                    divider = divider + '\n';
-                                                }
-                                                
-                                                const newContent = content.substring(0, start) + divider + content.substring(end);
-                                                setContent(newContent);
-                                                
-                                                // Focus and move cursor after the divider
-                                                setTimeout(() => {
-                                                    if (textArea) {
-                                                        const newPosition = start + divider.length;
-                                                        textArea.focus();
-                                                        textArea.selectionStart = textArea.selectionEnd = newPosition;
-                                                    }
-                                                }, 0);
-                                            }}
-                                            variant="text"
-                                            size="small"
-                                        >
-                                            Insert Divider
-                                        </Button>
-                                        <Button
-                                            onClick={() => {
-                                                const textArea = document.querySelector('textarea');
-                                                if (!textArea) return;
-                                                
-                                                const start = textArea.selectionStart;
-                                                const end = textArea.selectionEnd;
-                                                const selectedText = content.substring(start, end);
-                                                
-                                                // If text is selected, wrap it in bold markers
-                                                // If no text is selected, insert bold markers and place cursor between them
-                                                const newContent = content.substring(0, start) + 
-                                                    '**' + (selectedText || '') + '**' + 
-                                                    content.substring(end);
-                                                
-                                                setContent(newContent);
-                                                
-                                                // Position cursor after the bold text if text was selected,
-                                                // or between the ** marks if no text was selected
-                                                setTimeout(() => {
-                                                    textArea.focus();
-                                                    if (selectedText) {
-                                                        textArea.selectionStart = textArea.selectionEnd = start + selectedText.length + 4;
-                                                    } else {
-                                                        textArea.selectionStart = textArea.selectionEnd = start + 2;
-                                                    }
-                                                }, 0);
-                                            }}
-                                            variant="text"
-                                            size="small"
-                                        >
-                                            Bold Text
-                                        </Button>
-                                    </Stack>
+                                    
                                 </Box>
 
                                 {content && (
