@@ -27,63 +27,103 @@ import type { Blog, BlogRequest } from '../services/blog';
 import { useAuth } from '../contexts/AuthContext';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import ClearIcon from '@mui/icons-material/Clear';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
-const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => (
+const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
+    // Clean up common inline HTML artifacts from pasted content
+    const cleaned = content
+        .replace(/<span[^>]*style=["'][^"']*display\s*:\s*none[^"']*["'][^>]*>.*?<\/span>/gis, '')
+        .replace(/<div[^>]*align=["']center["'][^>]*>.*?<\/div>/gis, '');
+    return (
     <Box sx={{
-        '& hr': {
-            my: 3,
-            border: 'none',
-            height: '1px',
-            bgcolor: 'grey.300'
-        },
-        '& p': {
-            mb: 2,
-            lineHeight: 1.6
-        },
-        '& h1, & h2, & h3, & h4, & h5, & h6': {
-            mt: 3,
-            mb: 2,
-            color: 'primary.main'
-        },
-        '& a': {
-            color: 'primary.main',
-            textDecoration: 'none',
-            '&:hover': {
-                textDecoration: 'underline'
-            }
-        },
-        '& img': {
-            maxWidth: '100%',
-            height: 'auto',
-            borderRadius: 1
-        },
-        '& blockquote': {
-            borderLeft: '4px solid',
-            borderColor: 'primary.main',
-            pl: 2,
-            py: 1,
-            my: 2,
-            bgcolor: 'grey.50',
-            fontStyle: 'italic'
-        },
-        '& ul, & ol': {
-            mb: 2,
-            pl: 3
-        },
-        '& li': {
-            mb: 1
-        },
-        '& code': {
-            bgcolor: 'grey.100',
-            px: 1,
-            py: 0.5,
-            borderRadius: 1,
-            fontFamily: 'monospace'
-        }
+        '& hr': { my: 3, border: 'none', height: '1px', bgcolor: 'grey.300' },
+        '& p': { mb: 2, lineHeight: 1.6 },
+        '& h1, & h2, & h3, & h4, & h5, & h6': { mt: 3, mb: 2, color: 'primary.main' },
+        '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
+        '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1 },
+        '& table': { width: '100%', borderCollapse: 'collapse', my: 2 },
+        '& th, & td': { border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' },
+        '& thead th': { bgcolor: 'grey.100', fontWeight: 600 },
+        '& blockquote': { borderLeft: '4px solid', borderColor: 'primary.main', pl: 2, py: 1, my: 2, bgcolor: 'grey.50', fontStyle: 'italic' },
+        '& ul, & ol': { mb: 2, pl: 3 },
+        '& li': { mb: 1 },
+        '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
+        '& pre': { bgcolor: 'grey.100', p: 2, borderRadius: 1, overflowX: 'auto' }
     }}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+                code: (props: any) => {
+                    const { inline, children } = props;
+                    const text = String(children ?? '').replace(/\n$/, '');
+                    if (inline || (!text.includes('\n'))) {
+                        return (
+                            <Box component="code" sx={{ bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace' }}>
+                                {text}
+                            </Box>
+                        );
+                    }
+                    return (
+                        <Box sx={{ position: 'relative', my: 2 }}>
+                            <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
+                                <code>{text}</code>
+                            </Box>
+                            <Tooltip title="Copy">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => {
+                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                            navigator.clipboard.writeText(text).catch(() => {});
+                                        }
+                                    }}
+                                    sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'background.paper', border: '1px solid', borderColor: 'grey.300', '&:hover': { bgcolor: 'grey.50' } }}
+                                    aria-label="Copy code"
+                                >
+                                    <ContentCopyIcon fontSize="inherit" />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+                    );
+                },
+                img: (props: any) => {
+                    const alt = props.alt as string | undefined;
+                    const src = props.src as string | undefined;
+                    return (
+                        <Box sx={{ my: 2, textAlign: 'center' }}>
+                            <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }} />
+                            {alt && (
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                    {alt}
+                                </Typography>
+                            )}
+                        </Box>
+                    );
+                },
+                table: (props: any) => (
+                    <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', my: 2 }}>
+                        {props.children}
+                    </Box>
+                ),
+                thead: (props: any) => <Box component="thead">{props.children}</Box>,
+                tbody: (props: any) => <Box component="tbody">{props.children}</Box>,
+                tr: (props: any) => <Box component="tr">{props.children}</Box>,
+                th: (props: any) => (
+                    <Box component="th" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', bgcolor: 'grey.100', fontWeight: 600 }}>
+                        {props.children}
+                    </Box>
+                ),
+                td: (props: any) => (
+                    <Box component="td" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' }}>
+                        {props.children}
+                    </Box>
+                )
+            }}
+        >
+            {cleaned}
+        </ReactMarkdown>
     </Box>
-);
+    );
+};
 
 
 
@@ -500,6 +540,11 @@ export default function BlogList() {
                                                 flex: 1,
                                                 '& .MuiOutlinedInput-root': {
                                                     borderRadius: 1
+                                                },
+                                                '& .MuiInputBase-input, & .MuiInputBase-inputMultiline': {
+                                                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
+                                                    fontSize: '0.95rem',
+                                                    lineHeight: 1.6
                                                 }
                                             }}
                                         />
@@ -561,8 +606,60 @@ export default function BlogList() {
                                             <UploadFileIcon fontSize="inherit" /> Imported from: {importedFileName}
                                         </Typography>
                                     )}
-                                    {/* Size indicator and warnings */}
+                                    {/* Toolbar: helpers on the left, size on the right */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                                        <Stack direction="row" spacing={1}>
+                                            <Button
+                                                onClick={() => {
+                                                    const textArea = document.querySelector('textarea');
+                                                    const start = textArea ? (textArea as HTMLTextAreaElement).selectionStart : content.length;
+                                                    const end = textArea ? (textArea as HTMLTextAreaElement).selectionEnd : content.length;
+                                                    let divider = '\n---\n';
+                                                    if (!content.endsWith('\n\n')) {
+                                                        divider = '\n\n' + divider;
+                                                    }
+                                                    if (!content.substring(end).startsWith('\n')) {
+                                                        divider = divider + '\n';
+                                                    }
+                                                    const newContent = content.substring(0, start) + divider + content.substring(end);
+                                                    setContent(newContent);
+                                                    setTimeout(() => {
+                                                        if (textArea) {
+                                                            const newPosition = start + divider.length;
+                                                            (textArea as HTMLTextAreaElement).focus();
+                                                            (textArea as HTMLTextAreaElement).selectionStart = (textArea as HTMLTextAreaElement).selectionEnd = newPosition;
+                                                        }
+                                                    }, 0);
+                                                }}
+                                                variant="text"
+                                                size="small"
+                                            >
+                                                Insert Divider
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    const textArea = document.querySelector('textarea') as HTMLTextAreaElement | null;
+                                                    if (!textArea) return;
+                                                    const start = textArea.selectionStart;
+                                                    const end = textArea.selectionEnd;
+                                                    const selectedText = content.substring(start, end);
+                                                    const newContent = content.substring(0, start) + '**' + (selectedText || '') + '**' + content.substring(end);
+                                                    setContent(newContent);
+                                                    setTimeout(() => {
+                                                        textArea.focus();
+                                                        if (selectedText) {
+                                                            textArea.selectionStart = textArea.selectionEnd = start + selectedText.length + 4;
+                                                        } else {
+                                                            textArea.selectionStart = textArea.selectionEnd = start + 2;
+                                                        }
+                                                    }, 0);
+                                                }}
+                                                variant="text"
+                                                size="small"
+                                            >
+                                                Bold Text
+                                            </Button>
+                                        </Stack>
                                         <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
                                             Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB limit)' : overSoft ? ' (getting large)' : ''}
                                         </Typography>

@@ -183,7 +183,11 @@ export const ArticleDetail: React.FC = () => {
 
 // Reusable markdown renderer with heading size constraints and optional H1 removal
 const MarkdownContent: React.FC<{ content: string; hideLeadingH1?: boolean }> = ({ content, hideLeadingH1 = false }) => {
-  const processed = hideLeadingH1 ? content.replace(/^\s*#\s+.*\n?/, '') : content;
+  let processed = hideLeadingH1 ? content.replace(/^\s*#\s+.*\n?/, '') : content;
+  // Strip common inline HTML artifacts from pasted content (hidden spans, centered divs)
+  processed = processed
+    .replace(/<span[^>]*style=["'][^"']*display\s*:\s*none[^"']*["'][^>]*>.*?<\/span>/gis, '')
+    .replace(/<div[^>]*align=["']center["'][^>]*>.*?<\/div>/gis, '');
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -222,6 +226,24 @@ const MarkdownContent: React.FC<{ content: string; hideLeadingH1?: boolean }> = 
           <Typography component="p" variant="body1" sx={{ mb: 2, lineHeight: 1.7 }}>
             {props.children}
           </Typography>
+        ),
+        table: (props: any) => (
+          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', my: 2 }}>
+            {props.children}
+          </Box>
+        ),
+        thead: (props: any) => <Box component="thead">{props.children}</Box>,
+        tbody: (props: any) => <Box component="tbody">{props.children}</Box>,
+        tr: (props: any) => <Box component="tr">{props.children}</Box>,
+        th: (props: any) => (
+          <Box component="th" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', bgcolor: 'grey.100', fontWeight: 600 }}>
+            {props.children}
+          </Box>
+        ),
+        td: (props: any) => (
+          <Box component="td" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' }}>
+            {props.children}
+          </Box>
         )
       }}
     >

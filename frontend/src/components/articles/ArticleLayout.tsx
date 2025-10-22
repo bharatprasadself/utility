@@ -54,6 +54,10 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
     // Remove references like: [^1]
     processed = processed.replace(/\[\^[^\]]+\]/g, '');
   }
+  // Strip common inline HTML artifacts from pasted content (hidden spans, centered divs)
+  processed = processed
+    .replace(/<span[^>]*style=["'][^"']*display\s*:\s*none[^"']*["'][^>]*>.*?<\/span>/gis, '')
+    .replace(/<div[^>]*align=["']center["'][^>]*>.*?<\/div>/gis, '');
   return (
     <Box sx={{
       '& hr': { my: 3, border: 'none', height: '1px', bgcolor: 'grey.300' },
@@ -63,6 +67,9 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
         '&:hover': { textDecoration: 'underline' }
       },
       '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1 },
+      '& table': { width: '100%', borderCollapse: 'collapse', my: 2 },
+      '& th, & td': { border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' },
+      '& thead th': { bgcolor: 'grey.100', fontWeight: 600 },
       '& blockquote': {
         borderLeft: '4px solid', borderColor: 'primary.main', pl: 2, py: 1, my: 2, bgcolor: 'grey.50', fontStyle: 'italic'
       },
@@ -112,23 +119,22 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
           code: (props: any) => {
             const { inline, children } = props;
             const text = String(children ?? '').replace(/\n$/, '');
-            if (inline) {
+            if (inline || (!text.includes('\n'))) {
               return (
-                <Box component="code" sx={{ bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' }}>
+                <Box component="code" sx={{ bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace' }}>
                   {text}
                 </Box>
               );
             }
             return (
               <Box sx={{ position: 'relative', my: 2 }}>
-                <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace', fontSize: '0.9rem' }}>
+                <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
                   <code>{text}</code>
                 </Box>
                 <Tooltip title="Copy">
                   <IconButton
                     size="small"
                     onClick={() => {
-                      // Best-effort clipboard copy
                       if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText(text).catch(() => {});
                       }
@@ -147,7 +153,6 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
             const src = props.src as string | undefined;
             return (
               <Box sx={{ my: 2, textAlign: 'center' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }} />
                 {alt && (
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
@@ -156,7 +161,25 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
                 )}
               </Box>
             );
-          }
+          },
+          table: (props: any) => (
+            <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', my: 2 }}>
+              {props.children}
+            </Box>
+          ),
+          thead: (props: any) => <Box component="thead">{props.children}</Box>,
+          tbody: (props: any) => <Box component="tbody">{props.children}</Box>,
+          tr: (props: any) => <Box component="tr">{props.children}</Box>,
+          th: (props: any) => (
+            <Box component="th" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', bgcolor: 'grey.100', fontWeight: 600 }}>
+              {props.children}
+            </Box>
+          ),
+          td: (props: any) => (
+            <Box component="td" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' }}>
+              {props.children}
+            </Box>
+          )
         }}
       >
         {processed}
