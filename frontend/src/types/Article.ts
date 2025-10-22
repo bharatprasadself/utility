@@ -1,13 +1,14 @@
 export enum ArticleCategory {
-  SPRING_BOOT = 'SPRING_BOOT',
-  REACT = 'REACT',
-  POSTGRESQL = 'POSTGRESQL',
-  DOCKER = 'DOCKER',
-  MICROSERVICES = 'MICROSERVICES'
+  SPRING_BOOT = 'Spring Boot',
+  JAVA = 'Java',
+  REACT = 'React JS',
+  POSTGRESQL = 'PostgreSQL',
+  DOCKER = 'Docker',
+  MICROSERVICES = 'Microservices'
 }
 
 export interface Article {
-  id: number;
+  id: string;
   title: string;
   description: string;
   content: string;

@@ -19,7 +19,7 @@ export const ArticleService = {
     }
   },
 
-  getArticleById: async (id: number): Promise<AxiosResponse<Article>> => {
+  getArticleById: async (id: string): Promise<AxiosResponse<Article>> => {
     console.log(`🔍 Fetching article with ID: ${id}`);
     try {
       const response = await publicApi.get(`${BASE_URL}/${id}`);
@@ -32,7 +32,12 @@ export const ArticleService = {
   },
 
   getArticlesByCategory: async (category: ArticleCategory): Promise<AxiosResponse<Article[]>> => {
-    const url = `${BASE_URL}/category/${category}`;
+    // If category = ArticleCategory.SPRING_BOOT ("SPRING_BOOT")
+    const key = Object.keys(ArticleCategory).find(
+      k => ArticleCategory[k as keyof typeof ArticleCategory] === category
+    );
+    // key will be "SPRING_BOOT"
+    const url = `${BASE_URL}/category/${key}`;
     console.log(`🔍 Fetching articles from: ${url}`);
     try {
       const response = await publicApi.get(url);
@@ -58,10 +63,27 @@ export const ArticleService = {
     }
   },
 
-  createArticle: async (article: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>): Promise<AxiosResponse<Article>> => {
+  createArticle: async (article: Omit<Article, 'id' | 'createdAt' | 'updatedAt'> | any): Promise<AxiosResponse<Article>> => {
     console.log('📝 Creating new article:', { title: article.title, category: article.category });
+    
     try {
-      const response = await api.post(BASE_URL, article);
+      // Make a deep copy to avoid mutating the original
+      const articleToSend = { ...article };
+      
+      // If category is an enum value, convert it to the raw string name expected by backend
+      if (typeof articleToSend.category === 'string' && articleToSend.category.includes(' ')) {
+        // Find the enum key by its display value
+        const categoryKey = Object.keys(ArticleCategory).find(
+          key => ArticleCategory[key as keyof typeof ArticleCategory] === articleToSend.category
+        );
+        
+        if (categoryKey) {
+          articleToSend.category = categoryKey;
+        }
+      }
+      
+      console.log('📝 Sending article with processed category:', articleToSend);
+      const response = await api.post(BASE_URL, articleToSend);
       console.log(`✅ Successfully created article: "${response.data.title}"`);
       return response;
     } catch (error) {
@@ -70,10 +92,39 @@ export const ArticleService = {
     }
   },
 
-  updateArticle: async (id: number, article: Partial<Article>): Promise<AxiosResponse<Article>> => {
+  updateArticle: async (id: string, article: Partial<Article> | any): Promise<AxiosResponse<Article>> => {
     console.log(`📝 Updating article with ID ${id}:`, article);
     try {
-      const response = await api.put(`${BASE_URL}/${id}`, article);
+      // Make a deep copy to avoid mutating the original
+      const articleToSend = { ...article };
+      
+      // If category is an enum value, convert it to the raw string name expected by backend
+      if (typeof articleToSend.category === 'string' && articleToSend.category.includes(' ')) {
+        // Find the enum key by its display value
+        const categoryKey = Object.keys(ArticleCategory).find(
+          key => ArticleCategory[key as keyof typeof ArticleCategory] === articleToSend.category
+        );
+        
+        if (categoryKey) {
+          articleToSend.category = categoryKey;
+        }
+      }
+      
+      // Try to parse the ID as a number if it's a string containing only digits
+      if (typeof id === 'string' && /^\d+$/.test(id)) {
+        const numericId = parseInt(id, 10);
+        if (!isNaN(numericId)) {
+          // Use the numeric ID in the URL but keep the type as string
+          console.log(`📝 Converting string ID "${id}" to number ${numericId} for API call`);
+          const response = await api.put(`${BASE_URL}/${numericId}`, articleToSend);
+          console.log(`✅ Successfully updated article: "${response.data.title}"`);
+          return response;
+        }
+      }
+      
+      // If we didn't convert to a number, use the original string ID
+      console.log(`📝 Using original ID format: ${id}`);
+      const response = await api.put(`${BASE_URL}/${id}`, articleToSend);
       console.log(`✅ Successfully updated article: "${response.data.title}"`);
       return response;
     } catch (error) {
@@ -82,7 +133,7 @@ export const ArticleService = {
     }
   },
 
-  deleteArticle: async (id: number): Promise<AxiosResponse<void>> => {
+  deleteArticle: async (id: string): Promise<AxiosResponse<void>> => {
     console.log(`🗑️ Deleting article with ID: ${id}`);
     try {
       const response = await api.delete(`${BASE_URL}/${id}`);

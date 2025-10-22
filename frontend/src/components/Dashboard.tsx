@@ -37,50 +37,51 @@ export default function Dashboard() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Paper elevation={3}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={value} 
-            onChange={handleChange} 
-            aria-label="dashboard tabs"
-            variant="fullWidth"
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{ bgcolor: 'grey.100' }}
-          >
-            <Tab label="Currency Converter" sx={{ py: 2 }} />
-            <Tab label="Timezone Converter" sx={{ py: 2 }} />
-            <Tab label="File Converter" sx={{ py: 2 }} />
-            <Tab label="QR Code Generator" sx={{ py: 2 }} />
-          </Tabs>
-        </Box>
-        
-        <TabPanel value={value} index={0}>
-          <CurrencyConverter />
-        </TabPanel>
-        <TabPanel value={value} index={1}>
-          <TimezoneConverter />
-        </TabPanel>
-        <TabPanel value={value} index={2}>
-          <FileConverter />
-        </TabPanel>
-        <TabPanel value={value} index={3}>
-          <QRCodeGenerator />
-        </TabPanel>
-      </Paper>
-
-      {/* Render Advertisement at bottom on small screens, side on larger screens */}
-      <Box sx={{ 
-        mt: { xs: 3, md: 0 }, 
-        ml: { md: 3 },
-        position: { md: 'fixed' },
-        right: { md: '2rem' },
-        top: { md: '5rem' },
-        width: { md: '300px' }
-      }}>
+    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, position: 'relative' }}>
+      <Container maxWidth="md" sx={{ mt: 4, flex: 1 }}>
+        <Paper elevation={3}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs 
+              value={value} 
+              onChange={handleChange} 
+              aria-label="dashboard tabs"
+              variant="fullWidth"
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{ bgcolor: 'grey.100' }}
+            >
+              <Tab label="Currency Converter" sx={{ py: 2 }} />
+              <Tab label="Timezone Converter" sx={{ py: 2 }} />
+              <Tab label="File Converter" sx={{ py: 2 }} />
+              <Tab label="QR Code Generator" sx={{ py: 2 }} />
+            </Tabs>
+          </Box>
+          <TabPanel value={value} index={0}>
+            <CurrencyConverter />
+          </TabPanel>
+          <TabPanel value={value} index={1}>
+            <TimezoneConverter />
+          </TabPanel>
+          <TabPanel value={value} index={2}>
+            <FileConverter />
+          </TabPanel>
+          <TabPanel value={value} index={3}>
+            <QRCodeGenerator />
+          </TabPanel>
+        </Paper>
+      </Container>
+      {/* Advertisement aligned right, scrolls with page */}
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'block' },
+          width: 300,
+          ml: 3,
+          flexShrink: 0,
+          alignSelf: 'flex-start'
+        }}
+      >
         <Advertisement />
       </Box>
-    </Container>
+    </Box>
   );
 }

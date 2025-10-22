@@ -24,9 +24,10 @@ const navItems: NavItem[] = [
     subItems: [
       { label: 'Spring Boot', path: '/articles/spring-boot' },
       { label: 'React JS', path: '/articles/react' },
+      { label: 'Java', path: '/articles/java' },
       { label: 'PostgreSQL', path: '/articles/postgresql' },
       { label: 'Docker', path: '/articles/docker' },
-      { label: 'Microservices', path: '/articles/microservices' }
+      { label: 'Microservices', path: '/articles/microservices' },
     ]
   }
 ];

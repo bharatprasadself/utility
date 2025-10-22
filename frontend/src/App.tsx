@@ -8,7 +8,12 @@ import Register from './components/Register';
 import BlogList from './components/BlogList';
 import Navigation from './components/Navigation';
 import { AuthProvider } from './contexts/AuthContext';
-import Articles from './components/articles/Articles';
+import ReactArticles from './components/articles/ReactArticles';
+import SpringBootArticles from './components/articles/SpringBootArticles';
+import PostgreSQLArticles from './components/articles/PostgreSQLArticles';
+import DockerArticles from './components/articles/DockerArticles';
+import JavaArticles from './components/articles/JavaArticles';
+import MicroservicesArticles from './components/articles/MicroservicesArticles';
 import theme from './theme';
 
 function App() {
@@ -27,7 +32,12 @@ function App() {
                     <Route path="/blogs" element={<BlogList />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
-                    <Route path="/articles/*" element={<Articles />} />
+                    <Route path="/articles/spring-boot/*" element={<SpringBootArticles />} />
+                    <Route path="/articles/react/*" element={<ReactArticles />} />
+                    <Route path="/articles/postgresql/*" element={<PostgreSQLArticles />} />
+                    <Route path="/articles/docker/*" element={<DockerArticles />} />
+                    <Route path="/articles/microservices/*" element={<MicroservicesArticles />} />
+                    <Route path="/articles/java/*" element={<JavaArticles />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>
