@@ -172,7 +172,7 @@ const AdminEditor = ({ value, onChange, onSave }: { value: EbookContent; onChang
   };
 
   return (
-    <Paper elevation={1} sx={{ p: 2, mt: 3 }}>
+    <Paper elevation={1} sx={{ p: 2, mt: 3, maxWidth: { xs: '100%', md: 980 }, ml: 0, mr: 'auto' }}>
       <Typography variant="h6" sx={{ mb: 2 }}>
         Admin Editor
       </Typography>
@@ -392,7 +392,11 @@ export default function Ebooks() {
 
       {/* About */}
       <SectionHeader title="About" />
-      <Typography sx={{ whiteSpace: 'pre-wrap' }}>{content.about || 'Short bio goes here.'}</Typography>
+      <Box sx={{ maxWidth: { xs: '100%', md: 980 }, ml: 0, mr: 'auto' }}>
+        <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+          {content.about || 'Short bio goes here.'}
+        </Typography>
+      </Box>
 
       {/* Newsletter */}
       <SectionHeader title="Newsletter" />
