@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { EbookContent, EbookItem, ContactLink } from '@/types/Ebooks';
 import { defaultEbookContent } from '@/types/Ebooks';
 import EbookService from '@/services/ebooks';
+import { API_BASE_URL } from '@/services/axiosConfig';
 
 const SectionHeader = ({ title }: { title: string }) => (
   <Typography variant="h5" sx={{ mt: 4, mb: 2, fontWeight: 700 }}>{title}</Typography>
@@ -26,6 +27,14 @@ const extractFirstMdHeading = (md?: string): string | null => {
     break;
   }
   return null;
+};
+
+const resolveCoverUrl = (url?: string): string => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  // For relative URLs like /uploads/xyz, prefix with backend base URL when available
+  if (url.startsWith('/')) return `${API_BASE_URL || ''}${url}`;
+  return url;
 };
 
 const BooksGrid = ({ books }: { books: EbookItem[] }) => (
@@ -55,7 +64,7 @@ const BooksGrid = ({ books }: { books: EbookItem[] }) => (
             >
               <CardMedia
                 component="img"
-                image={b.coverUrl}
+                image={resolveCoverUrl(b.coverUrl)}
                 alt={extractFirstMdHeading(b.description || '') || b.title}
                 loading="lazy"
                 sx={{
@@ -227,7 +236,8 @@ const AdminEditor = ({ value, onChange, onSave }: { value: EbookContent; onChang
                     try {
                       setUploadingIndex(i);
                       const url = await EbookService.uploadCover(file);
-                      handleBookChange(i, { coverUrl: url });
+                      const absolute = url && url.startsWith('/') ? `${API_BASE_URL || ''}${url}` : url;
+                      handleBookChange(i, { coverUrl: absolute });
                     } catch (err) {
                       console.error('Upload failed', err);
                       setError('Cover upload failed');
