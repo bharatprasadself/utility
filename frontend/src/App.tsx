@@ -16,6 +16,7 @@ import JavaArticles from './components/articles/JavaArticles';
 import MicroservicesArticles from './components/articles/MicroservicesArticles';
 import FallingBall from './components/FallingBall';
 import DinoRunner from './components/DinoRunner';
+import Ebooks from '@/components/Ebooks';
 import theme from './theme';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/blogs" element={<BlogList />} />
+                    <Route path="/ebooks" element={<Ebooks />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/articles/spring-boot/*" element={<SpringBootArticles />} />

@@ -18,6 +18,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/' },
   { label: 'Blogs', path: '/blogs' },
+  { label: 'Ebooks', path: '/ebooks' },
   {
     label: 'Games',
     path: '/games',
