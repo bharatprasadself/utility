@@ -1,9 +1,12 @@
 import axios from 'axios';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'production'
-    ? 'https://utility-nrd7.onrender.com'
-    : '');  // Empty string to use relative URLs in development
+// In production, prefer an API subdomain. Allow override via VITE_API_URL.
+// In development, keep empty to use Vite proxy for /api and /uploads.
+export const API_BASE_URL = ((): string => {
+    const fromEnv = import.meta.env.VITE_API_URL as string | undefined;
+    if (fromEnv && fromEnv.trim().length > 0) return fromEnv.trim();
+    return import.meta.env.MODE === 'production' ? 'https://api.utilityzone.in' : '';
+})();
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
@@ -11,7 +14,7 @@ const axiosInstance = axios.create({
     headers: {
         'Accept': 'application/json'
     },
-    withCredentials: true, // Important for CORS with credentials
+    withCredentials: true, // Important for CORS with credentials (JWT cookies, etc.)
     timeout: 10000 // 10 second timeout
 });
 

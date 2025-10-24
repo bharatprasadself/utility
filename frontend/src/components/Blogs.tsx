@@ -2,6 +2,7 @@ import { Box, Typography, Card, CardContent, CardHeader, Avatar, CircularProgres
 import type { Theme } from '@mui/material/styles';
 import type { SxProps } from '@mui/system';
 import { useEffect, useState } from 'react';
+import axiosInstance from '../services/axiosConfig';
 import type { Blog } from '../types/Blog';
 
 const formatDate = (dateString: string) => {
@@ -26,12 +27,8 @@ const Blogs = () => {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/blogs?limit=10');
-        if (!response.ok) {
-          throw new Error('Failed to fetch blogs');
-        }
-        const data = await response.json();
-        setBlogs(data);
+        const response = await axiosInstance.get('/api/blogs', { params: { limit: 10 } });
+        setBlogs(response.data);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
