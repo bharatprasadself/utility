@@ -49,6 +49,9 @@ public class SecurityConfig {
                     "/api/converter/**",
                     "/api/qr/**",
                     "/api/greeting/**",
+                    // Expose Actuator endpoints
+                    "/api/actuator/**",
+                    "/actuator/**",
                     "/api/ebooks",
                     "/api/ebooks/newsletter/**",
                     "/api/blogs",
@@ -97,6 +100,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.addAllowedOrigin("http://localhost:5173");
         configuration.addAllowedOrigin("https://utilityzone.in");
+        configuration.addAllowedOrigin("https://www.utilityzone.in");
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
