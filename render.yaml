@@ -16,7 +16,7 @@ services:
       name: data
       mountPath: /app/data
       sizeGB: 1
-    healthCheckPath: /actuator/health
+  healthCheckPath: /api/actuator/health
     autoDeploy: true
 
   # Optional: If you want to serve frontend separately as a static site
