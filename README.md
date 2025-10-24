@@ -1,3 +1,72 @@
+# Utility
+
+## Production API subdomain setup (recommended)
+
+This project is configured to use an API subdomain in production so the SPA and the backend are cleanly separated:
+
+- Frontend (SPA): `https://utilityzone.in`
+- Backend (API): `https://api.utilityzone.in`
+
+In production, the frontend uses the environment variable `VITE_API_URL` to reach the API, and the backend exposes Actuator under `/api/actuator` with CORS allowed for the site.
+
+### 1) Frontend env files
+
+Create the following files in `frontend/` (or set these in your hosting provider’s build env):
+
+- `frontend/.env.production`
+  
+	```env
+	VITE_API_URL=https://api.utilityzone.in
+	```
+
+- `frontend/.env.development`
+  
+	```env
+	# Leave empty to use Vite dev proxy for /api and /uploads
+	VITE_API_URL=
+	```
+
+The Axios client reads `VITE_API_URL` in `frontend/src/services/axiosConfig.ts`. In dev it defaults to empty (`""`) to use the Vite proxy; in prod it defaults to `https://api.utilityzone.in` if the env var is not set.
+
+### 2) Render — attach API custom domain
+
+Attach `api.utilityzone.in` to your Render Web Service (backend):
+
+1. Render Dashboard → your web service (utility-zone) → Settings → Custom Domains → Add `api.utilityzone.in`.
+2. Follow Render’s DNS instructions (typically a CNAME from `api.utilityzone.in` to your Render service hostname).
+3. Ensure the service is deployed with `SPRING_PROFILES_ACTIVE=prod-h2` (or `prod` if using Postgres).
+
+### 3) Backend configuration already in place
+
+- Actuator base path is set to `/api/actuator` in prod and prod-h2 profiles.
+- Render health check path in `render.yaml` is `/api/actuator/health`.
+- CORS allows:
+	- `http://localhost:5173` (dev)
+	- `https://utilityzone.in`
+	- `https://www.utilityzone.in`
+
+### 4) Sanity checks after deploy
+
+- `https://api.utilityzone.in/api/actuator/health` → should return `UP`.
+- The SPA (https://utilityzone.in) calls `https://api.utilityzone.in/api/...` in the browser Network tab (no CORS errors).
+- Actuator cache diagnostics:
+	- `https://api.utilityzone.in/api/actuator/caches`
+	- `https://api.utilityzone.in/api/actuator/metrics/cache.gets?tag=cache:blogs&tag=result:hit`
+
+### 5) Optional: static proxy (not recommended for prod)
+
+If you absolutely must keep one domain only, configure your static host (Render Static Site or similar) to proxy `/api/*` to your backend. On a Render static site, include a `static.json` like:
+
+```json
+{
+	"routes": [
+		{ "src": "/api/(.*)", "dest": "https://api.utilityzone.in/api/$1" }
+	]
+}
+```
+
+However, the API subdomain approach above is more robust and future-proof.
+
 # Utility Zone Application
 
 ## Overview
