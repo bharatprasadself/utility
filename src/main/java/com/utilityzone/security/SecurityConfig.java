@@ -49,6 +49,9 @@ public class SecurityConfig {
                     "/api/converter/**",
                     "/api/qr/**",
                     "/api/greeting/**",
+                    // Expose Actuator endpoints
+                    "/api/actuator/**",
+                    "/actuator/**",
                     "/api/ebooks",
                     "/api/ebooks/newsletter/**",
                     "/api/blogs",
