@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Falling Ball Rescue</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="embedded-title">Falling Ball Rescue</div>
+  <div class="embedded-scoreboard" aria-hidden="false">
+    <div>Score: <strong><span id="score">0</span></strong></div>
+    <div>High Score: <strong><span id="highScore">0</span></strong></div>
+    <div>Mode: <strong><span id="modeLabel">Human</span></strong></div>
+    <div>Difficulty: <strong><span id="aiDepth">6</span></strong></div>
+  </div>
+  <main style="height:100vh;display:flex;align-items:center;justify-content:center;">
+    <div style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+      <canvas id="gameCanvas" width="700" height="600" aria-label="Falling Ball game canvas"></canvas>
+      <!-- Touch controls shown for small devices -->
+      <div class="touch-controls" aria-hidden="false" style="position:absolute;left:12px;bottom:12px;">
+        <button id="touchLeft" aria-label="Move left">◀️</button>
+        <button id="touchRight" aria-label="Move right">▶️</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    // If running inside an iframe, hide only the left column (duplicate controls/status)
+    // so the page header (right-side duplicate) remains visible.
+    if (window.self !== window.top) {
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.classList.add('embedded');
+        const leftStatus = document.querySelector('.left-col');
+        if (leftStatus) leftStatus.style.display = 'none';
+        // collapse grid to single column so right-col occupies full width
+        const grid = document.querySelector('.content-grid');
+        if (grid) grid.style.gridTemplateColumns = '1fr';
+        // hide header/footer inside the iframe to allow the canvas to use full viewport
+        const hdr = document.querySelector('header');
+        const ftr = document.querySelector('footer');
+        if (hdr) hdr.style.display = 'none';
+        if (ftr) ftr.style.display = 'none';
+        // reduce container padding to maximize space
+        const cont = document.querySelector('.container');
+        if (cont) { cont.style.margin = '0'; cont.style.padding = '0'; }
+
+            // When embedded, the iframe intentionally contains only the canvas and touch controls.
+            // The React parent provides all interactive controls and will send postMessage commands to control the game.
+
+        // trigger a resize so the game recalculates canvas size after DOM changes
+        setTimeout(()=> window.dispatchEvent(new Event('resize')), 50);
+      });
+    }
+  </script>
+</body>
+</html>

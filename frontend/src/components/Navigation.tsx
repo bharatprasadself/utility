@@ -18,6 +18,15 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/' },
   { label: 'Blogs', path: '/blogs' },
+  { label: 'Ebooks', path: '/ebooks' },
+  {
+    label: 'Games',
+    path: '/games',
+    subItems: [
+      { label: 'Falling Ball', path: '/games/falling-ball' },
+      { label: 'Dino Runner', path: '/games/dino-runner' }
+    ]
+  },
   { 
     label: 'Articles',
     path: '/articles',
@@ -38,28 +47,31 @@ const Navigation = () => {
   const { user, logout } = useAuth();
   const isMobile = useMediaQuery('(max-width:600px)');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [articleAnchorEl, setArticleAnchorEl] = useState<null | HTMLElement>(null);
+  const [subMenuAnchorEl, setSubMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleArticleMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setArticleAnchorEl(event.currentTarget);
+  const handleOpenSubMenu = (event: React.MouseEvent<HTMLElement>, label: string) => {
+    setSubMenuAnchorEl(event.currentTarget);
+    setActiveSubMenu(label);
   };
 
   const handleClose = () => {
     setAnchorEl(null);
   };
 
-  const handleArticleClose = () => {
-    setArticleAnchorEl(null);
+  const handleSubMenuClose = () => {
+    setSubMenuAnchorEl(null);
+    setActiveSubMenu(null);
   };
 
   const handleNavigation = (path: string) => {
     navigate(path);
     handleClose();
-    handleArticleClose();
+    handleSubMenuClose();
   };
 
   const renderDesktopNav = () => (
@@ -76,10 +88,10 @@ const Navigation = () => {
           <Box key={item.path}>
             <Button
               color="inherit"
-              onClick={item.subItems ? handleArticleMenu : () => navigate(item.path)}
+              onClick={item.subItems ? (e) => handleOpenSubMenu(e, item.label) : () => navigate(item.path)}
               aria-current={location.pathname === item.path ? 'page' : undefined}
               aria-label={`Navigate to ${item.label}`}
-              aria-controls={item.subItems ? 'article-menu' : undefined}
+              aria-controls={item.subItems ? `${item.label}-menu` : undefined}
               aria-haspopup={item.subItems ? 'true' : undefined}
               sx={{
                 px: 3,
@@ -92,50 +104,50 @@ const Navigation = () => {
               {item.label}
               {item.subItems && ' ▾'}
             </Button>
-            {item.subItems && (
-              <Menu
-                id="article-menu"
-                anchorEl={articleAnchorEl}
-                open={Boolean(articleAnchorEl)}
-                onClose={handleArticleClose}
-                sx={{
-                  '& .MuiPaper-root': {
-                    borderRadius: 2,
-                    mt: 1,
-                    minWidth: 180,
-                    boxShadow: 3
-                  }
-                }}
-              >
-                {item.subItems.map((subItem) => (
-                  <MenuItem
-                    key={subItem.path}
-                    onClick={() => handleNavigation(subItem.path)}
-                    selected={location.pathname === subItem.path}
-                    sx={{
-                      py: 1,
-                      px: 2,
-                      '&:hover': {
-                        bgcolor: 'primary.light',
-                        color: 'white'
-                      },
-                      '&.Mui-selected': {
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        '&:hover': {
-                          bgcolor: 'primary.dark'
-                        }
-                      }
-                    }}
-                  >
-                    {subItem.label}
-                  </MenuItem>
-                ))}
-              </Menu>
-            )}
+            {/* sub-menu opens below (single Menu rendered outside the map) */}
           </Box>
         ))}
       </Box>
+      {/* Single sub-menu for any nav item with subItems (Games, Articles, etc.) */}
+      <Menu
+        id={activeSubMenu ? `${activeSubMenu}-menu` : 'sub-menu'}
+        anchorEl={subMenuAnchorEl}
+        open={Boolean(subMenuAnchorEl)}
+        onClose={handleSubMenuClose}
+        sx={{
+          '& .MuiPaper-root': {
+            borderRadius: 2,
+            mt: 1,
+            minWidth: 180,
+            boxShadow: 3
+          }
+        }}
+      >
+        {navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => (
+          <MenuItem
+            key={subItem.path}
+            onClick={() => { handleNavigation(subItem.path); handleSubMenuClose(); }}
+            selected={location.pathname === subItem.path}
+            sx={{
+              py: 1,
+              px: 2,
+              '&:hover': {
+                bgcolor: 'primary.light',
+                color: 'white'
+              },
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  bgcolor: 'primary.dark'
+                }
+              }
+            }}
+          >
+            {subItem.label}
+          </MenuItem>
+        ))}
+      </Menu>
       <Box sx={{ display: 'flex', gap: 2 }}>
         {user ? (
           <Button 

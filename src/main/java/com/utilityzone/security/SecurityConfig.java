@@ -43,11 +43,14 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**",
                     "/h2-console/**",
+                    "/games/falling-ball/**",
                     "/api/currency/**",
                     "/api/timezone/**",
                     "/api/converter/**",
                     "/api/qr/**",
                     "/api/greeting/**",
+                    "/api/ebooks",
+                    "/api/ebooks/newsletter/**",
                     "/api/blogs",
                     "/api/blogs/{id}"
                 ).permitAll()
@@ -68,6 +71,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/articles/**").hasRole("ADMIN")
+                // Ebooks admin endpoints
+                .requestMatchers(HttpMethod.POST, "/api/admin/ebooks/**").hasRole("ADMIN")
                 // All other endpoints are public
                 .anyRequest().permitAll()
             )
