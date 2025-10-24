@@ -38,7 +38,7 @@ public class DatabaseConfig {
     @Value("${spring.datasource.driver-class-name:}")
     private String driverClassName;
     
-    @Value("${h2.datasource.url:jdbc:h2:file:./data/utilitydb;AUTO_SERVER=TRUE}")
+    @Value("${h2.datasource.url:jdbc:h2:file:./data/utilitydb;DB_CLOSE_DELAY=-1}")
     private String h2Url;
     
     @Value("${h2.datasource.username:sa}")
@@ -110,7 +110,22 @@ public class DatabaseConfig {
     
     private DataSource createH2DataSource() {
         logger.info("Configuring H2 file-based database");
-        logger.info("H2 URL: {}", h2Url);
+        logger.info("H2 URL (raw): {}", h2Url);
+        // Sanitize and normalize URL flags from possible shell-style concatenation (e.g., "&&")
+    String normalizedH2Url = h2Url
+        .trim()
+        .replaceAll("\\s+", "")             // remove all whitespace
+        .replace("&&", ";")                  // replace shell-style AND
+        .replace("&", ";")                   // replace single ampersand if present
+        .replace("AUTO_SERVER=TRUE", "")     // strip unsupported/undesired flag
+        .replace("DB_CLOSE_ON_EXIT=FALSE", "") // strip unsupported/undesired flag
+        .replaceAll(";+", ";");              // collapse duplicate separators
+
+    // Ensure DB_CLOSE_DELAY=-1 is present for stability (keeps DB open until JVM exits)
+    if (!normalizedH2Url.toUpperCase().contains("DB_CLOSE_DELAY=")) {
+        normalizedH2Url = normalizedH2Url + ";DB_CLOSE_DELAY=-1";
+    }
+        logger.info("H2 URL (normalized): {}", normalizedH2Url);
         logger.info("H2 Username: {}", h2Username);
         logger.info("H2 Driver: org.h2.Driver");
         
@@ -124,8 +139,8 @@ public class DatabaseConfig {
                 }
             }
             
-            DataSource ds = DataSourceBuilder.create()
-                    .url(h2Url)
+        DataSource ds = DataSourceBuilder.create()
+            .url(normalizedH2Url)
                     .username(h2Username)
                     .password(h2Password)
                     .driverClassName("org.h2.Driver")

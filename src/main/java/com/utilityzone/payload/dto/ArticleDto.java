@@ -1,4 +1,4 @@
-package com.utilityzone.payload;
+package com.utilityzone.payload.dto;
 
 import com.utilityzone.model.ArticleCategory;
 

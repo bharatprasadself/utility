@@ -26,7 +26,7 @@ const Blogs = () => {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/blogs');
+        const response = await fetch('http://localhost:8080/api/blogs?limit=10');
         if (!response.ok) {
           throw new Error('Failed to fetch blogs');
         }
