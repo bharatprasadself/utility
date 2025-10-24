@@ -4,6 +4,9 @@ import com.utilityzone.model.Article;
 import com.utilityzone.model.ArticleCategory;
 import com.utilityzone.repository.ArticleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,26 +20,42 @@ public class ArticleService {
     @Autowired
     private ArticleRepository articleRepository;
 
+    @Cacheable(value = "articles")
     public List<Article> getAllArticles() {
         return articleRepository.findAll();
     }
 
+    @Cacheable(value = "articleById", key = "#id")
     public Optional<Article> getArticleById(Long id) {
         return articleRepository.findById(id);
     }
 
+    @Cacheable(value = "articlesByCategory", key = "#category")
     public List<Article> getArticlesByCategory(ArticleCategory category) {
         return articleRepository.findByCategory(category);
     }
 
+    @Cacheable(value = "articlesByTag", key = "#tag")
     public List<Article> getArticlesByTag(String tag) {
         return articleRepository.findByTagsContaining(tag);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "articles", allEntries = true),
+        @CacheEvict(value = "articlesByCategory", allEntries = true),
+        @CacheEvict(value = "articlesByTag", allEntries = true),
+        @CacheEvict(value = "articleById", allEntries = true)
+    })
     public Article createArticle(Article article) {
         return articleRepository.save(article);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "articles", allEntries = true),
+        @CacheEvict(value = "articlesByCategory", allEntries = true),
+        @CacheEvict(value = "articlesByTag", allEntries = true),
+        @CacheEvict(value = "articleById", allEntries = true)
+    })
     public Article updateArticle(Long id, Article articleDetails) {
         Optional<Article> article = articleRepository.findById(id);
         if (article.isPresent()) {
@@ -52,6 +71,12 @@ public class ArticleService {
         return null;
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "articles", allEntries = true),
+        @CacheEvict(value = "articlesByCategory", allEntries = true),
+        @CacheEvict(value = "articlesByTag", allEntries = true),
+        @CacheEvict(value = "articleById", allEntries = true)
+    })
     public void deleteArticle(Long id) {
         articleRepository.deleteById(id);
     }

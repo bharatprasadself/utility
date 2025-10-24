@@ -6,6 +6,8 @@ import com.utilityzone.payload.dto.EbookContentDto;
 import com.utilityzone.repository.EbookContentRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -18,10 +20,12 @@ public class EbookContentService {
     private final EbookContentRepository repository;
     private final ObjectMapper objectMapper;
 
+    @Cacheable(value = "ebooks", key = "'content'")
     public Optional<EbookContentDto> getContent() {
         return repository.findAll().stream().findFirst().map(this::fromEntity);
     }
 
+    @CacheEvict(value = "ebooks", key = "'content'", beforeInvocation = false)
     public EbookContentDto upsert(EbookContentDto dto) {
         EbookContentEntity entity = repository.findAll().stream().findFirst().orElseGet(EbookContentEntity::new);
         dto.setUpdatedAt(Instant.now());

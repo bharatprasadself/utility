@@ -7,7 +7,11 @@ import com.utilityzone.repository.NewsletterSubscriberRepository;
 import com.utilityzone.service.EbookContentService;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,12 +32,23 @@ public class EbookController {
 
     private final EbookContentService service;
     private final NewsletterSubscriberRepository subscriberRepository;
+    private final CacheManager cacheManager;
+    private static final Logger log = LoggerFactory.getLogger(EbookController.class);
 
     @Value("${file.upload.dir:./data/uploads}")
     private String uploadDir;
 
     @GetMapping("/api/ebooks")
     public ResponseEntity<EbookContentDto> getContent() {
+        Cache cache = cacheManager.getCache("ebooks");
+        if (cache != null) {
+            Object cached = cache.get("content");
+            if (cached != null) {
+                log.info("Cache HIT: ebooks[content]");
+            } else {
+                log.info("Cache MISS: ebooks[content]");
+            }
+        }
         return service.getContent()
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.ok(defaultContent()));
