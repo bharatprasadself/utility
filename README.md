@@ -67,6 +67,29 @@ If you absolutely must keep one domain only, configure your static host (Render 
 
 However, the API subdomain approach above is more robust and future-proof.
 
+## Newsletter (SMTP) setup
+
+The Ebooks module supports collecting subscribers and sending newsletters via SMTP.
+
+Backend endpoints:
+- Public subscribe: `POST /api/ebooks/newsletter/subscribe` { email }
+- Public unsubscribe: `GET /api/ebooks/newsletter/unsubscribe?token=...`
+- Admin send: `POST /api/admin/ebooks/newsletter/send` { subject, htmlBody }
+
+Configure SMTP via environment variables (Render → Environment):
+
+```
+SPRING_MAIL_HOST=smtp.yourprovider.com
+SPRING_MAIL_PORT=587
+SPRING_MAIL_USERNAME=your_smtp_username
+SPRING_MAIL_PASSWORD=your_smtp_password
+APP_MAIL_FROM=bharat.prasad@utilityzone.in
+```
+
+Notes:
+- STARTTLS is enabled by default (port 587). Adjust `spring.mail.properties.mail.smtp.starttls.enable` if needed.
+- Unsubscribe links are appended automatically to each email.
+- Re-subscribing an unsubscribed email re-activates the subscription.
 # Utility Zone Application
 
 ## Overview

@@ -26,6 +26,8 @@ export const defaultEbookContent: EbookContent = {
   books: [],
   about: '',
   newsletterEnabled: true,
-  newsletterEndpoint: '/api/newsletter/subscribe',
+  // Keep default aligned with backend: EbookController sets 
+  // "/api/ebooks/newsletter/subscribe" by default
+  newsletterEndpoint: '/api/ebooks/newsletter/subscribe',
   contacts: []
 };

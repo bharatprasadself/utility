@@ -2,9 +2,12 @@ package com.utilityzone.controller;
 
 import com.utilityzone.payload.dto.EbookContentDto;
 import com.utilityzone.payload.request.NewsletterSubscribeRequest;
+import com.utilityzone.payload.request.NewsletterSendRequest;
 import com.utilityzone.model.NewsletterSubscriber;
 import com.utilityzone.repository.NewsletterSubscriberRepository;
 import com.utilityzone.service.EbookContentService;
+import com.utilityzone.service.NewsletterEmailService;
+import com.utilityzone.service.NewsletterTokenService;
 
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -32,6 +35,8 @@ public class EbookController {
 
     private final EbookContentService service;
     private final NewsletterSubscriberRepository subscriberRepository;
+    private final NewsletterEmailService emailService;
+    private final NewsletterTokenService tokenService;
     private final CacheManager cacheManager;
     private static final Logger log = LoggerFactory.getLogger(EbookController.class);
 
@@ -67,13 +72,38 @@ public class EbookController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid email format"));
         }
 
-        // idempotent: if already subscribed, still return success
-        if (!subscriberRepository.existsByEmailIgnoreCase(email)) {
+        // idempotent: if already subscribed, ensure active; else create
+        var existing = subscriberRepository.findByEmailIgnoreCase(email);
+        if (existing.isPresent()) {
+            NewsletterSubscriber sub = existing.get();
+            if (!sub.isActive()) {
+                sub.setActive(true);
+                sub.setUnsubscribedAt(null);
+                subscriberRepository.save(sub);
+            }
+        } else {
             NewsletterSubscriber sub = new NewsletterSubscriber();
             sub.setEmail(email);
             subscriberRepository.save(sub);
         }
         return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @GetMapping("/api/ebooks/newsletter/unsubscribe")
+    public ResponseEntity<String> unsubscribe(@RequestParam("token") String token) {
+        try {
+            String email = tokenService.parseEmailFromToken(token);
+            var existing = subscriberRepository.findByEmailIgnoreCase(email);
+            if (existing.isPresent()) {
+                NewsletterSubscriber sub = existing.get();
+                sub.setActive(false);
+                sub.setUnsubscribedAt(java.time.LocalDateTime.now());
+                subscriberRepository.save(sub);
+            }
+            return ResponseEntity.ok("You have been unsubscribed.");
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body("Invalid or expired token.");
+        }
     }
 
     @PostMapping("/api/admin/ebooks")
@@ -102,6 +132,18 @@ public class EbookController {
 
         String publicUrl = "/uploads/" + safeName;
         return ResponseEntity.ok(Map.of("url", publicUrl));
+    }
+
+    @PostMapping("/api/admin/ebooks/newsletter/send")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, Object>> sendNewsletter(@RequestBody NewsletterSendRequest req) {
+        if (req == null || !StringUtils.hasText(req.getSubject()) || !StringUtils.hasText(req.getHtmlBody())) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Subject and htmlBody are required"));
+        }
+        var activeSubs = subscriberRepository.findAllByActiveTrue();
+        var emails = activeSubs.stream().map(NewsletterSubscriber::getEmail).toList();
+        emailService.sendToAll(emails, req.getSubject().trim(), req.getHtmlBody());
+        return ResponseEntity.ok(Map.of("success", true, "recipients", emails.size()));
     }
 
     private EbookContentDto defaultContent() {
