@@ -142,8 +142,9 @@ public class EbookController {
         }
         var activeSubs = subscriberRepository.findAllByActiveTrue();
         var emails = activeSubs.stream().map(NewsletterSubscriber::getEmail).toList();
-        emailService.sendToAll(emails, req.getSubject().trim(), req.getHtmlBody());
-        return ResponseEntity.ok(Map.of("success", true, "recipients", emails.size()));
+        // fire-and-forget async send to avoid long request times
+        emailService.sendToAllAsync(emails, req.getSubject().trim(), req.getHtmlBody());
+        return ResponseEntity.accepted().body(Map.of("success", true, "recipients", emails.size()));
     }
 
     private EbookContentDto defaultContent() {

@@ -77,8 +77,8 @@ export const EbookService = {
   // Admin: send newsletter to all active subscribers
   async sendNewsletter(subject: string, htmlBody: string): Promise<{ success: boolean; recipients?: number; message?: string }>{
     try {
-      const res = await axiosInstance.post(`/api/admin/ebooks/newsletter/send`, { subject, htmlBody });
-      return { success: true, recipients: (res.data as any).recipients };
+      const res = await axiosInstance.post(`/api/admin/ebooks/newsletter/send`, { subject, htmlBody }, { timeout: 60000 });
+      return { success: res.status === 202 || (res.status >= 200 && res.status < 300), recipients: (res.data as any).recipients };
     } catch (e: any) {
       const msg = e?.response?.data?.message || 'Failed to send newsletter';
       return { success: false, message: msg };

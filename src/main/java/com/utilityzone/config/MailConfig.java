@@ -37,6 +37,10 @@ public class MailConfig {
         props.put("mail.smtp.auth", env.getProperty("spring.mail.properties.mail.smtp.auth", "true"));
         props.put("mail.smtp.starttls.enable", env.getProperty("spring.mail.properties.mail.smtp.starttls.enable", "true"));
         props.put("mail.transport.protocol", env.getProperty("spring.mail.protocol", "smtp"));
+    // Fail fast on slow or unreachable SMTP
+    props.put("mail.smtp.connectiontimeout", env.getProperty("spring.mail.properties.mail.smtp.connectiontimeout", "5000"));
+    props.put("mail.smtp.timeout", env.getProperty("spring.mail.properties.mail.smtp.timeout", "10000"));
+    props.put("mail.smtp.writetimeout", env.getProperty("spring.mail.properties.mail.smtp.writetimeout", "10000"));
 
         log.info("JavaMailSender configured (host={}, port={}, username set? {})",
                 host, port, (username != null && !username.isBlank()));

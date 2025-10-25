@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,8 @@ public class NewsletterEmailService {
         this.tokenService = tokenService;
     }
 
-    public void sendToAll(@NonNull List<String> emails, @NonNull String subject, @NonNull String htmlBody) {
+    @Async("newsletterExecutor")
+    public void sendToAllAsync(@NonNull List<String> emails, @NonNull String subject, @NonNull String htmlBody) {
         for (String email : emails) {
             try {
                 sendOne(email, subject, htmlBody);
