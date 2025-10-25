@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -142,8 +143,10 @@ public class EbookController {
         }
         var activeSubs = subscriberRepository.findAllByActiveTrue();
         var emails = activeSubs.stream().map(NewsletterSubscriber::getEmail).toList();
+        // Build base URI from current request context to generate unsubscribe links
+        String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
         // fire-and-forget async send to avoid long request times
-        emailService.sendToAllAsync(emails, req.getSubject().trim(), req.getHtmlBody());
+        emailService.sendToAllAsync(emails, req.getSubject().trim(), req.getHtmlBody(), baseUri);
         return ResponseEntity.accepted().body(Map.of("success", true, "recipients", emails.size()));
     }
 

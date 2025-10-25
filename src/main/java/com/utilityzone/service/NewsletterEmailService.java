@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+// Avoid using ServletUriComponentsBuilder in async threads; base URL passed from controller or config
 
 import jakarta.mail.internet.MimeMessage;
 import java.nio.charset.StandardCharsets;
@@ -24,30 +24,34 @@ public class NewsletterEmailService {
     @Value("${app.mail.from:bharat.prasad@utilityzone.in}")
     private String fromAddress;
 
+    @Value("${app.api.base-url:https://api.utilityzone.in}")
+    private String apiBaseUrl;
+
     public NewsletterEmailService(JavaMailSender mailSender, NewsletterTokenService tokenService) {
         this.mailSender = mailSender;
         this.tokenService = tokenService;
     }
 
     @Async("newsletterExecutor")
-    public void sendToAllAsync(@NonNull List<String> emails, @NonNull String subject, @NonNull String htmlBody) {
+    public void sendToAllAsync(@NonNull List<String> emails, @NonNull String subject, @NonNull String htmlBody, String baseUri) {
         for (String email : emails) {
             try {
-                sendOne(email, subject, htmlBody);
+                sendOne(email, subject, htmlBody, baseUri);
             } catch (Exception ex) {
                 log.warn("Failed to send newsletter to {}: {}", email, ex.getMessage());
             }
         }
     }
 
-    private void sendOne(String toEmail, String subject, String htmlBody) throws Exception {
+    private void sendOne(String toEmail, String subject, String htmlBody, String baseUri) throws Exception {
         if (fromAddress == null || fromAddress.isBlank()) {
             // Fallback to a sane default to avoid startup failures due to missing property
             fromAddress = "bharat.prasad@utilityzone.in";
         }
         String token = tokenService.generateUnsubscribeToken(toEmail);
-        String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
-        String unsubLink = baseUri + "/api/ebooks/newsletter/unsubscribe?token=" + token;
+        String resolvedBase = (baseUri != null && !baseUri.isBlank()) ? baseUri :
+                (apiBaseUrl != null && !apiBaseUrl.isBlank() ? apiBaseUrl : "http://localhost:8080");
+        String unsubLink = resolvedBase + "/api/ebooks/newsletter/unsubscribe?token=" + token;
         String composedHtml = htmlBody +
                 "<hr style='margin-top:24px'/>" +
                 "<p style='font-size:12px;color:#666'>" +
