@@ -53,14 +53,19 @@ export const EbookService = {
   },
 
   // Newsletter signup (public)
-  async subscribeNewsletter(email: string, endpointOverride?: string): Promise<{ success: boolean }>{
+  async subscribeNewsletter(email: string, endpointOverride?: string): Promise<{ success: boolean; status?: string; message?: string }> {
     try {
       const endpoint = endpointOverride || `${PUBLIC_BASE}/newsletter/subscribe`;
       const res = await publicApi.post(endpoint, { email });
-      return { success: res.status >= 200 && res.status < 300 };
-    } catch {
-      // Best-effort demo fallback
-      return { success: true };
+      const data = res.data as any;
+      return {
+        success: res.status >= 200 && res.status < 300,
+        status: data?.status,
+        message: data?.message
+      };
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'Subscription failed';
+      return { success: false, message: msg };
     }
   },
 
