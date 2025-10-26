@@ -33,6 +33,20 @@ public class NewsletterEmailService {
     }
 
     @Async("newsletterExecutor")
+    public void sendWelcomeAsync(@NonNull String email, String baseUri) {
+        String subject = "Welcome to UtilityZone Ebooks";
+        String body = "<p>Hi,</p>"
+                + "<p>Thanks for subscribing to the UtilityZone newsletter. You'll occasionally receive updates about new ebooks, articles, and tools.</p>"
+                + "<p>If this wasn't you, you can unsubscribe anytime using the link below.</p>"
+                + "<p>— UtilityZone</p>";
+        try {
+            sendOne(email, subject, body, baseUri);
+        } catch (Exception ex) {
+            log.warn("Failed to send welcome email to {}: {}", email, ex.getMessage());
+        }
+    }
+
+    @Async("newsletterExecutor")
     public void sendToAllAsync(@NonNull List<String> emails, @NonNull String subject, @NonNull String htmlBody, String baseUri) {
         for (String email : emails) {
             try {

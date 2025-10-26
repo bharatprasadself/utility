@@ -74,6 +74,7 @@ public class EbookController {
         }
 
         // idempotent: if already subscribed, ensure active; else create
+        boolean shouldSendWelcome = false;
         var existing = subscriberRepository.findByEmailIgnoreCase(email);
         if (existing.isPresent()) {
             NewsletterSubscriber sub = existing.get();
@@ -81,11 +82,17 @@ public class EbookController {
                 sub.setActive(true);
                 sub.setUnsubscribedAt(null);
                 subscriberRepository.save(sub);
+                shouldSendWelcome = true; // reactivated
             }
         } else {
             NewsletterSubscriber sub = new NewsletterSubscriber();
             sub.setEmail(email);
             subscriberRepository.save(sub);
+            shouldSendWelcome = true; // new signup
+        }
+        if (shouldSendWelcome) {
+            String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+            emailService.sendWelcomeAsync(email, baseUri);
         }
         return ResponseEntity.ok(Map.of("success", true));
     }
