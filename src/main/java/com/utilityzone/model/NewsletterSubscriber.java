@@ -17,6 +17,12 @@ public class NewsletterSubscriber {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Column(name = "unsubscribed_at")
+    private LocalDateTime unsubscribedAt;
+
     public Long getId() {
         return id;
     }
@@ -39,5 +45,21 @@ public class NewsletterSubscriber {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public LocalDateTime getUnsubscribedAt() {
+        return unsubscribedAt;
+    }
+
+    public void setUnsubscribedAt(LocalDateTime unsubscribedAt) {
+        this.unsubscribedAt = unsubscribedAt;
     }
 }

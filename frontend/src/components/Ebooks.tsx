@@ -138,6 +138,9 @@ const AdminEditor = ({ value, onChange, onSave }: { value: EbookContent; onChang
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [sendSubject, setSendSubject] = useState("");
+  const [sendBody, setSendBody] = useState("");
+  const [sendStatus, setSendStatus] = useState<string | null>(null);
 
   // guard against nulls from backend
   const booksSafe: EbookItem[] = value.books ?? [];
@@ -324,6 +327,48 @@ const AdminEditor = ({ value, onChange, onSave }: { value: EbookContent; onChang
           {saving ? 'Saving...' : 'Save'}
         </Button>
       </Stack>
+
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle1" sx={{ mb: 1 }}>
+        Send Newsletter (admin)
+      </Typography>
+      <TextField
+        fullWidth
+        label="Subject"
+        value={sendSubject}
+        onChange={(e) => setSendSubject(e.target.value)}
+        sx={{ mb: 1 }}
+      />
+      <TextField
+        fullWidth
+        multiline
+        minRows={6}
+        label="HTML Body"
+        value={sendBody}
+        onChange={(e) => setSendBody(e.target.value)}
+        helperText="Basic HTML supported. An unsubscribe link will be appended automatically."
+      />
+      <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+        <Button
+          variant="outlined"
+          onClick={async () => {
+            setSendStatus(null);
+            try {
+              const res = await EbookService.sendNewsletter(sendSubject, sendBody);
+              if (res.success) setSendStatus(`Sent to ${res.recipients ?? 0} subscribers.`);
+              else setSendStatus(res.message || 'Failed to send');
+            } catch (e: any) {
+              setSendStatus(e?.message || 'Failed to send');
+            }
+          }}
+          disabled={!sendSubject || !sendBody}
+        >
+          Send Newsletter
+        </Button>
+      </Stack>
+      {sendStatus && (
+        <Alert sx={{ mt: 2 }} severity="info">{sendStatus}</Alert>
+      )}
     </Paper>
   );
 };
