@@ -77,6 +77,7 @@ public class EbookController {
 
         // idempotent: if already subscribed, ensure active; else create
         boolean shouldSendWelcome = false;
+        String status = "";
         var existing = subscriberRepository.findByEmailIgnoreCase(email);
         if (existing.isPresent()) {
             NewsletterSubscriber sub = existing.get();
@@ -85,12 +86,16 @@ public class EbookController {
                 sub.setUnsubscribedAt(null);
                 subscriberRepository.save(sub);
                 shouldSendWelcome = true; // reactivated
+                status = "reactivated";
+            } else {
+                status = "already-subscribed";
             }
         } else {
             NewsletterSubscriber sub = new NewsletterSubscriber();
             sub.setEmail(email);
             subscriberRepository.save(sub);
             shouldSendWelcome = true; // new signup
+            status = "subscribed";
         }
         if (shouldSendWelcome) {
             String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
@@ -99,7 +104,16 @@ public class EbookController {
         } else {
             log.info("Subscription received for existing active subscriber={}, welcome email not sent (idempotent)", email);
         }
-        return ResponseEntity.ok(Map.of("success", true));
+        String message = switch (status) {
+            case "reactivated" -> "Welcome back! Your subscription has been reactivated.";
+            case "already-subscribed" -> "You are already subscribed.";
+            default -> "Thank you for subscribing!";
+        };
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "status", status,
+                "message", message
+        ));
     }
 
     @GetMapping("/api/ebooks/newsletter/unsubscribe")

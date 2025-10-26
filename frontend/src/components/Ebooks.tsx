@@ -407,7 +407,14 @@ export default function Ebooks() {
   const subscribe = async () => {
     setSubResult(null);
     const res = await EbookService.subscribeNewsletter(email, content.newsletterEndpoint);
-    setSubResult(res.success ? 'Thanks for subscribing!' : 'Subscription failed.');
+    const msg = res.message || (res.status === 'already-subscribed'
+      ? 'You are already subscribed.'
+      : res.status === 'reactivated'
+        ? 'Welcome back! Your subscription has been reactivated.'
+        : res.success
+          ? 'Thanks for subscribing! Please check your inbox.'
+          : 'Subscription failed.');
+    setSubResult(msg);
     setEmail('');
   };
 
@@ -457,7 +464,11 @@ export default function Ebooks() {
           Sign up
         </Button>
       </Box>
-      {subResult && <Alert sx={{ mt: 2 }} severity="success">{subResult}</Alert>}
+      {subResult && (
+        <Alert sx={{ mt: 2 }} severity={subResult.includes('failed') ? 'error' : (subResult.includes('already') ? 'info' : 'success')}>
+          {subResult}
+        </Alert>
+      )}
 
       {/* Contact / Links */}
       <SectionHeader title="Contact / Links" />
