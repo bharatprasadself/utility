@@ -62,4 +62,12 @@ public class NewsletterSubscriber {
     public void setUnsubscribedAt(LocalDateTime unsubscribedAt) {
         this.unsubscribedAt = unsubscribedAt;
     }
+
+    @PrePersist
+    @PreUpdate
+    private void normalize() {
+        if (this.email != null) {
+            this.email = this.email.trim().toLowerCase(java.util.Locale.ROOT);
+        }
+    }
 }
