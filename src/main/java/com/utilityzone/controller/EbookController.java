@@ -66,7 +66,9 @@ public class EbookController {
         if (email == null || email.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Email is required"));
         }
-        email = email.trim();
+    email = email.trim();
+    // normalize to lower-case to avoid case-variant duplicates across databases
+    email = email.toLowerCase(java.util.Locale.ROOT);
 
         // simple email sanity check
         if (!email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
@@ -92,7 +94,10 @@ public class EbookController {
         }
         if (shouldSendWelcome) {
             String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+            log.info("Scheduling welcome email for subscriber={} baseUri={}", email, baseUri);
             emailService.sendWelcomeAsync(email, baseUri);
+        } else {
+            log.info("Subscription received for existing active subscriber={}, welcome email not sent (idempotent)", email);
         }
         return ResponseEntity.ok(Map.of("success", true));
     }

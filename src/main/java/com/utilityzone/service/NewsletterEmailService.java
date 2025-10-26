@@ -40,9 +40,12 @@ public class NewsletterEmailService {
                 + "<p>If this wasn't you, you can unsubscribe anytime using the link below.</p>"
                 + "<p>— UtilityZone</p>";
         try {
+            log.info("Sending welcome email to {}", email);
             sendOne(email, subject, body, baseUri);
+            log.info("Welcome email sent to {}", email);
         } catch (Exception ex) {
-            log.warn("Failed to send welcome email to {}: {}", email, ex.getMessage());
+            //log.warn("Failed to send welcome email to {}: {}", email, ex.getMessage());
+            log.error("Failed to send welcome email to {}: {}", email, ex.getMessage());
         }
     }
 
@@ -52,7 +55,7 @@ public class NewsletterEmailService {
             try {
                 sendOne(email, subject, htmlBody, baseUri);
             } catch (Exception ex) {
-                log.warn("Failed to send newsletter to {}: {}", email, ex.getMessage());
+                log.error("Failed to send newsletter to {}: {}", email, ex.getMessage());
             }
         }
     }
@@ -82,5 +85,6 @@ public class NewsletterEmailService {
         helper.setText(composedHtml, true);
 
         mailSender.send(message);
+        log.debug("Email dispatched to {} with subject '{}'", toEmail, subject);
     }
 }
