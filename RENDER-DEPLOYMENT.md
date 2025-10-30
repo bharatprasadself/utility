@@ -258,6 +258,31 @@ This typically indicates that the application's JPA/database configuration isn't
    
    This temporarily disables Spring Security during initialization, which should prevent the JWT filter errors.
 
+### Profile not switching to `prod` on Render
+
+If you set environment variables to use the `prod` profile but still see `prod-h2` (or H2) in logs:
+
+1) Check effective environment variables inside the running container
+   - Open Render Shell and run:
+     - `env | grep -E "SPRING_PROFILES_ACTIVE|SPRING_DATASOURCE|DATABASE_TYPE"`
+   - Ensure there’s exactly one `SPRING_PROFILES_ACTIVE=prod` and it’s not overridden by a Secret Group or duplicate var with a different value.
+
+2) Avoid pinning the profile in code
+   - In `application.properties`, do not set `spring.profiles.active`. If you want a local default, use:
+     - `spring.profiles.default=prod-h2`
+   - This lets the Render env var `SPRING_PROFILES_ACTIVE=prod` cleanly take precedence.
+
+3) Be mindful of Dockerfile defaults
+   - The Dockerfile currently sets `ENV SPRING_PROFILES_ACTIVE="prod-h2"` as a default.
+   - Render service-level env vars should override this at runtime, but if you prefer less ambiguity, remove that line from the Dockerfile and control the profile entirely via Render env.
+
+4) Database type reads as H2
+   - That usually means the app actually booted with `prod-h2`. Once the active profile is `prod`, the app will use PostgreSQL settings from `application-prod.properties` and your `SPRING_DATASOURCE_*` variables.
+
+5) Verify after changes
+   - Redeploy, then check logs for: `Active profiles: prod`.
+   - Health endpoints: `GET /api/actuator/health` and (if exposed) `GET /api/actuator/env` to confirm the active profile and the datasource URL.
+
 2. **Check Docker environment variables**: Make sure these environment variables are correctly picked up in the Docker container:
    - SSH into the container using Render Shell
    - Run `env | grep SPRING` to verify the environment variables are set
