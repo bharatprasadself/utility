@@ -148,6 +148,51 @@ This option requires updating your Dockerfile to build and include the frontend 
 
 3. Commit these changes and deploy
 
+## Switching to PostgreSQL on Render (prod profile)
+
+If you want to run the app on PostgreSQL instead of the H2 file DB, use the `prod` profile and provide your Render PostgreSQL credentials.
+
+### Steps
+
+1) Provision a PostgreSQL database on Render
+- In the Render dashboard, create a new PostgreSQL instance and note its connection info (host, port, database, user, password, optional CA settings).
+
+2) Set service environment variables on your Web Service
+- Navigate to your backend Web Service → Environment → Add/Update variables:
+
+```
+SPRING_PROFILES_ACTIVE=prod
+
+# Replace with your Render Postgres values:
+SPRING_DATASOURCE_URL=jdbc:postgresql://<HOST>:<PORT>/<DB>
+SPRING_DATASOURCE_USERNAME=<USER>
+SPRING_DATASOURCE_PASSWORD=<PASSWORD>
+
+# Optional tuning (defaults already set in application-prod.properties):
+# spring.datasource.hikari.maximum-pool-size=5
+# spring.datasource.hikari.minimum-idle=2
+# spring.jpa.hibernate.ddl-auto=none
+# spring.sql.init.mode=always
+```
+
+Notes
+- The `prod` profile already targets PostgreSQL (`application-prod.properties`).
+- Schema is applied via `src/main/resources/schema.sql` on startup (because `spring.sql.init.mode=always`). If your DB is already initialized, you can set `spring.sql.init.mode=never`.
+- Keep your persistent disk mounted at `/app/data` for file uploads; it is unrelated to the database once you’re on Postgres.
+
+3) Deploy and verify
+- Deploy the service and watch logs for a successful Postgres connection and schema initialization.
+- Health check: `GET https://<your-domain>/api/actuator/health`
+
+4) (Optional) Migrate existing H2 data to Postgres
+- Use the migration scripts committed in the repo:
+   - `scripts/migration/h2_to_postgres/h2-export.sql` (export CSVs from H2)
+   - `scripts/migration/h2_to_postgres/postgres-import.sql` (import CSVs into Postgres)
+- See `scripts/migration/h2_to_postgres/README.md` for Render-specific, step-by-step instructions.
+
+5) Rollback
+- To revert to H2, set `SPRING_PROFILES_ACTIVE=prod-h2` and redeploy (data remains on your persistent disk at `/app/data`).
+
 ### 5. Verify Deployment
 
 1. Once deployed, visit your Render URL to verify the application is running
