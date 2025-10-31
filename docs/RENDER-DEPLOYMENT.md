@@ -173,6 +173,11 @@ SPRING_DATASOURCE_PASSWORD=<PASSWORD>
 # spring.datasource.hikari.minimum-idle=2
 # spring.jpa.hibernate.ddl-auto=none
 # spring.sql.init.mode=always
+
+# Required for JWT security (prod)
+# - Secret must be 32+ chars for HS256. Expiration is milliseconds.
+APP_JWT_SECRET=<generate-a-strong-random-64-char-string>
+APP_JWT_EXPIRATION=86400000
 ```
 
 Notes
@@ -183,6 +188,16 @@ Notes
 3) Deploy and verify
 - Deploy the service and watch logs for a successful Postgres connection and schema initialization.
 - Health check: `GET https://<your-domain>/api/actuator/health`
+
+JWT sanity check
+- If startup fails with "Could not bind properties to 'JwtProperties' (prefix=app.jwt)", ensure both env vars above are set and valid.
+- If you later see "The signing key's size is ..." errors, your secret is too short—use 32+ characters (64+ recommended).
+
+Quick secret generator (PowerShell)
+```powershell
+$chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+-join ((1..64) | ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] })
+```
 
 4) (Optional) Migrate existing H2 data to Postgres
 - Use the migration scripts committed in the repo:
