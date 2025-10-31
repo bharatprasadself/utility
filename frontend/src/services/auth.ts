@@ -44,11 +44,22 @@ const authService = {
             localStorage.removeItem('username');
             localStorage.removeItem('roles');
             console.error('Login error:', error); // Debug log
-            if (error.response?.data?.message) {
-                throw new Error(error.response.data.message);
-            } else if (error.response?.status === 401) {
-                throw new Error('Invalid username or password');
+            // Prefer server-provided message
+            if (error?.response) {
+                const data = error.response.data;
+                const serverMessage = typeof data === 'string' ? data : data?.message;
+                if (serverMessage) {
+                    throw new Error(serverMessage);
+                }
+                if (error.response.status === 401) {
+                    throw new Error('Invalid username or password');
+                }
             }
+            // Fallback to error.message if available
+            if (error?.message) {
+                throw new Error(error.message);
+            }
+            // Final fallback
             throw new Error('Failed to login. Please try again later.');
         }
     },
