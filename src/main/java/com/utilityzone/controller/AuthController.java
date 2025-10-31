@@ -74,10 +74,27 @@ public class AuthController {
                     roles);
             System.out.println("Returning JWT response: " + response);
             return ResponseEntity.ok(response);
-        } catch (AuthenticationException e) {
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
             return ResponseEntity
                 .status(HttpServletResponse.SC_UNAUTHORIZED)
-                .body(new MessageResponse("Invalid username or password"));
+                .body(new MessageResponse("User not found"));
+        } catch (org.springframework.security.authentication.BadCredentialsException ex) {
+            return ResponseEntity
+                .status(HttpServletResponse.SC_UNAUTHORIZED)
+                .body(new MessageResponse("Bad credentials"));
+        } catch (org.springframework.security.authentication.LockedException ex) {
+            return ResponseEntity
+                .status(HttpServletResponse.SC_UNAUTHORIZED)
+                .body(new MessageResponse("Account is locked"));
+        } catch (org.springframework.security.authentication.DisabledException ex) {
+            return ResponseEntity
+                .status(HttpServletResponse.SC_UNAUTHORIZED)
+                .body(new MessageResponse("Account is disabled"));
+        } catch (AuthenticationException e) {
+            // Fallback for any other auth failures
+            return ResponseEntity
+                .status(HttpServletResponse.SC_UNAUTHORIZED)
+                .body(new MessageResponse("Authentication failed"));
         }
     }
 
