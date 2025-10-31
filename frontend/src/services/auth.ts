@@ -44,28 +44,27 @@ const authService = {
             localStorage.removeItem('username');
             localStorage.removeItem('roles');
             console.error('Login error:', error); // Debug log
-            // Prefer server-provided message
             if (error?.response) {
                 const data = error.response.data;
-                const serverMessage = typeof data === 'string' ? data : data?.message;
-                if (serverMessage) {
-                    throw new Error(serverMessage);
-                }
-                if (error.response.status === 401) {
-                    throw new Error('Invalid username or password');
-                }
+                const payload = typeof data === 'string' ? { message: data } : data;
+                const message = payload?.message || (error.response.status === 401 ? 'Invalid username or password' : undefined);
+                const code = payload?.code;
+                // Throw a structured error object
+                throw { message: message || 'Failed to login. Please try again later.', code };
             }
-            // Fallback to error.message if available
-            if (error?.message) {
-                throw new Error(error.message);
-            }
-            // Final fallback
-            throw new Error('Failed to login. Please try again later.');
+            throw { message: error?.message || 'Failed to login. Please try again later.' };
         }
     },
 
     register: async (data: RegisterRequest): Promise<any> => {
-        return await axiosInstance.post('/api/auth/signup', data);
+        try {
+            return await axiosInstance.post('/api/auth/signup', data);
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || error?.message || 'Registration failed.';
+            const code = typeof payload === 'object' ? payload?.code : undefined;
+            throw { message, code };
+        }
     },
 
     logout: () => {

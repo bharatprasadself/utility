@@ -77,31 +77,62 @@ public class AuthController {
         } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
             return ResponseEntity
                 .status(HttpServletResponse.SC_UNAUTHORIZED)
-                .body(new MessageResponse("User not found"));
+                .body(new com.utilityzone.exception.ErrorResponse(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Unauthorized",
+                    "User not found",
+                    "USER_NOT_FOUND"
+                ));
         } catch (org.springframework.security.authentication.BadCredentialsException ex) {
             return ResponseEntity
                 .status(HttpServletResponse.SC_UNAUTHORIZED)
-                .body(new MessageResponse("Bad credentials"));
+                .body(new com.utilityzone.exception.ErrorResponse(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Unauthorized",
+                    "Bad credentials",
+                    "BAD_CREDENTIALS"
+                ));
         } catch (org.springframework.security.authentication.LockedException ex) {
             return ResponseEntity
                 .status(HttpServletResponse.SC_UNAUTHORIZED)
-                .body(new MessageResponse("Account is locked"));
+                .body(new com.utilityzone.exception.ErrorResponse(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Unauthorized",
+                    "Account is locked",
+                    "ACCOUNT_LOCKED"
+                ));
         } catch (org.springframework.security.authentication.DisabledException ex) {
             return ResponseEntity
                 .status(HttpServletResponse.SC_UNAUTHORIZED)
-                .body(new MessageResponse("Account is disabled"));
+                .body(new com.utilityzone.exception.ErrorResponse(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Unauthorized",
+                    "Account is disabled",
+                    "ACCOUNT_DISABLED"
+                ));
         } catch (AuthenticationException e) {
             // Fallback for any other auth failures
             return ResponseEntity
                 .status(HttpServletResponse.SC_UNAUTHORIZED)
-                .body(new MessageResponse("Authentication failed"));
+                .body(new com.utilityzone.exception.ErrorResponse(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Unauthorized",
+                    "Authentication failed",
+                    "AUTHENTICATION_FAILED"
+                ));
         }
     }
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
+            return ResponseEntity.status(HttpServletResponse.SC_BAD_REQUEST)
+                .body(new com.utilityzone.exception.ErrorResponse(
+                    HttpServletResponse.SC_BAD_REQUEST,
+                    "Bad Request",
+                    "Username is already taken",
+                    "USERNAME_TAKEN"
+                ));
         }
 
         // Create new user account
