@@ -39,7 +39,7 @@ public class EbookController {
     private final NewsletterEmailService emailService;
     private final NewsletterTokenService tokenService;
     private final CacheManager cacheManager;
-    private final com.utilityzone.repository.EbookCoverRepository coverRepository;
+    private final com.utilityzone.service.EbookCoverService coverService;
     private static final Logger log = LoggerFactory.getLogger(EbookController.class);
 
     @Value("${file.upload.dir:}")
@@ -155,20 +155,34 @@ public class EbookController {
         entity.setOriginalFilename(original);
         entity.setMimeType(mime);
         entity.setData(file.getBytes());
-        var saved = coverRepository.save(entity);
+        var saved = coverService.save(entity);
 
         String publicUrl = "/api/ebooks/covers/" + saved.getId();
         return ResponseEntity.ok(Map.of("url", publicUrl));
     }
 
     @GetMapping("/api/ebooks/covers/{id}")
-    public ResponseEntity<byte[]> getCover(@PathVariable("id") Long id) {
-        var opt = coverRepository.findById(id);
+    public ResponseEntity<byte[]> getCover(@PathVariable("id") Long id, @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
+        var opt = coverService.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         var entity = opt.get();
+        // Build a stable ETag based on id + createdAt + data length
+        long created = entity.getCreatedAt() != null ? entity.getCreatedAt().toEpochMilli() : 0L;
+        int length = entity.getData() != null ? entity.getData().length : 0;
+        String eTag = "\"" + id + "-" + created + "-" + length + "\"";
+
+        if (ifNoneMatch != null && ifNoneMatch.equals(eTag)) {
+            return ResponseEntity.status(304)
+                    .header("Cache-Control", "public, max-age=86400, immutable")
+                    .eTag(eTag)
+                    .build();
+        }
+
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(entity.getMimeType() != null ? entity.getMimeType() : MediaType.APPLICATION_OCTET_STREAM_VALUE))
-                .header("Cache-Control", "public, max-age=86400")
+                .header("Cache-Control", "public, max-age=86400, immutable")
+                .eTag(eTag)
+                .contentLength(length)
                 .body(entity.getData());
     }
 
