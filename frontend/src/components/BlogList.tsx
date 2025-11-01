@@ -255,16 +255,34 @@ export default function BlogList() {
             return;
         }
 
+        // Helper: extract first H1 and return cleaned body without that heading
+        const splitMdHeading = (md: string): { heading: string | null; body: string } => {
+            const lines = md.split(/\r?\n/);
+            let i = 0;
+            // skip leading blank lines
+            while (i < lines.length && lines[i].trim() === '') i++;
+            if (i < lines.length && /^#\s+/.test(lines[i])) {
+                const heading = lines[i].replace(/^#\s+/, '').trim();
+                i++;
+                // skip a single blank line after the heading if present
+                if (i < lines.length && lines[i].trim() === '') i++;
+                const body = lines.slice(i).join('\n').replace(/^\s+/, '');
+                return { heading, body };
+            }
+            return { heading: null, body: md };
+        };
+
         const reader = new FileReader();
         reader.onload = (ev) => {
             const text = (ev.target?.result as string) || '';
-            setContent(text);
-            setImportedFileName(file.name);
-            // If title is empty, attempt to derive from first markdown H1
-            const firstLine = text.split('\n')[0] || '';
-            if (!title && firstLine.startsWith('# ')) {
-                setTitle(firstLine.substring(2).trim());
+            const { heading, body } = splitMdHeading(text);
+            // Set title from heading if none provided
+            if (!title && heading) {
+                setTitle(heading);
             }
+            // Always use body so we don't render duplicate heading in content
+            setContent(body || text);
+            setImportedFileName(file.name);
         };
         reader.readAsText(file);
         // allow reselecting same file

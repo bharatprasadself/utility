@@ -21,9 +21,10 @@ public class EbookCoverEntity {
     @Column(name = "mime_type")
     private String mimeType;
 
-    @Lob
-    @Basic(fetch = FetchType.LAZY)
-    @Column(name = "data", nullable = false)
+    // Store as PostgreSQL BYTEA. Using @Lob on PostgreSQL maps to OID (bigint),
+    // which caused a type mismatch when our column is BYTEA.
+    // So we explicitly map to bytea and avoid @Lob.
+    @Column(name = "data", nullable = false, columnDefinition = "bytea")
     private byte[] data;
 
     @Column(name = "created_at")
