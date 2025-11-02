@@ -677,6 +677,82 @@ export default function BlogList() {
                                             >
                                                 Bold Text
                                             </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    const ta = document.querySelector('textarea') as HTMLTextAreaElement | null;
+                                                    if (!ta) return;
+                                                    const start = ta.selectionStart;
+                                                    const end = ta.selectionEnd;
+                                                    const selected = content.substring(start, end);
+                                                    if (!selected) {
+                                                        const insert = (content.endsWith('\n') ? '' : '\n') + '- ';
+                                                        const updated = content.substring(0, start) + insert + content.substring(end);
+                                                        setContent(updated);
+                                                        setTimeout(() => {
+                                                            ta.focus();
+                                                            const pos = start + insert.length;
+                                                            ta.selectionStart = ta.selectionEnd = pos;
+                                                        }, 0);
+                                                        return;
+                                                    }
+                                                    const lines = selected.split(/\r?\n/);
+                                                    const transformed = lines.map(l => {
+                                                        const trimmed = l.replace(/^\s+/, '');
+                                                        if (/^(?:- |\* |\d+\. )/.test(trimmed)) return l; // already list-like
+                                                        return (l ? '- ' + trimmed : l);
+                                                    }).join('\n');
+                                                    const updated = content.substring(0, start) + transformed + content.substring(end);
+                                                    setContent(updated);
+                                                    setTimeout(() => {
+                                                        ta.focus();
+                                                        ta.selectionStart = start;
+                                                        ta.selectionEnd = start + transformed.length;
+                                                    }, 0);
+                                                }}
+                                                variant="text"
+                                                size="small"
+                                            >
+                                                Bulleted List
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    const ta = document.querySelector('textarea') as HTMLTextAreaElement | null;
+                                                    if (!ta) return;
+                                                    const start = ta.selectionStart;
+                                                    const end = ta.selectionEnd;
+                                                    const selected = content.substring(start, end);
+                                                    if (!selected) {
+                                                        const insert = (content.endsWith('\n') ? '' : '\n') + '1. ';
+                                                        const updated = content.substring(0, start) + insert + content.substring(end);
+                                                        setContent(updated);
+                                                        setTimeout(() => {
+                                                            ta.focus();
+                                                            const pos = start + insert.length;
+                                                            ta.selectionStart = ta.selectionEnd = pos;
+                                                        }, 0);
+                                                        return;
+                                                    }
+                                                    const lines = selected.split(/\r?\n/);
+                                                    let counter = 1;
+                                                    const transformed = lines.map(l => {
+                                                        const trimmed = l.replace(/^\s+/, '');
+                                                        if (/^(?:- |\* |\d+\. )/.test(trimmed)) return l; // already list-like
+                                                        const prefix = (trimmed.length > 0) ? (counter++ + '. ') : '';
+                                                        return prefix + trimmed;
+                                                    }).join('\n');
+                                                    const updated = content.substring(0, start) + transformed + content.substring(end);
+                                                    setContent(updated);
+                                                    setTimeout(() => {
+                                                        ta.focus();
+                                                        ta.selectionStart = start;
+                                                        ta.selectionEnd = start + transformed.length;
+                                                    }, 0);
+                                                }}
+                                                variant="text"
+                                                size="small"
+                                            >
+                                                Numbered List
+                                            </Button>
                                         </Stack>
                                         <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
                                             Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB limit)' : overSoft ? ' (getting large)' : ''}
