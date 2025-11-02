@@ -284,18 +284,41 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       return;
     }
     try {
+      // Helper: extract first H1 and return cleaned body without that heading
+      const splitMdHeading = (md: string): { heading: string | null; body: string } => {
+        const normalized = md.replace(/^\uFEFF/, ''); // strip BOM if present
+        const lines = normalized.split(/\r?\n/);
+        let i = 0;
+        // Skip YAML frontmatter if present
+        if (lines[i]?.trim() === '---') {
+          i++;
+          while (i < lines.length && lines[i].trim() !== '---') i++;
+          if (i < lines.length) i++; // skip closing '---'
+        }
+        // Skip leading blank lines
+        while (i < lines.length && lines[i].trim() === '') i++;
+        if (i < lines.length && /^#\s*/.test(lines[i])) { // accept optional space after '#'
+          const heading = lines[i].replace(/^#\s*/, '').trim();
+          i++;
+          // Skip a single blank line after the heading if present
+          if (i < lines.length && lines[i].trim() === '') i++;
+          const body = lines.slice(i).join('\n').replace(/^\s+/, '');
+          return { heading, body };
+        }
+        return { heading: null, body: normalized };
+      };
+
       const reader = new FileReader();
       reader.onload = (ev) => {
         const text = (ev.target?.result as string) || '';
-        setContentInput(text);
-        setImportedFileName(file.name);
-        // Extract title from first heading if empty
-        const firstLine = text.split('\n')[0] || '';
-        if (!titleInput && firstLine.startsWith('# ')) {
-          setTitleInput(firstLine.substring(2).trim());
+        const { heading, body } = splitMdHeading(text);
+        if (!titleInput && heading) {
+          setTitleInput(heading);
         }
-        // Estimate read time
-        const words = text.trim().split(/\s+/).filter(Boolean).length;
+        setContentInput(body || text);
+        setImportedFileName(file.name);
+        // Estimate read time from body
+        const words = (body || text).trim().split(/\s+/).filter(Boolean).length;
         if (!readTimeInput) {
           const mins = Math.max(1, Math.ceil(words / 200));
           setReadTimeInput(`${mins} min read`);
