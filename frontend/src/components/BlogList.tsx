@@ -332,7 +332,15 @@ export default function BlogList() {
                             <Button 
                                 variant="contained" 
                                 color="primary" 
-                                onClick={() => setOpen(true)}
+                                onClick={() => {
+                                    // Ensure we are in "create" mode and not accidentally editing
+                                    setEditBlogId(null);
+                                    setTitle('');
+                                    setContent('');
+                                    setImportedFileName('');
+                                    setError('');
+                                    setOpen(true);
+                                }}
                                 startIcon={<EditIcon />}
                                 sx={{
                                     px: 3,

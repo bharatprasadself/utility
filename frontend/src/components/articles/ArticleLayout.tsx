@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -197,12 +197,39 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   handleDelete,
   handleCreate
 }) => {
+  // Contextual default tags based on category (used when creating a new article)
+  const getDefaultTagsForCategory = (category?: ArticleCategory | string): string[] => {
+    switch (category) {
+      case ArticleCategory.SPRING_BOOT:
+      case 'SPRING_BOOT':
+        return ['Spring Boot'];
+      case ArticleCategory.REACT:
+      case 'REACT':
+        return ['React'];
+      case ArticleCategory.JAVA:
+      case 'JAVA':
+        return ['Java'];
+      case ArticleCategory.POSTGRESQL:
+      case 'POSTGRESQL':
+        return ['PostgreSQL'];
+      case ArticleCategory.DOCKER:
+      case 'DOCKER':
+        return ['Docker'];
+      case ArticleCategory.MICROSERVICES:
+      case 'MICROSERVICES':
+        return ['Microservices'];
+      default:
+        return [];
+    }
+  };
+  const inferredCategory = articles.length > 0 ? articles[0].category : undefined;
+  const defaultTags = useMemo(() => getDefaultTagsForCategory(inferredCategory), [inferredCategory]);
   // Local state for dialogs and form fields
   const [open, setOpen] = useState(false);
   const [editArticleId, setEditArticleId] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState('');
   const [contentInput, setContentInput] = useState('');
-  const [tagsInput, setTagsInput] = useState<string[]>(['Spring Boot']); // Default tag
+  const [tagsInput, setTagsInput] = useState<string[]>(defaultTags);
   const [readTimeInput, setReadTimeInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false); // Add loading state for delete action
@@ -227,7 +254,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     setEditArticleId(article.id);
     setTitleInput(article.title || '');
     setContentInput(article.content || '');
-    setTagsInput(article.tags || ['Spring Boot']);
+    setTagsInput(article.tags || getDefaultTagsForCategory(article.category));
     setReadTimeInput(article.readTime || '');
     setOpen(true);
   };
@@ -237,7 +264,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     setEditArticleId(null);
     setTitleInput('');
     setContentInput('');
-    setTagsInput(['Spring Boot']); // Reset to default tag
+    setTagsInput(defaultTags); // Reset to contextual default tags
     setReadTimeInput('');
     setError('');
     setImportedFileName('');
@@ -315,7 +342,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       const baseData = {
         title: titleInput.trim(),
         content: contentInput,
-        tags: tagsInput.length ? tagsInput : ['Spring Boot'], // Ensure we have at least one tag
+        tags: tagsInput.length ? tagsInput : getDefaultTagsForCategory(categoryValue), // Ensure we have at least one contextual tag
         readTime: readTimeInput || '5 min read',
         category: categoryValue
       } as const;
@@ -400,7 +427,17 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               <Button
                 variant="contained"
                 color="primary"
-                onClick={() => setOpen(true)}
+                onClick={() => {
+                  // Ensure fresh create mode and clear any stale edit state
+                  setEditArticleId(null);
+                  setTitleInput('');
+                  setContentInput('');
+                  setTagsInput(defaultTags);
+                  setReadTimeInput('');
+                  setError('');
+                  setImportedFileName('');
+                  setOpen(true);
+                }}
                 startIcon={<AddIcon />}
                 sx={{
                   px: 3,
