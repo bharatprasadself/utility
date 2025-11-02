@@ -695,6 +695,83 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   >
                     Bold Text
                   </Button>
+                  <Button
+                    onClick={() => {
+                      const ta = contentTextAreaRef.current;
+                      if (!ta) return;
+                      const start = ta.selectionStart;
+                      const end = ta.selectionEnd;
+                      const selected = contentInput.substring(start, end);
+                      // If nothing selected, insert a starter list item on new line
+                      if (!selected) {
+                        const insert = (contentInput.endsWith('\n') ? '' : '\n') + '- ';
+                        const updated = contentInput.substring(0, start) + insert + contentInput.substring(end);
+                        setContentInput(updated);
+                        setTimeout(() => {
+                          ta.focus();
+                          const pos = start + insert.length;
+                          ta.selectionStart = ta.selectionEnd = pos;
+                        }, 0);
+                        return;
+                      }
+                      const lines = selected.split(/\r?\n/);
+                      const transformed = lines.map(l => {
+                        const trimmed = l.replace(/^\s+/, '');
+                        if (/^(?:- |\* |\d+\. )/.test(trimmed)) return l; // already a list-ish
+                        return (l ? '- ' + trimmed : l);
+                      }).join('\n');
+                      const updated = contentInput.substring(0, start) + transformed + contentInput.substring(end);
+                      setContentInput(updated);
+                      setTimeout(() => {
+                        ta.focus();
+                        ta.selectionStart = start;
+                        ta.selectionEnd = start + transformed.length;
+                      }, 0);
+                    }}
+                    variant="text"
+                    size="small"
+                  >
+                    Bulleted List
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const ta = contentTextAreaRef.current;
+                      if (!ta) return;
+                      const start = ta.selectionStart;
+                      const end = ta.selectionEnd;
+                      const selected = contentInput.substring(start, end);
+                      if (!selected) {
+                        const insert = (contentInput.endsWith('\n') ? '' : '\n') + '1. ';
+                        const updated = contentInput.substring(0, start) + insert + contentInput.substring(end);
+                        setContentInput(updated);
+                        setTimeout(() => {
+                          ta.focus();
+                          const pos = start + insert.length;
+                          ta.selectionStart = ta.selectionEnd = pos;
+                        }, 0);
+                        return;
+                      }
+                      const lines = selected.split(/\r?\n/);
+                      let counter = 1;
+                      const transformed = lines.map(l => {
+                        const trimmed = l.replace(/^\s+/, '');
+                        if (/^(?:- |\* |\d+\. )/.test(trimmed)) return l; // already list-like
+                        const prefix = (trimmed.length > 0) ? (counter++ + '. ') : '';
+                        return prefix + trimmed;
+                      }).join('\n');
+                      const updated = contentInput.substring(0, start) + transformed + contentInput.substring(end);
+                      setContentInput(updated);
+                      setTimeout(() => {
+                        ta.focus();
+                        ta.selectionStart = start;
+                        ta.selectionEnd = start + transformed.length;
+                      }, 0);
+                    }}
+                    variant="text"
+                    size="small"
+                  >
+                    Numbered List
+                  </Button>
                 </Stack>
                 <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
                   Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB limit)' : overSoft ? ' (getting large)' : ''}
