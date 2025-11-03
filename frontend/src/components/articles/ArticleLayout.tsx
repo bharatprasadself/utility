@@ -77,7 +77,8 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
       '& ul, & ol': { mb: 2, pl: 3 },
       '& li': { mb: 1 },
       '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
-      '& pre': { bgcolor: 'grey.100', p: 2, borderRadius: 1, overflowX: 'auto' }
+      // Make code blocks flush-left: remove left padding while keeping top/right/bottom for readability
+      '& pre': { bgcolor: 'grey.100', py: 2, pr: 2, pl: 0, borderRadius: 1, overflowX: 'auto' }
     }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -129,7 +130,7 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
             }
             return (
               <Box sx={{ position: 'relative', my: 2 }}>
-                <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
+                <Box component="pre" sx={{ m: 0, py: 2, pr: 2, pl: 0, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
                   <code>{text}</code>
                 </Box>
                 <Tooltip title="Copy">

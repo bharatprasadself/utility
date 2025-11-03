@@ -47,8 +47,9 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
         '& blockquote': { borderLeft: '4px solid', borderColor: 'primary.main', pl: 2, py: 1, my: 2, bgcolor: 'grey.50', fontStyle: 'italic' },
         '& ul, & ol': { mb: 2, pl: 3 },
         '& li': { mb: 1 },
-        '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
-        '& pre': { bgcolor: 'grey.100', p: 2, borderRadius: 1, overflowX: 'auto' }
+    '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
+    // Flush-left code blocks: remove left padding to align the first column to the container edge
+    '& pre': { bgcolor: 'grey.100', py: 2, pr: 2, pl: 0, borderRadius: 1, overflowX: 'auto' }
     }}>
         <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
@@ -65,7 +66,7 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
                     }
                     return (
                         <Box sx={{ position: 'relative', my: 2 }}>
-                            <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
+                            <Box component="pre" sx={{ m: 0, py: 2, pr: 2, pl: 0, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
                                 <code>{text}</code>
                             </Box>
                             <Tooltip title="Copy">
