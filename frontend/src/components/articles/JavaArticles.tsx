@@ -53,37 +53,116 @@ function JavaArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>(staticArticles);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadArticles = async () => {
-      try {
-        console.log('Loading Java articles...');
-        const response = await ArticleService.getArticlesByCategory(ArticleCategory.JAVA as any);
-        console.log('Java articles response:', response);
-        if (response.data && response.data.length > 0) {
-          setArticles(response.data);
-        } else {
-          console.log('No articles found, using static content');
-          setArticles(staticArticles);
-        }
-      } catch (error) {
-        console.error('Failed to load Java articles:', error);
+  const loadArticles = async () => {
+    try {
+      console.log('Loading Java articles...');
+      const response = await ArticleService.getArticlesByCategory(ArticleCategory.JAVA);
+      console.log('Java articles response:', response);
+      if (response.data && response.data.length > 0) {
+        setArticles(response.data);
+      } else {
+        console.log('No Java articles found, using static content');
         setArticles(staticArticles);
       }
-    };
+    } catch (error) {
+      console.error('Failed to load Java articles:', error);
+      setArticles(staticArticles);
+    }
+  };
 
+  useEffect(() => {
     loadArticles();
   }, []);
 
+  const handleCreateArticle = async (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!isAdmin) {
+      setError('You must be an admin to create articles');
+      return;
+    }
+    setCreating(true);
+    setError(null);
+    try {
+      console.log('Creating Java article:', articleData);
+      const articleToCreate = {
+        ...articleData,
+        category: ArticleCategory.JAVA
+      };
+      const apiArticle = {
+        ...articleToCreate,
+        category: 'JAVA',
+        tags: articleToCreate.tags && Array.isArray(articleToCreate.tags) ? articleToCreate.tags : ['Java']
+      };
+      // @ts-ignore intentional formatting for API
+      await ArticleService.createArticle(apiArticle);
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to create Java article:', error);
+      const msg = error?.response?.data?.message || error?.message || 'Failed to create article. Please try again.';
+      setError(msg);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleEdit = async (article: Article) => {
+    if (!isAdmin) {
+      setError('You must be an admin to edit articles');
+      return;
+    }
+    setCreating(true);
+    setError(null);
+    try {
+      const updated = {
+        ...article,
+        category: 'JAVA'
+      } as any;
+      const resp = await ArticleService.updateArticle(article.id, updated);
+      console.log('Java article updated:', resp);
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to update Java article:', error);
+      const msg = error?.response?.data?.message || error?.message || 'Failed to update article. Please try again.';
+      setError(msg);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!isAdmin) {
+      setError('You must be an admin to delete articles');
+      return;
+    }
+    try {
+      await ArticleService.deleteArticle(id);
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Failed to delete Java article:', error);
+      setError(error?.response?.data?.message || 'Failed to delete article. Please try again.');
+    }
+  };
+
   return (
-    <ArticleLayout
-      title="Java Articles"
-      description="Articles about the Java language, platform, and ecosystem."
-      articles={articles}
-      isAdmin={isAdmin}
-      handleEdit={() => {}}
-      handleDelete={() => {}}
-    />
+    <>
+      {error && (
+        <div style={{ color: 'red', padding: '10px', marginBottom: '10px' }}>
+          Error: {error}
+        </div>
+      )}
+      <ArticleLayout
+        title="Java Articles"
+        description="Articles about the Java language, platform, and ecosystem."
+        articles={articles}
+        isAdmin={isAdmin}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+        handleCreate={handleCreateArticle}
+      />
+      {creating && <div>Saving...</div>}
+    </>
   );
 }
 
