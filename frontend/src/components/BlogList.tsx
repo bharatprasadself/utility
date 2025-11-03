@@ -90,7 +90,7 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
                     const src = props.src as string | undefined;
                     return (
                         <Box sx={{ my: 2, textAlign: 'center' }}>
-                            <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }} />
+                            <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.1)', backgroundColor: '#f5f5f5' }} />
                             {alt && (
                                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
                                     {alt}

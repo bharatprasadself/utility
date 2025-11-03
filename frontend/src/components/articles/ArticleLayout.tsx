@@ -66,7 +66,8 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
         textDecoration: 'none',
         '&:hover': { textDecoration: 'underline' }
       },
-      '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1 },
+  // Ensure transparent PNGs render over a light grey instead of default white card background
+  '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1, backgroundColor: 'grey.300' },
       '& table': { width: '100%', borderCollapse: 'collapse', my: 2 },
       '& th, & td': { border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' },
       '& thead th': { bgcolor: 'grey.100', fontWeight: 600 },
