@@ -64,11 +64,22 @@ public class BlogController {
             if (blog.getContent() == null || blog.getContent().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Content is required");
             }
-
-            blog.setPublishDate(LocalDateTime.now());
+            // If not explicitly set to DRAFT, treat as PUBLISHED
+            if (blog.getStatus() == null) {
+                blog.setStatus(com.utilityzone.model.PublicationStatus.PUBLISHED);
+            }
             String username = extractUsernameFromToken(token);
             blog.setAuthor(username);
-            Blog savedBlog = blogService.save(blog);
+            Blog savedBlog;
+            if (blog.getStatus() == com.utilityzone.model.PublicationStatus.DRAFT) {
+                // Upsert draft to avoid duplicate draft versions by same author/title
+                blog.setPublishDate(null);
+                savedBlog = blogService.createOrUpdateDraft(blog, username);
+            } else {
+                // PUBLISHED: ensure publishDate is set
+                blog.setPublishDate(LocalDateTime.now());
+                savedBlog = blogService.save(blog);
+            }
             return ResponseEntity.ok(savedBlog);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to create blog: " + e.getMessage());
@@ -107,11 +118,46 @@ public class BlogController {
                     existingBlog.setTitle(blog.getTitle().trim());
                     existingBlog.setContent(blog.getContent().trim());
                     existingBlog.setUpdatedAt(LocalDateTime.now());
+                    // Apply status changes
+                    if (blog.getStatus() != null) {
+                        existingBlog.setStatus(blog.getStatus());
+                        if (blog.getStatus() == com.utilityzone.model.PublicationStatus.PUBLISHED && existingBlog.getPublishDate() == null) {
+                            existingBlog.setPublishDate(LocalDateTime.now());
+                        }
+                        if (blog.getStatus() == com.utilityzone.model.PublicationStatus.DRAFT) {
+                            // Keep publishDate null for drafts
+                            existingBlog.setPublishDate(null);
+                        }
+                    }
                     return ResponseEntity.ok(blogService.save(existingBlog));
                 })
                 .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to update blog: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/drafts")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> getDraftBlogs(@RequestParam(name = "limit", required = false) Integer limit) {
+        try {
+            int effectiveLimit = (limit == null) ? 0 : Math.max(0, limit);
+            List<Blog> drafts = blogService.getDraftBlogs(effectiveLimit);
+            return ResponseEntity.ok(drafts);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to fetch drafts: " + e.getMessage());
+        }
+    }
+
+    // Optional admin maintenance endpoint to remove existing duplicate drafts.
+    @PostMapping("/drafts/deduplicate")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> deduplicateDrafts() {
+        try {
+            int removed = blogService.deduplicateDrafts();
+            return ResponseEntity.ok(Map.of("removed", removed));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to de-duplicate drafts: " + e.getMessage());
         }
     }
 

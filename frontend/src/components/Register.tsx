@@ -15,8 +15,9 @@ export default function Register() {
         try {
             await register(username, password);
             navigate('/login');
-        } catch (err) {
-            setError('Registration failed. Please try a different username.');
+        } catch (err: any) {
+            const serverMessage = err?.message || err?.response?.data?.message;
+            setError(serverMessage || 'Registration failed. Please try a different username.');
         }
     };
 

@@ -115,6 +115,9 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setPasswordEncoder(passwordEncoder());
         provider.setUserDetailsService(userDetailsService);
+        // Expose UsernameNotFoundException instead of converting to BadCredentialsException
+        // so we can return a clearer message to the client on /api/auth/signin
+        provider.setHideUserNotFoundExceptions(false);
         return provider;
     }
 

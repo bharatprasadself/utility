@@ -8,11 +8,13 @@ export interface Blog {
     publishDate: string;
     createdAt: string;
     updatedAt: string;
+    status?: 'DRAFT' | 'PUBLISHED';
 }
 
 export interface BlogRequest {
     title: string;
     content: string;
+    status?: 'DRAFT' | 'PUBLISHED';
 }
 
 export interface CreateBlogRequest extends BlogRequest {}
@@ -60,7 +62,8 @@ const blogService = {
                     author: blog.author || 'Unknown',
                     publishDate: blog.publishDate || new Date().toISOString(),
                     createdAt: blog.createdAt || new Date().toISOString(),
-                    updatedAt: blog.updatedAt || new Date().toISOString()
+                    updatedAt: blog.updatedAt || new Date().toISOString(),
+                    status: blog.status || 'PUBLISHED'
                 };
             });
 
@@ -74,6 +77,29 @@ const blogService = {
             } else {
                 throw new Error('Failed to fetch blogs. Please try again later.');
             }
+        }
+    },
+
+    getDrafts: async (): Promise<Blog[]> => {
+        try {
+            console.log('Fetching draft blogs...');
+            const response = await axiosInstance.get('/api/blogs/drafts');
+            if (!Array.isArray(response.data)) {
+                throw new Error('Invalid data format received for drafts');
+            }
+            return response.data.map(blog => ({
+                id: blog.id,
+                title: blog.title || 'Untitled',
+                content: blog.content || 'No content',
+                author: blog.author || 'Unknown',
+                publishDate: blog.publishDate || new Date().toISOString(),
+                createdAt: blog.createdAt || new Date().toISOString(),
+                updatedAt: blog.updatedAt || new Date().toISOString(),
+                status: blog.status || 'DRAFT'
+            }));
+        } catch (error: any) {
+            console.error('Error fetching drafts:', error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch drafts');
         }
     },
 

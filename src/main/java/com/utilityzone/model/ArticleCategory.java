@@ -2,6 +2,7 @@ package com.utilityzone.model;
 
 public enum ArticleCategory {
     SPRING_BOOT("Spring Boot"),
+    JAVA("Java"),
     REACT("React JS"),
     POSTGRESQL("PostgreSQL"),
     DOCKER("Docker"),

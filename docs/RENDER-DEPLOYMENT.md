@@ -148,6 +148,66 @@ This option requires updating your Dockerfile to build and include the frontend 
 
 3. Commit these changes and deploy
 
+## Switching to PostgreSQL on Render (prod profile)
+
+If you want to run the app on PostgreSQL instead of the H2 file DB, use the `prod` profile and provide your Render PostgreSQL credentials.
+
+### Steps
+
+1) Provision a PostgreSQL database on Render
+- In the Render dashboard, create a new PostgreSQL instance and note its connection info (host, port, database, user, password, optional CA settings).
+
+2) Set service environment variables on your Web Service
+- Navigate to your backend Web Service → Environment → Add/Update variables:
+
+```
+SPRING_PROFILES_ACTIVE=prod
+
+# Replace with your Render Postgres values:
+SPRING_DATASOURCE_URL=jdbc:postgresql://<HOST>:<PORT>/<DB>
+SPRING_DATASOURCE_USERNAME=<USER>
+SPRING_DATASOURCE_PASSWORD=<PASSWORD>
+
+# Optional tuning (defaults already set in application-prod.properties):
+# spring.datasource.hikari.maximum-pool-size=5
+# spring.datasource.hikari.minimum-idle=2
+# spring.jpa.hibernate.ddl-auto=none
+# spring.sql.init.mode=always
+
+# Required for JWT security (prod)
+# - Secret must be 32+ chars for HS256. Expiration is milliseconds.
+APP_JWT_SECRET=<generate-a-strong-random-64-char-string>
+APP_JWT_EXPIRATION=86400000
+```
+
+Notes
+- The `prod` profile already targets PostgreSQL (`application-prod.properties`).
+- Schema is applied via `src/main/resources/schema.sql` on startup (because `spring.sql.init.mode=always`). If your DB is already initialized, you can set `spring.sql.init.mode=never`.
+- Keep your persistent disk mounted at `/app/data` for file uploads; it is unrelated to the database once you’re on Postgres.
+
+3) Deploy and verify
+- Deploy the service and watch logs for a successful Postgres connection and schema initialization.
+- Health check: `GET https://<your-domain>/api/actuator/health`
+
+JWT sanity check
+- If startup fails with "Could not bind properties to 'JwtProperties' (prefix=app.jwt)", ensure both env vars above are set and valid.
+- If you later see "The signing key's size is ..." errors, your secret is too short—use 32+ characters (64+ recommended).
+
+Quick secret generator (PowerShell)
+```powershell
+$chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+-join ((1..64) | ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] })
+```
+
+4) (Optional) Migrate existing H2 data to Postgres
+- Use the migration scripts committed in the repo:
+   - `scripts/migration/h2_to_postgres/h2-export.sql` (export CSVs from H2)
+   - `scripts/migration/h2_to_postgres/postgres-import.sql` (import CSVs into Postgres)
+- See `scripts/migration/h2_to_postgres/README.md` for Render-specific, step-by-step instructions.
+
+5) Rollback
+- To revert to H2, set `SPRING_PROFILES_ACTIVE=prod-h2` and redeploy (data remains on your persistent disk at `/app/data`).
+
 ### 5. Verify Deployment
 
 1. Once deployed, visit your Render URL to verify the application is running
@@ -212,6 +272,31 @@ This typically indicates that the application's JPA/database configuration isn't
    ```
    
    This temporarily disables Spring Security during initialization, which should prevent the JWT filter errors.
+
+### Profile not switching to `prod` on Render
+
+If you set environment variables to use the `prod` profile but still see `prod-h2` (or H2) in logs:
+
+1) Check effective environment variables inside the running container
+   - Open Render Shell and run:
+     - `env | grep -E "SPRING_PROFILES_ACTIVE|SPRING_DATASOURCE|DATABASE_TYPE"`
+   - Ensure there’s exactly one `SPRING_PROFILES_ACTIVE=prod` and it’s not overridden by a Secret Group or duplicate var with a different value.
+
+2) Avoid pinning the profile in code
+   - In `application.properties`, do not set `spring.profiles.active`. If you want a local default, use:
+     - `spring.profiles.default=prod-h2`
+   - This lets the Render env var `SPRING_PROFILES_ACTIVE=prod` cleanly take precedence.
+
+3) Be mindful of Dockerfile defaults
+   - The Dockerfile currently sets `ENV SPRING_PROFILES_ACTIVE="prod-h2"` as a default.
+   - Render service-level env vars should override this at runtime, but if you prefer less ambiguity, remove that line from the Dockerfile and control the profile entirely via Render env.
+
+4) Database type reads as H2
+   - That usually means the app actually booted with `prod-h2`. Once the active profile is `prod`, the app will use PostgreSQL settings from `application-prod.properties` and your `SPRING_DATASOURCE_*` variables.
+
+5) Verify after changes
+   - Redeploy, then check logs for: `Active profiles: prod`.
+   - Health endpoints: `GET /api/actuator/health` and (if exposed) `GET /api/actuator/env` to confirm the active profile and the datasource URL.
 
 2. **Check Docker environment variables**: Make sure these environment variables are correctly picked up in the Docker container:
    - SSH into the container using Render Shell

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -66,7 +66,8 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
         textDecoration: 'none',
         '&:hover': { textDecoration: 'underline' }
       },
-      '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1 },
+  // Ensure transparent PNGs render over a light grey instead of default white card background
+  '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1, backgroundColor: 'grey.300' },
       '& table': { width: '100%', borderCollapse: 'collapse', my: 2 },
       '& th, & td': { border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' },
       '& thead th': { bgcolor: 'grey.100', fontWeight: 600 },
@@ -76,7 +77,8 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
       '& ul, & ol': { mb: 2, pl: 3 },
       '& li': { mb: 1 },
       '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
-      '& pre': { bgcolor: 'grey.100', p: 2, borderRadius: 1, overflowX: 'auto' }
+      // Make code blocks flush-left: remove left padding while keeping top/right/bottom for readability
+      '& pre': { bgcolor: 'grey.100', py: 2, pr: 2, pl: 0, borderRadius: 1, overflowX: 'auto' }
     }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -128,7 +130,7 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
             }
             return (
               <Box sx={{ position: 'relative', my: 2 }}>
-                <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
+                <Box component="pre" sx={{ m: 0, py: 2, pr: 2, pl: 0, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
                   <code>{text}</code>
                 </Box>
                 <Tooltip title="Copy">
@@ -197,12 +199,39 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   handleDelete,
   handleCreate
 }) => {
+  // Contextual default tags based on category (used when creating a new article)
+  const getDefaultTagsForCategory = (category?: ArticleCategory | string): string[] => {
+    switch (category) {
+      case ArticleCategory.SPRING_BOOT:
+      case 'SPRING_BOOT':
+        return ['Spring Boot'];
+      case ArticleCategory.REACT:
+      case 'REACT':
+        return ['React'];
+      case ArticleCategory.JAVA:
+      case 'JAVA':
+        return ['Java'];
+      case ArticleCategory.POSTGRESQL:
+      case 'POSTGRESQL':
+        return ['PostgreSQL'];
+      case ArticleCategory.DOCKER:
+      case 'DOCKER':
+        return ['Docker'];
+      case ArticleCategory.MICROSERVICES:
+      case 'MICROSERVICES':
+        return ['Microservices'];
+      default:
+        return [];
+    }
+  };
+  const inferredCategory = articles.length > 0 ? articles[0].category : undefined;
+  const defaultTags = useMemo(() => getDefaultTagsForCategory(inferredCategory), [inferredCategory]);
   // Local state for dialogs and form fields
   const [open, setOpen] = useState(false);
   const [editArticleId, setEditArticleId] = useState<string | null>(null);
   const [titleInput, setTitleInput] = useState('');
   const [contentInput, setContentInput] = useState('');
-  const [tagsInput, setTagsInput] = useState<string[]>(['Spring Boot']); // Default tag
+  const [tagsInput, setTagsInput] = useState<string[]>(defaultTags);
   const [readTimeInput, setReadTimeInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false); // Add loading state for delete action
@@ -227,7 +256,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     setEditArticleId(article.id);
     setTitleInput(article.title || '');
     setContentInput(article.content || '');
-    setTagsInput(article.tags || ['Spring Boot']);
+    setTagsInput(article.tags || getDefaultTagsForCategory(article.category));
     setReadTimeInput(article.readTime || '');
     setOpen(true);
   };
@@ -237,7 +266,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     setEditArticleId(null);
     setTitleInput('');
     setContentInput('');
-    setTagsInput(['Spring Boot']); // Reset to default tag
+    setTagsInput(defaultTags); // Reset to contextual default tags
     setReadTimeInput('');
     setError('');
     setImportedFileName('');
@@ -257,18 +286,41 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       return;
     }
     try {
+      // Helper: extract first H1 and return cleaned body without that heading
+      const splitMdHeading = (md: string): { heading: string | null; body: string } => {
+        const normalized = md.replace(/^\uFEFF/, ''); // strip BOM if present
+        const lines = normalized.split(/\r?\n/);
+        let i = 0;
+        // Skip YAML frontmatter if present
+        if (lines[i]?.trim() === '---') {
+          i++;
+          while (i < lines.length && lines[i].trim() !== '---') i++;
+          if (i < lines.length) i++; // skip closing '---'
+        }
+        // Skip leading blank lines
+        while (i < lines.length && lines[i].trim() === '') i++;
+        if (i < lines.length && /^#\s*/.test(lines[i])) { // accept optional space after '#'
+          const heading = lines[i].replace(/^#\s*/, '').trim();
+          i++;
+          // Skip a single blank line after the heading if present
+          if (i < lines.length && lines[i].trim() === '') i++;
+          const body = lines.slice(i).join('\n').replace(/^\s+/, '');
+          return { heading, body };
+        }
+        return { heading: null, body: normalized };
+      };
+
       const reader = new FileReader();
       reader.onload = (ev) => {
         const text = (ev.target?.result as string) || '';
-        setContentInput(text);
-        setImportedFileName(file.name);
-        // Extract title from first heading if empty
-        const firstLine = text.split('\n')[0] || '';
-        if (!titleInput && firstLine.startsWith('# ')) {
-          setTitleInput(firstLine.substring(2).trim());
+        const { heading, body } = splitMdHeading(text);
+        if (!titleInput && heading) {
+          setTitleInput(heading);
         }
-        // Estimate read time
-        const words = text.trim().split(/\s+/).filter(Boolean).length;
+        setContentInput(body || text);
+        setImportedFileName(file.name);
+        // Estimate read time from body
+        const words = (body || text).trim().split(/\s+/).filter(Boolean).length;
         if (!readTimeInput) {
           const mins = Math.max(1, Math.ceil(words / 200));
           setReadTimeInput(`${mins} min read`);
@@ -315,7 +367,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       const baseData = {
         title: titleInput.trim(),
         content: contentInput,
-        tags: tagsInput.length ? tagsInput : ['Spring Boot'], // Ensure we have at least one tag
+        tags: tagsInput.length ? tagsInput : getDefaultTagsForCategory(categoryValue), // Ensure we have at least one contextual tag
         readTime: readTimeInput || '5 min read',
         category: categoryValue
       } as const;
@@ -400,7 +452,17 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               <Button
                 variant="contained"
                 color="primary"
-                onClick={() => setOpen(true)}
+                onClick={() => {
+                  // Ensure fresh create mode and clear any stale edit state
+                  setEditArticleId(null);
+                  setTitleInput('');
+                  setContentInput('');
+                  setTagsInput(defaultTags);
+                  setReadTimeInput('');
+                  setError('');
+                  setImportedFileName('');
+                  setOpen(true);
+                }}
                 startIcon={<AddIcon />}
                 sx={{
                   px: 3,
@@ -694,6 +756,83 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     size="small"
                   >
                     Bold Text
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const ta = contentTextAreaRef.current;
+                      if (!ta) return;
+                      const start = ta.selectionStart;
+                      const end = ta.selectionEnd;
+                      const selected = contentInput.substring(start, end);
+                      // If nothing selected, insert a starter list item on new line
+                      if (!selected) {
+                        const insert = (contentInput.endsWith('\n') ? '' : '\n') + '- ';
+                        const updated = contentInput.substring(0, start) + insert + contentInput.substring(end);
+                        setContentInput(updated);
+                        setTimeout(() => {
+                          ta.focus();
+                          const pos = start + insert.length;
+                          ta.selectionStart = ta.selectionEnd = pos;
+                        }, 0);
+                        return;
+                      }
+                      const lines = selected.split(/\r?\n/);
+                      const transformed = lines.map(l => {
+                        const trimmed = l.replace(/^\s+/, '');
+                        if (/^(?:- |\* |\d+\. )/.test(trimmed)) return l; // already a list-ish
+                        return (l ? '- ' + trimmed : l);
+                      }).join('\n');
+                      const updated = contentInput.substring(0, start) + transformed + contentInput.substring(end);
+                      setContentInput(updated);
+                      setTimeout(() => {
+                        ta.focus();
+                        ta.selectionStart = start;
+                        ta.selectionEnd = start + transformed.length;
+                      }, 0);
+                    }}
+                    variant="text"
+                    size="small"
+                  >
+                    Bulleted List
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const ta = contentTextAreaRef.current;
+                      if (!ta) return;
+                      const start = ta.selectionStart;
+                      const end = ta.selectionEnd;
+                      const selected = contentInput.substring(start, end);
+                      if (!selected) {
+                        const insert = (contentInput.endsWith('\n') ? '' : '\n') + '1. ';
+                        const updated = contentInput.substring(0, start) + insert + contentInput.substring(end);
+                        setContentInput(updated);
+                        setTimeout(() => {
+                          ta.focus();
+                          const pos = start + insert.length;
+                          ta.selectionStart = ta.selectionEnd = pos;
+                        }, 0);
+                        return;
+                      }
+                      const lines = selected.split(/\r?\n/);
+                      let counter = 1;
+                      const transformed = lines.map(l => {
+                        const trimmed = l.replace(/^\s+/, '');
+                        if (/^(?:- |\* |\d+\. )/.test(trimmed)) return l; // already list-like
+                        const prefix = (trimmed.length > 0) ? (counter++ + '. ') : '';
+                        return prefix + trimmed;
+                      }).join('\n');
+                      const updated = contentInput.substring(0, start) + transformed + contentInput.substring(end);
+                      setContentInput(updated);
+                      setTimeout(() => {
+                        ta.focus();
+                        ta.selectionStart = start;
+                        ta.selectionEnd = start + transformed.length;
+                      }, 0);
+                    }}
+                    variant="text"
+                    size="small"
+                  >
+                    Numbered List
                   </Button>
                 </Stack>
                 <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>

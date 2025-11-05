@@ -162,12 +162,14 @@ public class DatabaseConfig {
         logger.info("Configuring PostgreSQL database");
         logger.info("PostgreSQL URL: {}", datasourceUrl);
         logger.info("PostgreSQL Username: {}", datasourceUsername);
-        logger.info("PostgreSQL Driver: {}", driverClassName);
+        String effectiveDriver = (driverClassName == null || driverClassName.isBlank())
+                ? "org.postgresql.Driver" : driverClassName;
+        logger.info("PostgreSQL Driver: {}", effectiveDriver);
         return DataSourceBuilder.create()
                 .url(datasourceUrl)
                 .username(datasourceUsername)
                 .password(datasourcePassword)
-                .driverClassName(driverClassName)
+                .driverClassName(effectiveDriver)
                 .build();
     }
 }

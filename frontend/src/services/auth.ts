@@ -44,17 +44,27 @@ const authService = {
             localStorage.removeItem('username');
             localStorage.removeItem('roles');
             console.error('Login error:', error); // Debug log
-            if (error.response?.data?.message) {
-                throw new Error(error.response.data.message);
-            } else if (error.response?.status === 401) {
-                throw new Error('Invalid username or password');
+            if (error?.response) {
+                const data = error.response.data;
+                const payload = typeof data === 'string' ? { message: data } : data;
+                const message = payload?.message || (error.response.status === 401 ? 'Invalid username or password' : undefined);
+                const code = payload?.code;
+                // Throw a structured error object
+                throw { message: message || 'Failed to login. Please try again later.', code };
             }
-            throw new Error('Failed to login. Please try again later.');
+            throw { message: error?.message || 'Failed to login. Please try again later.' };
         }
     },
 
     register: async (data: RegisterRequest): Promise<any> => {
-        return await axiosInstance.post('/api/auth/signup', data);
+        try {
+            return await axiosInstance.post('/api/auth/signup', data);
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || error?.message || 'Registration failed.';
+            const code = typeof payload === 'object' ? payload?.code : undefined;
+            throw { message, code };
+        }
     },
 
     logout: () => {
