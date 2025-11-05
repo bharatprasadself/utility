@@ -2,6 +2,8 @@ package com.utilityzone.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -55,6 +57,31 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, message);
     }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+        FieldError first = ex.getBindingResult().getFieldErrors().isEmpty() ? null
+                : ex.getBindingResult().getFieldErrors().get(0);
+        String message = first != null ? first.getDefaultMessage() : "Validation error";
+        String field = first != null ? first.getField() : "unknown";
+        String constraint = first != null ? first.getCode() : "Unknown";
+
+        // Map to stable error codes for signup flow
+        String code = "VALIDATION_ERROR";
+        if ("username".equals(field)) {
+            if ("NotBlank".equals(constraint)) code = "USERNAME_REQUIRED";
+            else if ("Size".equals(constraint)) code = "USERNAME_INVALID_LENGTH";
+            else code = "USERNAME_INVALID";
+        } else if ("password".equals(field)) {
+            if ("NotBlank".equals(constraint)) code = "PASSWORD_REQUIRED";
+            else if ("Size".equals(constraint)) code = "PASSWORD_TOO_SHORT";
+            else code = "PASSWORD_INVALID";
+        }
+
+        log.error("Validation error: {} (code={})", message, code);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, code);
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex) {
@@ -63,10 +90,15 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(HttpStatus status, String message) {
+        return buildErrorResponse(status, message, null);
+    }
+
+    private ResponseEntity<ErrorResponse> buildErrorResponse(HttpStatus status, String message, String code) {
         ErrorResponse errorResponse = new ErrorResponse(
             status.value(),
             status.getReasonPhrase(),
-            message
+            message,
+            code
         );
         return new ResponseEntity<>(errorResponse, status);
     }

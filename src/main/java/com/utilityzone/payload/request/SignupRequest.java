@@ -9,7 +9,7 @@ public class SignupRequest {
     private String username;
 
     @NotBlank
-    @Size(min = 6, max = 40)
+    @Size(min = 6, max = 40, message = "password length should be more than 6")
     private String password;
 
     public String getUsername() {

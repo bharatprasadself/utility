@@ -34,6 +34,8 @@ build/
 
 ### Database ###
 /data/
+# Track migration scripts even if placed under data in the future
+!data/**/README.md
 *.db
 *.mv.db
 *.trace.db

@@ -46,9 +46,16 @@ axiosInstance.interceptors.response.use(
         }
         
         if (error.response) {
+            const requestUrl: string = (error.config?.url || '').toString();
             // Handle specific HTTP error codes
             switch (error.response.status) {
                 case 401:
+                    // Special-case login failures: let the auth service read backend message
+                    if (requestUrl.includes('/api/auth/signin')) {
+                        // Preserve original error with response so caller can surface specific message
+                        return Promise.reject(error);
+                    }
+                    // For all other 401s, treat as session expiration
                     localStorage.removeItem('token');
                     localStorage.removeItem('username');
                     window.location.href = '/login';

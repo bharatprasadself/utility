@@ -47,8 +47,9 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
         '& blockquote': { borderLeft: '4px solid', borderColor: 'primary.main', pl: 2, py: 1, my: 2, bgcolor: 'grey.50', fontStyle: 'italic' },
         '& ul, & ol': { mb: 2, pl: 3 },
         '& li': { mb: 1 },
-        '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
-        '& pre': { bgcolor: 'grey.100', p: 2, borderRadius: 1, overflowX: 'auto' }
+    '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
+    // Flush-left code blocks: remove left padding to align the first column to the container edge
+    '& pre': { bgcolor: 'grey.100', py: 2, pr: 2, pl: 0, borderRadius: 1, overflowX: 'auto' }
     }}>
         <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
@@ -65,7 +66,7 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
                     }
                     return (
                         <Box sx={{ position: 'relative', my: 2 }}>
-                            <Box component="pre" sx={{ m: 0, p: 2, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
+                            <Box component="pre" sx={{ m: 0, py: 2, pr: 2, pl: 0, bgcolor: 'grey.100', borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace', fontSize: '0.9rem' }}>
                                 <code>{text}</code>
                             </Box>
                             <Tooltip title="Copy">
@@ -90,7 +91,7 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
                     const src = props.src as string | undefined;
                     return (
                         <Box sx={{ my: 2, textAlign: 'center' }}>
-                            <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }} />
+                            <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.1)', backgroundColor: '#f5f5f5' }} />
                             {alt && (
                                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
                                     {alt}
@@ -136,6 +137,7 @@ export default function BlogList() {
     const [error, setError] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
     const [expandedPosts, setExpandedPosts] = useState<number[]>([]);
+    const [viewDrafts, setViewDrafts] = useState<boolean>(false);
     const { user } = useAuth();
     // Markdown import helpers
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,11 +156,12 @@ export default function BlogList() {
         loadBlogs();
         const interval = setInterval(loadBlogs, 30000);
         return () => clearInterval(interval);
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewDrafts]);
 
     const loadBlogs = async () => {
         try {
-            const blogs = await blogService.getAll();
+            const blogs = viewDrafts ? await blogService.getDrafts() : await blogService.getAll();
             if (Array.isArray(blogs)) {
                 setBlogs(blogs);
                 setError('');
@@ -173,7 +176,21 @@ export default function BlogList() {
         }
     };
 
-    const handleSubmit = async () => {
+    const handlePublish = async (blog: Blog) => {
+        if (!isAdmin) {
+            setError('You must be an admin to publish blogs');
+            return;
+        }
+        try {
+            await blogService.update(blog.id, { title: blog.title, content: blog.content, status: 'PUBLISHED' });
+            await loadBlogs();
+        } catch (err: any) {
+            console.error('Failed to publish blog:', err);
+            setError(err.message || 'Failed to publish blog. Please try again later.');
+        }
+    };
+
+    const handleSubmit = async (asDraft: boolean = false) => {
         if (!isAdmin) {
             setError('You must be an admin to manage blogs');
             return;
@@ -189,7 +206,8 @@ export default function BlogList() {
         try {
             const blogData: BlogRequest = { 
                 title: title.trim(), 
-                content: content.trim() 
+                content: content.trim(),
+                status: asDraft ? 'DRAFT' : 'PUBLISHED'
             };
             if (editBlogId !== null) {
                 await blogService.update(editBlogId, blogData);
@@ -255,16 +273,34 @@ export default function BlogList() {
             return;
         }
 
+        // Helper: extract first H1 and return cleaned body without that heading
+        const splitMdHeading = (md: string): { heading: string | null; body: string } => {
+            const lines = md.split(/\r?\n/);
+            let i = 0;
+            // skip leading blank lines
+            while (i < lines.length && lines[i].trim() === '') i++;
+            if (i < lines.length && /^#\s+/.test(lines[i])) {
+                const heading = lines[i].replace(/^#\s+/, '').trim();
+                i++;
+                // skip a single blank line after the heading if present
+                if (i < lines.length && lines[i].trim() === '') i++;
+                const body = lines.slice(i).join('\n').replace(/^\s+/, '');
+                return { heading, body };
+            }
+            return { heading: null, body: md };
+        };
+
         const reader = new FileReader();
         reader.onload = (ev) => {
             const text = (ev.target?.result as string) || '';
-            setContent(text);
-            setImportedFileName(file.name);
-            // If title is empty, attempt to derive from first markdown H1
-            const firstLine = text.split('\n')[0] || '';
-            if (!title && firstLine.startsWith('# ')) {
-                setTitle(firstLine.substring(2).trim());
+            const { heading, body } = splitMdHeading(text);
+            // Set title from heading if none provided
+            if (!title && heading) {
+                setTitle(heading);
             }
+            // Always use body so we don't render duplicate heading in content
+            setContent(body || text);
+            setImportedFileName(file.name);
         };
         reader.readAsText(file);
         // allow reselecting same file
@@ -314,7 +350,15 @@ export default function BlogList() {
                             <Button 
                                 variant="contained" 
                                 color="primary" 
-                                onClick={() => setOpen(true)}
+                                onClick={() => {
+                                    // Ensure we are in "create" mode and not accidentally editing
+                                    setEditBlogId(null);
+                                    setTitle('');
+                                    setContent('');
+                                    setImportedFileName('');
+                                    setError('');
+                                    setOpen(true);
+                                }}
                                 startIcon={<EditIcon />}
                                 sx={{
                                     px: 3,
@@ -326,8 +370,28 @@ export default function BlogList() {
                                     }
                                 }}
                             >
-                                Create New Post
+                                New Post
                             </Button>
+                        )}
+                        {isAdmin && (
+                            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                                <Button
+                                    variant={viewDrafts ? 'outlined' : 'contained'}
+                                    color="secondary"
+                                    onClick={() => setViewDrafts(false)}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    Published
+                                </Button>
+                                <Button
+                                    variant={viewDrafts ? 'contained' : 'outlined'}
+                                    color="secondary"
+                                    onClick={() => setViewDrafts(true)}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    Drafts
+                                </Button>
+                            </Box>
                         )}
                     </Box>
                     {error && (
@@ -361,7 +425,7 @@ export default function BlogList() {
                                         By {blog.author}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        • {new Date(blog.createdAt).toLocaleDateString()}
+                                        • {new Date(blog.publishDate).toLocaleDateString()}
                                     </Typography>
                                     {blog.updatedAt !== blog.createdAt && (
                                         <Typography variant="body2" sx={{ color: 'warning.main', fontSize: '0.8rem' }}>
@@ -456,6 +520,17 @@ export default function BlogList() {
                                             >
                                                 Edit
                                             </Button>
+                                            {viewDrafts && (
+                                                <Button
+                                                    onClick={() => handlePublish(blog)}
+                                                    color="success"
+                                                    variant="contained"
+                                                    size="small"
+                                                    sx={{ mr: 1 }}
+                                                >
+                                                    Publish
+                                                </Button>
+                                            )}
                                             <Button
                                                 startIcon={<DeleteIcon />}
                                                 onClick={() => setConfirmDelete(blog.id)}
@@ -659,6 +734,82 @@ export default function BlogList() {
                                             >
                                                 Bold Text
                                             </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    const ta = document.querySelector('textarea') as HTMLTextAreaElement | null;
+                                                    if (!ta) return;
+                                                    const start = ta.selectionStart;
+                                                    const end = ta.selectionEnd;
+                                                    const selected = content.substring(start, end);
+                                                    if (!selected) {
+                                                        const insert = (content.endsWith('\n') ? '' : '\n') + '- ';
+                                                        const updated = content.substring(0, start) + insert + content.substring(end);
+                                                        setContent(updated);
+                                                        setTimeout(() => {
+                                                            ta.focus();
+                                                            const pos = start + insert.length;
+                                                            ta.selectionStart = ta.selectionEnd = pos;
+                                                        }, 0);
+                                                        return;
+                                                    }
+                                                    const lines = selected.split(/\r?\n/);
+                                                    const transformed = lines.map(l => {
+                                                        const trimmed = l.replace(/^\s+/, '');
+                                                        if (/^(?:- |\* |\d+\. )/.test(trimmed)) return l; // already list-like
+                                                        return (l ? '- ' + trimmed : l);
+                                                    }).join('\n');
+                                                    const updated = content.substring(0, start) + transformed + content.substring(end);
+                                                    setContent(updated);
+                                                    setTimeout(() => {
+                                                        ta.focus();
+                                                        ta.selectionStart = start;
+                                                        ta.selectionEnd = start + transformed.length;
+                                                    }, 0);
+                                                }}
+                                                variant="text"
+                                                size="small"
+                                            >
+                                                Bulleted List
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    const ta = document.querySelector('textarea') as HTMLTextAreaElement | null;
+                                                    if (!ta) return;
+                                                    const start = ta.selectionStart;
+                                                    const end = ta.selectionEnd;
+                                                    const selected = content.substring(start, end);
+                                                    if (!selected) {
+                                                        const insert = (content.endsWith('\n') ? '' : '\n') + '1. ';
+                                                        const updated = content.substring(0, start) + insert + content.substring(end);
+                                                        setContent(updated);
+                                                        setTimeout(() => {
+                                                            ta.focus();
+                                                            const pos = start + insert.length;
+                                                            ta.selectionStart = ta.selectionEnd = pos;
+                                                        }, 0);
+                                                        return;
+                                                    }
+                                                    const lines = selected.split(/\r?\n/);
+                                                    let counter = 1;
+                                                    const transformed = lines.map(l => {
+                                                        const trimmed = l.replace(/^\s+/, '');
+                                                        if (/^(?:- |\* |\d+\. )/.test(trimmed)) return l; // already list-like
+                                                        const prefix = (trimmed.length > 0) ? (counter++ + '. ') : '';
+                                                        return prefix + trimmed;
+                                                    }).join('\n');
+                                                    const updated = content.substring(0, start) + transformed + content.substring(end);
+                                                    setContent(updated);
+                                                    setTimeout(() => {
+                                                        ta.focus();
+                                                        ta.selectionStart = start;
+                                                        ta.selectionEnd = start + transformed.length;
+                                                    }, 0);
+                                                }}
+                                                variant="text"
+                                                size="small"
+                                            >
+                                                Numbered List
+                                            </Button>
                                         </Stack>
                                         <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
                                             Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB limit)' : overSoft ? ' (getting large)' : ''}
@@ -701,14 +852,25 @@ export default function BlogList() {
                         <Button onClick={handleClose} variant="outlined" sx={{ borderRadius: 1 }}>
                             Cancel
                         </Button>
+                        {isAdmin && !editBlogId && (
+                            <Button 
+                                onClick={() => handleSubmit(true)} 
+                                variant="outlined" 
+                                color="secondary"
+                                disabled={!title.trim() || !content.trim() || overHard}
+                                sx={{ borderRadius: 1 }}
+                            >
+                                Save Draft
+                            </Button>
+                        )}
                         <Button 
-                            onClick={handleSubmit} 
+                            onClick={() => handleSubmit(false)} 
                             variant="contained" 
                             color="primary"
                             disabled={!title.trim() || !content.trim() || overHard}
                             sx={{ borderRadius: 1, px: 3 }}
                         >
-                            {editBlogId ? 'Update' : 'Create'}
+                            {editBlogId ? 'Update' : 'Publish'}
                         </Button>
                     </DialogActions>
                 </Dialog>

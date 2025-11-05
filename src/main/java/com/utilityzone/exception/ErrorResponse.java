@@ -11,4 +11,5 @@ public class ErrorResponse {
     private int status;
     private String error;
     private String message;
+    private String code; // Optional machine-readable error code (e.g., BAD_CREDENTIALS)
 }
