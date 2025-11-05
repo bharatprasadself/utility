@@ -63,6 +63,19 @@ export const ArticleService = {
     }
   },
 
+  getDrafts: async (): Promise<AxiosResponse<Article[]>> => {
+    console.log('🔍 Fetching draft articles (admin)...');
+    try {
+      // drafts require auth
+      const response = await api.get(`${BASE_URL}/drafts`);
+      console.log(`✅ Successfully fetched ${response.data.length} draft articles`);
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to fetch draft articles:', error);
+      throw error;
+    }
+  },
+
   createArticle: async (article: Omit<Article, 'id' | 'createdAt' | 'updatedAt'> | any): Promise<AxiosResponse<Article>> => {
     console.log('📝 Creating new article:', { title: article.title, category: article.category });
     
@@ -83,7 +96,7 @@ export const ArticleService = {
       }
       
       console.log('📝 Sending article with processed category:', articleToSend);
-      const response = await api.post(BASE_URL, articleToSend);
+  const response = await api.post(BASE_URL, articleToSend);
       console.log(`✅ Successfully created article: "${response.data.title}"`);
       return response;
     } catch (error) {

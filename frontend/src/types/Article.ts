@@ -15,6 +15,8 @@ export interface Article {
   tags: string[];
   readTime: string;
   category: ArticleCategory;
+  status?: 'DRAFT' | 'PUBLISHED';
+  publishDate?: string;
   createdAt: string;
   updatedAt: string;
 }

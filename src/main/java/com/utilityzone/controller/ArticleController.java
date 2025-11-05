@@ -2,6 +2,7 @@ package com.utilityzone.controller;
 
 import com.utilityzone.model.Article;
 import com.utilityzone.model.ArticleCategory;
+import com.utilityzone.model.PublicationStatus;
 import com.utilityzone.service.ArticleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,9 +11,11 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/articles")
@@ -85,11 +88,23 @@ public class ArticleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public Article createArticle(@RequestBody Article article) {
+        // default to PUBLISHED unless explicitly DRAFT
+        if (article.getStatus() == null) {
+            article.setStatus(PublicationStatus.PUBLISHED);
+        }
+        if (article.getStatus() == PublicationStatus.PUBLISHED && article.getPublishDate() == null) {
+            article.setPublishDate(LocalDateTime.now());
+        }
+        if (article.getStatus() == PublicationStatus.DRAFT) {
+            article.setPublishDate(null);
+        }
         return articleService.createArticle(article);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Article> updateArticle(@PathVariable Long id, @RequestBody Article articleDetails) {
         Article updatedArticle = articleService.updateArticle(id, articleDetails);
         if (updatedArticle == null) {
@@ -99,8 +114,15 @@ public class ArticleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteArticle(@PathVariable Long id) {
         articleService.deleteArticle(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/drafts")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<List<Article>> getDraftArticles() {
+        return ResponseEntity.ok(articleService.getDraftArticles());
     }
 }
