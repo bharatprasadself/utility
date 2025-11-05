@@ -7,6 +7,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Column;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 
 @Entity
 @Table(name = "blogs")
@@ -32,6 +36,10 @@ public class Blog {
 
     @Column(nullable = false)
     private String author;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PublicationStatus status;
 
     // Getters and Setters
     public Long getId() {
@@ -82,11 +90,33 @@ public class Blog {
         this.updatedAt = updatedAt;
     }
 
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (this.createdAt == null) this.createdAt = now;
+        // Do not auto-set publishDate; drafts should have null until published
+        this.updatedAt = now;
+        if (this.status == null) this.status = PublicationStatus.PUBLISHED; // default behavior stays published unless explicitly set to DRAFT
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public String getAuthor() {
         return author;
     }
 
     public void setAuthor(String author) {
         this.author = author;
+    }
+
+    public PublicationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PublicationStatus status) {
+        this.status = status;
     }
 }

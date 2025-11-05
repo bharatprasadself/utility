@@ -137,6 +137,7 @@ export default function BlogList() {
     const [error, setError] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
     const [expandedPosts, setExpandedPosts] = useState<number[]>([]);
+    const [viewDrafts, setViewDrafts] = useState<boolean>(false);
     const { user } = useAuth();
     // Markdown import helpers
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -155,11 +156,12 @@ export default function BlogList() {
         loadBlogs();
         const interval = setInterval(loadBlogs, 30000);
         return () => clearInterval(interval);
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewDrafts]);
 
     const loadBlogs = async () => {
         try {
-            const blogs = await blogService.getAll();
+            const blogs = viewDrafts ? await blogService.getDrafts() : await blogService.getAll();
             if (Array.isArray(blogs)) {
                 setBlogs(blogs);
                 setError('');
@@ -174,7 +176,21 @@ export default function BlogList() {
         }
     };
 
-    const handleSubmit = async () => {
+    const handlePublish = async (blog: Blog) => {
+        if (!isAdmin) {
+            setError('You must be an admin to publish blogs');
+            return;
+        }
+        try {
+            await blogService.update(blog.id, { title: blog.title, content: blog.content, status: 'PUBLISHED' });
+            await loadBlogs();
+        } catch (err: any) {
+            console.error('Failed to publish blog:', err);
+            setError(err.message || 'Failed to publish blog. Please try again later.');
+        }
+    };
+
+    const handleSubmit = async (asDraft: boolean = false) => {
         if (!isAdmin) {
             setError('You must be an admin to manage blogs');
             return;
@@ -190,7 +206,8 @@ export default function BlogList() {
         try {
             const blogData: BlogRequest = { 
                 title: title.trim(), 
-                content: content.trim() 
+                content: content.trim(),
+                status: asDraft ? 'DRAFT' : 'PUBLISHED'
             };
             if (editBlogId !== null) {
                 await blogService.update(editBlogId, blogData);
@@ -353,8 +370,28 @@ export default function BlogList() {
                                     }
                                 }}
                             >
-                                Create New Post
+                                New Post
                             </Button>
+                        )}
+                        {isAdmin && (
+                            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                                <Button
+                                    variant={viewDrafts ? 'outlined' : 'contained'}
+                                    color="secondary"
+                                    onClick={() => setViewDrafts(false)}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    Published
+                                </Button>
+                                <Button
+                                    variant={viewDrafts ? 'contained' : 'outlined'}
+                                    color="secondary"
+                                    onClick={() => setViewDrafts(true)}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    Drafts
+                                </Button>
+                            </Box>
                         )}
                     </Box>
                     {error && (
@@ -388,7 +425,7 @@ export default function BlogList() {
                                         By {blog.author}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        • {new Date(blog.createdAt).toLocaleDateString()}
+                                        • {new Date(blog.publishDate).toLocaleDateString()}
                                     </Typography>
                                     {blog.updatedAt !== blog.createdAt && (
                                         <Typography variant="body2" sx={{ color: 'warning.main', fontSize: '0.8rem' }}>
@@ -483,6 +520,17 @@ export default function BlogList() {
                                             >
                                                 Edit
                                             </Button>
+                                            {viewDrafts && (
+                                                <Button
+                                                    onClick={() => handlePublish(blog)}
+                                                    color="success"
+                                                    variant="contained"
+                                                    size="small"
+                                                    sx={{ mr: 1 }}
+                                                >
+                                                    Publish
+                                                </Button>
+                                            )}
                                             <Button
                                                 startIcon={<DeleteIcon />}
                                                 onClick={() => setConfirmDelete(blog.id)}
@@ -804,14 +852,25 @@ export default function BlogList() {
                         <Button onClick={handleClose} variant="outlined" sx={{ borderRadius: 1 }}>
                             Cancel
                         </Button>
+                        {isAdmin && !editBlogId && (
+                            <Button 
+                                onClick={() => handleSubmit(true)} 
+                                variant="outlined" 
+                                color="secondary"
+                                disabled={!title.trim() || !content.trim() || overHard}
+                                sx={{ borderRadius: 1 }}
+                            >
+                                Save Draft
+                            </Button>
+                        )}
                         <Button 
-                            onClick={handleSubmit} 
+                            onClick={() => handleSubmit(false)} 
                             variant="contained" 
                             color="primary"
                             disabled={!title.trim() || !content.trim() || overHard}
                             sx={{ borderRadius: 1, px: 3 }}
                         >
-                            {editBlogId ? 'Update' : 'Create'}
+                            {editBlogId ? 'Update' : 'Publish'}
                         </Button>
                     </DialogActions>
                 </Dialog>

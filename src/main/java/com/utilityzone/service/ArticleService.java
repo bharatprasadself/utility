@@ -22,7 +22,8 @@ public class ArticleService {
 
     @Cacheable(value = "articles")
     public List<Article> getAllArticles() {
-        return articleRepository.findAll();
+        // Return oldest first by createdAt, with id as a tiebreaker for deterministic order
+        return articleRepository.findAllByOrderByCreatedAtAscIdAsc();
     }
 
     @Cacheable(value = "articleById", key = "#id")
@@ -32,12 +33,14 @@ public class ArticleService {
 
     @Cacheable(value = "articlesByCategory", key = "#category")
     public List<Article> getArticlesByCategory(ArticleCategory category) {
-        return articleRepository.findByCategory(category);
+        // Return oldest first within category
+        return articleRepository.findByCategoryOrderByCreatedAtAscIdAsc(category);
     }
 
     @Cacheable(value = "articlesByTag", key = "#tag")
     public List<Article> getArticlesByTag(String tag) {
-        return articleRepository.findByTagsContaining(tag);
+        // Return oldest first within tag
+        return articleRepository.findByTagsContainingOrderByCreatedAtAscIdAsc(tag);
     }
 
     @Caching(evict = {
