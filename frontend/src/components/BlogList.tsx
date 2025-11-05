@@ -347,34 +347,32 @@ export default function BlogList() {
                             </Typography>
                         </Box>
                         {isAdmin && (
-                            <Button 
-                                variant="contained" 
-                                color="primary" 
-                                onClick={() => {
-                                    // Ensure we are in "create" mode and not accidentally editing
-                                    setEditBlogId(null);
-                                    setTitle('');
-                                    setContent('');
-                                    setImportedFileName('');
-                                    setError('');
-                                    setOpen(true);
-                                }}
-                                startIcon={<EditIcon />}
-                                sx={{
-                                    px: 3,
-                                    py: 1,
-                                    borderRadius: 2,
-                                    boxShadow: 2,
-                                    '&:hover': {
-                                        boxShadow: 4
-                                    }
-                                }}
-                            >
-                                New Post
-                            </Button>
-                        )}
-                        {isAdmin && (
-                            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Button 
+                                    variant="contained" 
+                                    color="primary" 
+                                    onClick={() => {
+                                        // Ensure we are in "create" mode and not accidentally editing
+                                        setEditBlogId(null);
+                                        setTitle('');
+                                        setContent('');
+                                        setImportedFileName('');
+                                        setError('');
+                                        setOpen(true);
+                                    }}
+                                    startIcon={<EditIcon />}
+                                    sx={{
+                                        px: 3,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        boxShadow: 2,
+                                        '&:hover': {
+                                            boxShadow: 4
+                                        }
+                                    }}
+                                >
+                                    New Blog
+                                </Button>
                                 <Button
                                     variant={viewDrafts ? 'outlined' : 'contained'}
                                     color="secondary"
@@ -848,20 +846,31 @@ export default function BlogList() {
                             </Box>
                         </Stack>
                     </DialogContent>
-                    <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0', gap: 1, flexWrap: 'wrap' }}>
                         <Button onClick={handleClose} variant="outlined" sx={{ borderRadius: 1 }}>
                             Cancel
                         </Button>
-                        {isAdmin && !editBlogId && (
-                            <Button 
-                                onClick={() => handleSubmit(true)} 
-                                variant="outlined" 
-                                color="secondary"
-                                disabled={!title.trim() || !content.trim() || overHard}
-                                sx={{ borderRadius: 1 }}
-                            >
-                                Save Draft
-                            </Button>
+                        {isAdmin && (
+                            <>
+                                <Button 
+                                    onClick={() => handleSubmit(true)} 
+                                    variant="contained" 
+                                    color="secondary"
+                                    disabled={!title.trim() || !content.trim() || overHard}
+                                    sx={{ borderRadius: 1 }}
+                                >
+                                    {editBlogId ? 'Save Draft' : 'Save as Draft'}
+                                </Button>
+                                <Button 
+                                    onClick={() => handleSubmit(false)} 
+                                    variant="contained" 
+                                    color="success"
+                                    disabled={!title.trim() || !content.trim() || overHard}
+                                    sx={{ borderRadius: 1 }}
+                                >
+                                    Publish
+                                </Button>
+                            </>
                         )}
                         <Button 
                             onClick={() => handleSubmit(false)} 
@@ -870,7 +879,7 @@ export default function BlogList() {
                             disabled={!title.trim() || !content.trim() || overHard}
                             sx={{ borderRadius: 1, px: 3 }}
                         >
-                            {editBlogId ? 'Update' : 'Publish'}
+                            {editBlogId ? 'Update' : 'Create'}
                         </Button>
                     </DialogActions>
                 </Dialog>
