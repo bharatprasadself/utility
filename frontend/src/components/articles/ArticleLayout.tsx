@@ -37,7 +37,7 @@ interface ArticleLayoutProps {
   description: string;
   articles: Article[];
   isAdmin: boolean;
-  handleEdit: (article: Article) => void;
+  handleEdit: (article: Article) => Promise<void>;
   handleDelete: (id: string) => void;
   handleCreate?: (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
 }
@@ -407,13 +407,13 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       
       if (editArticleId) {
         // Handle edit logic by finding the article to update
-        const articleToEdit = articles.find(a => a.id === editArticleId);
+        const articleToEdit = displayedArticles.find(a => a.id === editArticleId) || articles.find(a => a.id === editArticleId);
         
         if (articleToEdit && handleEdit) {
           // Debug log removed
           
           // Call the parent component's handleEdit function with the updated article
-          handleEdit({
+          await handleEdit({
             ...articleToEdit,
             ...baseData,
             // Preserve existing description on edit to avoid data loss
@@ -436,7 +436,8 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       handleClose();
       // refresh current view after save
       if (isAdmin) {
-        if (status === 'DRAFT' || viewDrafts) {
+        // In generic submit we don't change status explicitly; refresh the current view
+        if (viewDrafts) {
           await loadDrafts();
         } else {
           await loadPublished();
@@ -475,9 +476,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       } as const;
 
       if (editArticleId) {
-        const articleToEdit = articles.find(a => a.id === editArticleId);
+        const articleToEdit = displayedArticles.find(a => a.id === editArticleId) || articles.find(a => a.id === editArticleId);
         if (articleToEdit && handleEdit) {
-          handleEdit({
+          await handleEdit({
             ...articleToEdit,
             ...baseData,
             description: articleToEdit.description
@@ -492,6 +493,14 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
         } as any);
       }
       handleClose();
+      // refresh current view after save/publish
+      if (isAdmin) {
+        if (status === 'DRAFT' || viewDrafts) {
+          await loadDrafts();
+        } else {
+          await loadPublished();
+        }
+      }
     } catch (error: any) {
       console.error('Error saving with status:', error);
       setError(error?.message || 'An error occurred. Please try again.');

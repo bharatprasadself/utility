@@ -31,12 +31,32 @@ export const ArticleService = {
     }
   },
 
-  getArticlesByCategory: async (category: ArticleCategory): Promise<AxiosResponse<Article[]>> => {
-    // If category = ArticleCategory.SPRING_BOOT ("SPRING_BOOT")
-    const key = Object.keys(ArticleCategory).find(
-      k => ArticleCategory[k as keyof typeof ArticleCategory] === category
-    );
-    // key will be "SPRING_BOOT"
+  getArticlesByCategory: async (category: ArticleCategory | string): Promise<AxiosResponse<Article[]>> => {
+    // Accept both enum display values (e.g., 'Java') and enum keys (e.g., 'JAVA').
+    const asString = String(category);
+    let key: string | undefined;
+    // Case 1: already an enum key like 'JAVA', 'SPRING_BOOT'
+    if (Object.prototype.hasOwnProperty.call(ArticleCategory, asString)) {
+      key = asString;
+    } else {
+      // Case 2: display value like 'Java', 'Spring Boot' -> find its enum key
+      key = Object.keys(ArticleCategory).find(
+        k => ArticleCategory[k as keyof typeof ArticleCategory] === (category as ArticleCategory)
+      );
+    }
+
+    // Final fallback: try transforming display text to enum key style
+    if (!key && asString && asString !== 'undefined') {
+      key = asString.toUpperCase().replace(/[\s-]+/g, '_');
+    }
+
+    if (!key || key === 'undefined') {
+      const msg = `Invalid or missing category provided to getArticlesByCategory: ${category}`;
+      console.warn(msg);
+      // Avoid calling backend with undefined; throw a descriptive error
+      throw new Error(msg);
+    }
+
     const url = `${BASE_URL}/category/${key}`;
     console.log(`🔍 Fetching articles from: ${url}`);
     try {
