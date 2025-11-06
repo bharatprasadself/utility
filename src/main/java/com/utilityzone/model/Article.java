@@ -35,6 +35,13 @@ public class Article {
     @Column(nullable = false)
     private ArticleCategory category;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PublicationStatus status;
+
+    @Column(name = "publish_date")
+    private LocalDateTime publishDate;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -43,13 +50,20 @@ public class Article {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
+        LocalDateTime now = LocalDateTime.now();
+        if (this.createdAt == null) this.createdAt = now;
+        this.updatedAt = now;
+        // default to PUBLISHED unless explicitly set to DRAFT by admin
+        if (this.status == null) this.status = PublicationStatus.PUBLISHED;
+        // publishDate is only for published items; drafts keep it null
+        if (this.status == PublicationStatus.PUBLISHED && this.publishDate == null) {
+            this.publishDate = now;
+        }
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -107,6 +121,22 @@ public class Article {
 
     public void setCategory(ArticleCategory category) {
         this.category = category;
+    }
+
+    public PublicationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PublicationStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getPublishDate() {
+        return publishDate;
+    }
+
+    public void setPublishDate(LocalDateTime publishDate) {
+        this.publishDate = publishDate;
     }
 
     public LocalDateTime getCreatedAt() {

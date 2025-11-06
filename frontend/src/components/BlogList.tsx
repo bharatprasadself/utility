@@ -48,8 +48,26 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
         '& ul, & ol': { mb: 2, pl: 3 },
         '& li': { mb: 1 },
     '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
-    // Flush-left code blocks: remove left padding to align the first column to the container edge
-    '& pre': { bgcolor: 'grey.100', py: 2, pr: 2, pl: 0, borderRadius: 1, overflowX: 'auto' }
+    // Flush-left code blocks: ensure absolutely no left indentation on first line
+    '& pre': {
+        bgcolor: 'grey.100',
+        py: 2,
+        pr: 2,
+        pl: 0,
+        borderRadius: 1,
+        overflowX: 'auto',
+        textIndent: 0,
+        m: 0
+    },
+    '& pre code': {
+        display: 'block',
+        m: 0,
+        p: 0,
+        textIndent: 0,
+        marginLeft: 0,
+        paddingLeft: 0,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace'
+    }
     }}>
         <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
@@ -347,34 +365,32 @@ export default function BlogList() {
                             </Typography>
                         </Box>
                         {isAdmin && (
-                            <Button 
-                                variant="contained" 
-                                color="primary" 
-                                onClick={() => {
-                                    // Ensure we are in "create" mode and not accidentally editing
-                                    setEditBlogId(null);
-                                    setTitle('');
-                                    setContent('');
-                                    setImportedFileName('');
-                                    setError('');
-                                    setOpen(true);
-                                }}
-                                startIcon={<EditIcon />}
-                                sx={{
-                                    px: 3,
-                                    py: 1,
-                                    borderRadius: 2,
-                                    boxShadow: 2,
-                                    '&:hover': {
-                                        boxShadow: 4
-                                    }
-                                }}
-                            >
-                                New Post
-                            </Button>
-                        )}
-                        {isAdmin && (
-                            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Button 
+                                    variant="contained" 
+                                    color="primary" 
+                                    onClick={() => {
+                                        // Ensure we are in "create" mode and not accidentally editing
+                                        setEditBlogId(null);
+                                        setTitle('');
+                                        setContent('');
+                                        setImportedFileName('');
+                                        setError('');
+                                        setOpen(true);
+                                    }}
+                                    startIcon={<EditIcon />}
+                                    sx={{
+                                        px: 3,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        boxShadow: 2,
+                                        '&:hover': {
+                                            boxShadow: 4
+                                        }
+                                    }}
+                                >
+                                    New Blog
+                                </Button>
                                 <Button
                                     variant={viewDrafts ? 'outlined' : 'contained'}
                                     color="secondary"
@@ -848,30 +864,32 @@ export default function BlogList() {
                             </Box>
                         </Stack>
                     </DialogContent>
-                    <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0', gap: 1, flexWrap: 'wrap' }}>
                         <Button onClick={handleClose} variant="outlined" sx={{ borderRadius: 1 }}>
                             Cancel
                         </Button>
-                        {isAdmin && !editBlogId && (
-                            <Button 
-                                onClick={() => handleSubmit(true)} 
-                                variant="outlined" 
-                                color="secondary"
-                                disabled={!title.trim() || !content.trim() || overHard}
-                                sx={{ borderRadius: 1 }}
-                            >
-                                Save Draft
-                            </Button>
+                        {isAdmin && (
+                            <>
+                                <Button 
+                                    onClick={() => handleSubmit(true)} 
+                                    variant="contained" 
+                                    color="secondary"
+                                    disabled={!title.trim() || !content.trim() || overHard}
+                                    sx={{ borderRadius: 1 }}
+                                >
+                                    {editBlogId ? 'Save Draft' : 'Save as Draft'}
+                                </Button>
+                                <Button 
+                                    onClick={() => handleSubmit(false)} 
+                                    variant="contained" 
+                                    color="success"
+                                    disabled={!title.trim() || !content.trim() || overHard}
+                                    sx={{ borderRadius: 1 }}
+                                >
+                                    Publish
+                                </Button>
+                            </>
                         )}
-                        <Button 
-                            onClick={() => handleSubmit(false)} 
-                            variant="contained" 
-                            color="primary"
-                            disabled={!title.trim() || !content.trim() || overHard}
-                            sx={{ borderRadius: 1, px: 3 }}
-                        >
-                            {editBlogId ? 'Update' : 'Publish'}
-                        </Button>
                     </DialogActions>
                 </Dialog>
                 <Dialog 

@@ -3,6 +3,7 @@ package com.utilityzone.service;
 import com.utilityzone.model.Article;
 import com.utilityzone.model.ArticleCategory;
 import com.utilityzone.repository.ArticleRepository;
+import com.utilityzone.model.PublicationStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,8 +23,8 @@ public class ArticleService {
 
     @Cacheable(value = "articles")
     public List<Article> getAllArticles() {
-        // Return oldest first by createdAt, with id as a tiebreaker for deterministic order
-        return articleRepository.findAllByOrderByCreatedAtAscIdAsc();
+        // Public list: only published articles, oldest first for deterministic chronological order
+        return articleRepository.findAllByStatusOrderByCreatedAtAscIdAsc(PublicationStatus.PUBLISHED);
     }
 
     @Cacheable(value = "articleById", key = "#id")
@@ -33,14 +34,19 @@ public class ArticleService {
 
     @Cacheable(value = "articlesByCategory", key = "#category")
     public List<Article> getArticlesByCategory(ArticleCategory category) {
-        // Return oldest first within category
-        return articleRepository.findByCategoryOrderByCreatedAtAscIdAsc(category);
+        // Public list: only published in category
+        return articleRepository.findByCategoryAndStatusOrderByCreatedAtAscIdAsc(category, PublicationStatus.PUBLISHED);
     }
 
     @Cacheable(value = "articlesByTag", key = "#tag")
     public List<Article> getArticlesByTag(String tag) {
-        // Return oldest first within tag
-        return articleRepository.findByTagsContainingOrderByCreatedAtAscIdAsc(tag);
+        // Public list: only published with tag
+        return articleRepository.findByTagsContainingAndStatusOrderByCreatedAtAscIdAsc(tag, PublicationStatus.PUBLISHED);
+    }
+
+    public List<Article> getDraftArticles() {
+        // Admin view: all drafts, newest first for convenience
+        return articleRepository.findAllByStatusOrderByCreatedAtDescIdDesc(PublicationStatus.DRAFT);
     }
 
     @Caching(evict = {
@@ -69,6 +75,16 @@ public class ArticleService {
             existingArticle.setTags(articleDetails.getTags());
             existingArticle.setReadTime(articleDetails.getReadTime());
             existingArticle.setCategory(articleDetails.getCategory());
+            // Status/publish date management if provided
+            if (articleDetails.getStatus() != null) {
+                existingArticle.setStatus(articleDetails.getStatus());
+                if (articleDetails.getStatus() == PublicationStatus.PUBLISHED && existingArticle.getPublishDate() == null) {
+                    existingArticle.setPublishDate(java.time.LocalDateTime.now());
+                }
+                if (articleDetails.getStatus() == PublicationStatus.DRAFT) {
+                    existingArticle.setPublishDate(null);
+                }
+            }
             return articleRepository.save(existingArticle);
         }
         return null;

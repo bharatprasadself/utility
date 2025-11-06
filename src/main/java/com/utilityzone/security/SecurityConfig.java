@@ -70,6 +70,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/blogs/**").authenticated()
                 // Article endpoints
+                .requestMatchers(HttpMethod.GET, "/api/articles/drafts/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")
