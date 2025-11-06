@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS articles (
     content TEXT NOT NULL,
     read_time VARCHAR(50),
     category VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PUBLISHED',
+    publish_date TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -58,6 +60,7 @@ CREATE TABLE IF NOT EXISTS article_tags (
 
 -- Create indexes for articles
 CREATE INDEX idx_article_category ON articles(category);
+CREATE INDEX IF NOT EXISTS idx_article_publish_date ON articles(publish_date);
 
 -- Ebooks content table (single-row JSON storage)
 CREATE TABLE IF NOT EXISTS ebooks_content (

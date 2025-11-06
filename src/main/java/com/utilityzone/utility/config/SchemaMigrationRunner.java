@@ -33,6 +33,7 @@ public class SchemaMigrationRunner {
     public void onReady() {
         try (Connection conn = dataSource.getConnection()) {
             ensureBlogsStatusColumn(conn);
+            ensureArticlesStatusAndPublishDate(conn);
         } catch (SQLException e) {
             log.warn("Schema migration runner encountered an error: {}", e.getMessage());
         }
@@ -62,6 +63,37 @@ public class SchemaMigrationRunner {
             }
         } catch (SQLException e) {
             log.warn("Failed to ensure BLOGS.STATUS column: {}", e.getMessage());
+        }
+    }
+
+    private void ensureArticlesStatusAndPublishDate(Connection conn) {
+        try {
+            boolean hasStatus = columnExists(conn, null, null, "ARTICLES", "STATUS");
+            boolean hasPublishDate = columnExists(conn, null, null, "ARTICLES", "PUBLISH_DATE");
+            if (!hasStatus || !hasPublishDate) {
+                log.info("Ensuring ARTICLES has STATUS and PUBLISH_DATE columns...");
+                try (Statement st = conn.createStatement()) {
+                    if (!hasStatus) {
+                        st.executeUpdate("ALTER TABLE articles ADD COLUMN status VARCHAR(20)");
+                        st.executeUpdate("UPDATE articles SET status='PUBLISHED' WHERE status IS NULL");
+                    }
+                    if (!hasPublishDate) {
+                        st.executeUpdate("ALTER TABLE articles ADD COLUMN publish_date TIMESTAMP");
+                    }
+                    // Backfill publish_date for published rows where missing
+                    st.executeUpdate("UPDATE articles SET publish_date = COALESCE(publish_date, created_at, updated_at, CURRENT_TIMESTAMP) WHERE status='PUBLISHED' AND publish_date IS NULL");
+                }
+                log.info("ARTICLES columns ensured and initialized.");
+            } else {
+                try (Statement st = conn.createStatement()) {
+                    int updated = st.executeUpdate("UPDATE articles SET publish_date = COALESCE(publish_date, created_at, updated_at, CURRENT_TIMESTAMP) WHERE status='PUBLISHED' AND publish_date IS NULL");
+                    if (updated > 0) {
+                        log.info("Backfilled publish_date for {} article(s).", updated);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.warn("Failed to ensure ARTICLES columns: {}", e.getMessage());
         }
     }
 

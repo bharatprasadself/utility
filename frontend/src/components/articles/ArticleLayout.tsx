@@ -18,7 +18,6 @@ import {
   Tooltip
 } from '@mui/material';
 import Paper from '@mui/material/Paper';
-import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -31,13 +30,14 @@ import remarkGfm from 'remark-gfm';
 import Advertisement from '../Advertisement';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
+import { ArticleService } from '../../services/article';
 
 interface ArticleLayoutProps {
   title: string;
   description: string;
   articles: Article[];
   isAdmin: boolean;
-  handleEdit: (article: Article) => void;
+  handleEdit: (article: Article) => Promise<void>;
   handleDelete: (id: string) => void;
   handleCreate?: (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
 }
@@ -77,8 +77,27 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
       '& ul, & ol': { mb: 2, pl: 3 },
       '& li': { mb: 1 },
       '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
-      // Make code blocks flush-left: remove left padding while keeping top/right/bottom for readability
-      '& pre': { bgcolor: 'grey.100', py: 2, pr: 2, pl: 0, borderRadius: 1, overflowX: 'auto' }
+      // Make code blocks flush-left: remove left padding on the first line and entire block
+      '& pre': {
+        bgcolor: 'grey.100',
+        py: 2,
+        pr: 2,
+        pl: 0,
+        borderRadius: 1,
+        overflowX: 'auto',
+        textIndent: 0,
+        m: 0
+      },
+      '& pre code': {
+        display: 'block',
+        m: 0,
+        p: 0,
+        textIndent: 0,
+        // ensure no accidental leading indent from fonts/UA defaults
+        marginLeft: 0,
+        paddingLeft: 0,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace'
+      }
     }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -224,7 +243,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
         return [];
     }
   };
-  const inferredCategory = articles.length > 0 ? articles[0].category : undefined;
+  const [displayedArticles, setDisplayedArticles] = useState<Article[]>(articles);
+  const [viewDrafts, setViewDrafts] = useState<boolean>(false);
+  const inferredCategory = (displayedArticles.length > 0 ? displayedArticles[0].category : (articles[0]?.category)) as ArticleCategory | undefined;
   const defaultTags = useMemo(() => getDefaultTagsForCategory(inferredCategory), [inferredCategory]);
   // Local state for dialogs and form fields
   const [open, setOpen] = useState(false);
@@ -243,6 +264,37 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   const contentTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
   // Track which articles have their content expanded
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
+
+  // Keep displayed list in sync with incoming props only when viewing published
+  React.useEffect(() => {
+    if (!viewDrafts) {
+      setDisplayedArticles(articles);
+    }
+  }, [articles, viewDrafts]);
+
+  const loadPublished = async () => {
+    try {
+      if (!inferredCategory) {
+        setDisplayedArticles(articles);
+        return;
+      }
+      const resp = await ArticleService.getArticlesByCategory(inferredCategory);
+      setDisplayedArticles(resp.data);
+    } catch (e) {
+      setDisplayedArticles(articles);
+    }
+  };
+
+  const loadDrafts = async () => {
+    try {
+      const resp = await ArticleService.getDrafts();
+      const cat = inferredCategory;
+      const data = Array.isArray(resp.data) ? resp.data : [];
+      setDisplayedArticles(cat ? data.filter(a => a.category === cat) : data);
+    } catch (e) {
+      // If drafts fetch fails, keep current list
+    }
+  };
 
   // Content size checks (soft 250KB, hard 1MB)
   const SOFT_LIMIT = 250 * 1024; // 250KB
@@ -346,7 +398,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     });
   };
 
-  const handleSubmit = async () => {
+  // Removed generic handleSubmit; we now always save via explicit Draft/Publish buttons
+
+  const handleSubmitWithStatus = async (status: 'DRAFT' | 'PUBLISHED') => {
     if (!titleInput?.trim() || !contentInput?.trim()) {
       setError('Title and content are required');
       return;
@@ -355,54 +409,49 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       setError('Content exceeds the 1 MB limit. Please reduce the size before saving.');
       return;
     }
-    
+
     setLoading(true);
     setError('');
-    
-    try {
-      // Get category from articles or default to SPRING_BOOT
-      const categoryValue = articles.length > 0 ? articles[0].category : ArticleCategory.SPRING_BOOT;
 
-      // Common article data for both create and update
+    try {
+      const categoryValue = articles.length > 0 ? articles[0].category : ArticleCategory.SPRING_BOOT;
       const baseData = {
         title: titleInput.trim(),
         content: contentInput,
-        tags: tagsInput.length ? tagsInput : getDefaultTagsForCategory(categoryValue), // Ensure we have at least one contextual tag
+        tags: tagsInput.length ? tagsInput : getDefaultTagsForCategory(categoryValue),
         readTime: readTimeInput || '5 min read',
-        category: categoryValue
+        category: categoryValue,
+        status
       } as const;
-      
+
       if (editArticleId) {
-        // Handle edit logic by finding the article to update
-        const articleToEdit = articles.find(a => a.id === editArticleId);
-        
+        const articleToEdit = displayedArticles.find(a => a.id === editArticleId) || articles.find(a => a.id === editArticleId);
         if (articleToEdit && handleEdit) {
-          // Debug log removed
-          
-          // Call the parent component's handleEdit function with the updated article
-          handleEdit({
+          await handleEdit({
             ...articleToEdit,
             ...baseData,
-            // Preserve existing description on edit to avoid data loss
             description: articleToEdit.description
           });
         } else {
-          console.error('Article not found for editing or handleEdit not provided');
           setError('Could not find article to edit');
         }
       } else if (handleCreate) {
-  // Debug log removed
-        
-        // Create new article
         await handleCreate({
           ...baseData,
           description: ''
-        });
+        } as any);
       }
-      
       handleClose();
+      // refresh current view after save/publish
+      if (isAdmin) {
+        if (status === 'DRAFT' || viewDrafts) {
+          await loadDrafts();
+        } else {
+          await loadPublished();
+        }
+      }
     } catch (error: any) {
-      console.error('Error in form submission:', error);
+      console.error('Error saving with status:', error);
       setError(error?.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -448,7 +497,14 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
             </Box>
           </Box>
           {isAdmin && (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: 2,
+              mb: 2,
+              flexWrap: 'wrap'
+            }}>
               <Button
                 variant="contained"
                 color="primary"
@@ -463,18 +519,46 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   setImportedFileName('');
                   setOpen(true);
                 }}
-                startIcon={<AddIcon />}
+                startIcon={<EditIcon />}
                 sx={{
                   px: 3,
                   py: 1,
                   borderRadius: 2,
                   boxShadow: 2,
-                  '&:hover': {
-                    boxShadow: 4
-                  }
+                  '&:hover': { boxShadow: 4 }
                 }}
               >
-                Create Article
+                New Article
+              </Button>
+              <Button
+                variant={viewDrafts ? 'outlined' : 'contained'}
+                color={viewDrafts ? 'secondary' : 'error'}
+                onClick={async () => { setViewDrafts(false); await loadPublished(); }}
+                sx={{
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  boxShadow: viewDrafts ? 0 : 2,
+                  textTransform: 'none',
+                  '&:hover': { boxShadow: viewDrafts ? 1 : 4 }
+                }}
+              >
+                Published
+              </Button>
+              <Button
+                variant={viewDrafts ? 'contained' : 'outlined'}
+                color={viewDrafts ? 'error' : 'secondary'}
+                onClick={async () => { setViewDrafts(true); await loadDrafts(); }}
+                sx={{
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  boxShadow: viewDrafts ? 2 : 0,
+                  textTransform: 'none',
+                  '&:hover': { boxShadow: viewDrafts ? 4 : 1 }
+                }}
+              >
+                Drafts
               </Button>
             </Box>
           )}
@@ -500,7 +584,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           )}
         </Box>
         <Stack spacing={2}>
-          {articles.map((article) => (
+          {displayedArticles.map((article) => (
             <Card key={article.id} sx={{
               borderRadius: 2,
               boxShadow: 2,
@@ -509,9 +593,14 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               }
             }}>
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
-                  {article.title}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50', mb: 0 }}>
+                    {article.title}
+                  </Typography>
+                  {article.status === 'DRAFT' && (
+                    <Chip label="Draft" size="small" color="warning" variant="outlined" />
+                  )}
+                </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
                   <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 'medium' }}>
                     {article.category}
@@ -878,6 +967,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   }
                 }}
               />
+              {/* Admin Published/Drafts toggle lives in header; no toggle inside dialog */}
               <Box>
                 <TextField
                   label="Tags (comma separated)"
@@ -915,19 +1005,32 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               </Box>
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0' }}>
+          <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0', gap: 1, flexWrap: 'wrap' }}>
             <Button onClick={handleClose} variant="outlined" sx={{ borderRadius: 1 }}>
               Cancel
             </Button>
-            <Button
-              onClick={handleSubmit}
-              variant="contained"
-              color="primary"
-              disabled={loading || !titleInput?.trim() || !contentInput?.trim() || overHard}
-              sx={{ borderRadius: 1, px: 3 }}
-            >
-              {loading ? 'Saving...' : editArticleId ? 'Update' : 'Create'}
-            </Button>
+            {isAdmin && (
+              <>
+                <Button
+                  onClick={() => handleSubmitWithStatus('DRAFT')}
+                  variant="contained"
+                  color="secondary"
+                  disabled={loading || !titleInput?.trim() || !contentInput?.trim() || overHard}
+                  sx={{ borderRadius: 1 }}
+                >
+                  {loading ? 'Saving...' : editArticleId ? 'Save Draft' : 'Save as Draft'}
+                </Button>
+                <Button
+                  onClick={() => handleSubmitWithStatus('PUBLISHED')}
+                  variant="contained"
+                  color="success"
+                  disabled={loading || !titleInput?.trim() || !contentInput?.trim() || overHard}
+                  sx={{ borderRadius: 1 }}
+                >
+                  {loading ? 'Saving...' : 'Publish'}
+                </Button>
+              </>
+            )}
           </DialogActions>
         </Dialog>
         <Dialog
