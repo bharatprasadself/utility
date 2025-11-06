@@ -398,77 +398,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     });
   };
 
-  const handleSubmit = async () => {
-    if (!titleInput?.trim() || !contentInput?.trim()) {
-      setError('Title and content are required');
-      return;
-    }
-    if (overHard) {
-      setError('Content exceeds the 1 MB limit. Please reduce the size before saving.');
-      return;
-    }
-    
-    setLoading(true);
-    setError('');
-    
-    try {
-      // Get category from articles or default to SPRING_BOOT
-      const categoryValue = articles.length > 0 ? articles[0].category : ArticleCategory.SPRING_BOOT;
-
-      // Common article data for both create and update
-      const baseData = {
-        title: titleInput.trim(),
-        content: contentInput,
-        tags: tagsInput.length ? tagsInput : getDefaultTagsForCategory(categoryValue), // Ensure we have at least one contextual tag
-        readTime: readTimeInput || '5 min read',
-        category: categoryValue
-      } as const;
-      
-      if (editArticleId) {
-        // Handle edit logic by finding the article to update
-        const articleToEdit = displayedArticles.find(a => a.id === editArticleId) || articles.find(a => a.id === editArticleId);
-        
-        if (articleToEdit && handleEdit) {
-          // Debug log removed
-          
-          // Call the parent component's handleEdit function with the updated article
-          await handleEdit({
-            ...articleToEdit,
-            ...baseData,
-            // Preserve existing description on edit to avoid data loss
-            description: articleToEdit.description
-          });
-        } else {
-          console.error('Article not found for editing or handleEdit not provided');
-          setError('Could not find article to edit');
-        }
-      } else if (handleCreate) {
-  // Debug log removed
-        
-        // Create new article
-        await handleCreate({
-          ...baseData,
-          description: ''
-        });
-      }
-      
-      handleClose();
-      // refresh current view after save
-      if (isAdmin) {
-        // In generic submit we don't change status explicitly; refresh the current view
-        if (viewDrafts) {
-          await loadDrafts();
-        } else {
-          await loadPublished();
-        }
-      }
-    } catch (error: any) {
-      console.error('Error in form submission:', error);
-      setError(error?.message || 'An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed generic handleSubmit; we now always save via explicit Draft/Publish buttons
 
   const handleSubmitWithStatus = async (status: 'DRAFT' | 'PUBLISHED') => {
     if (!titleInput?.trim() || !contentInput?.trim()) {
