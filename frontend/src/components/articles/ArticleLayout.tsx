@@ -1101,15 +1101,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                 </Button>
               </>
             )}
-            <Button
-              onClick={handleSubmit}
-              variant="contained"
-              color="primary"
-              disabled={loading || !titleInput?.trim() || !contentInput?.trim() || overHard}
-              sx={{ borderRadius: 1, px: 3 }}
-            >
-              {loading ? 'Saving...' : editArticleId ? 'Update' : 'Create'}
-            </Button>
           </DialogActions>
         </Dialog>
         <Dialog

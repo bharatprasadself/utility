@@ -890,15 +890,6 @@ export default function BlogList() {
                                 </Button>
                             </>
                         )}
-                        <Button 
-                            onClick={() => handleSubmit(false)} 
-                            variant="contained" 
-                            color="primary"
-                            disabled={!title.trim() || !content.trim() || overHard}
-                            sx={{ borderRadius: 1, px: 3 }}
-                        >
-                            {editBlogId ? 'Update' : 'Create'}
-                        </Button>
                     </DialogActions>
                 </Dialog>
                 <Dialog 
