@@ -48,8 +48,26 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
         '& ul, & ol': { mb: 2, pl: 3 },
         '& li': { mb: 1 },
     '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
-    // Flush-left code blocks: remove left padding to align the first column to the container edge
-    '& pre': { bgcolor: 'grey.100', py: 2, pr: 2, pl: 0, borderRadius: 1, overflowX: 'auto' }
+    // Flush-left code blocks: ensure absolutely no left indentation on first line
+    '& pre': {
+        bgcolor: 'grey.100',
+        py: 2,
+        pr: 2,
+        pl: 0,
+        borderRadius: 1,
+        overflowX: 'auto',
+        textIndent: 0,
+        m: 0
+    },
+    '& pre code': {
+        display: 'block',
+        m: 0,
+        p: 0,
+        textIndent: 0,
+        marginLeft: 0,
+        paddingLeft: 0,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace'
+    }
     }}>
         <ReactMarkdown 
             remarkPlugins={[remarkGfm]}

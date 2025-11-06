@@ -77,8 +77,27 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
       '& ul, & ol': { mb: 2, pl: 3 },
       '& li': { mb: 1 },
       '& code': { bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
-      // Make code blocks flush-left: remove left padding while keeping top/right/bottom for readability
-      '& pre': { bgcolor: 'grey.100', py: 2, pr: 2, pl: 0, borderRadius: 1, overflowX: 'auto' }
+      // Make code blocks flush-left: remove left padding on the first line and entire block
+      '& pre': {
+        bgcolor: 'grey.100',
+        py: 2,
+        pr: 2,
+        pl: 0,
+        borderRadius: 1,
+        overflowX: 'auto',
+        textIndent: 0,
+        m: 0
+      },
+      '& pre code': {
+        display: 'block',
+        m: 0,
+        p: 0,
+        textIndent: 0,
+        // ensure no accidental leading indent from fonts/UA defaults
+        marginLeft: 0,
+        paddingLeft: 0,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace'
+      }
     }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
