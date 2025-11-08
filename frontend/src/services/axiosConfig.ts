@@ -66,8 +66,10 @@ axiosInstance.interceptors.response.use(
                     localStorage.removeItem('username');
                     window.location.href = '/login';
                     throw new Error('Session expired. Please log in again.');
-                case 403:
-                    throw new Error('You do not have permission to perform this action.');
+                case 403: {
+                    const backendMessage = error.response.data?.message;
+                    throw new Error(backendMessage || 'You do not have permission to perform this action.');
+                }
                 case 404:
                     throw new Error('The requested resource was not found.');
                 case 500:

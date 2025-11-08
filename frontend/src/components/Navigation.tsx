@@ -185,16 +185,21 @@ const Navigation = () => {
               sx={{ '& .MuiPaper-root': { mt: 1, minWidth: 200, borderRadius: 2 } }}
             >
               <MenuItem
+                onClick={() => { navigate('/profile'); handleUserMenuClose(); }}
+              >
+                My Profile
+              </MenuItem>
+              <MenuItem
                 onClick={() => { logout(); handleUserMenuClose(); }}
               >
                 Logout
               </MenuItem>
               <MenuItem
                 onClick={async () => {
-                  if (window.confirm('Are you sure you want to permanently delete your account? This action cannot be undone.')) {
-                    try { await deleteAccount(); } catch { alert('Failed to delete account.'); }
-                  }
                   handleUserMenuClose();
+                  if (window.confirm('Are you sure you want to permanently delete your account? This action cannot be undone.')) {
+                    try { await deleteAccount(); } catch (e: any) { alert(e?.message || 'Failed to delete account.'); }
+                  }
                 }}
                 sx={{ color: 'error.main' }}
               >
@@ -272,6 +277,12 @@ const Navigation = () => {
         {user ? (
           <>
             <MenuItem 
+              onClick={() => { handleNavigation('/profile'); }}
+              role="menuitem"
+            >
+              My Profile
+            </MenuItem>
+            <MenuItem 
               onClick={() => { logout(); handleClose(); }}
               role="menuitem"
             >
@@ -281,7 +292,7 @@ const Navigation = () => {
               onClick={async () => {
                 handleClose();
                 if (window.confirm('Delete account permanently?')) {
-                  try { await deleteAccount(); } catch { alert('Failed to delete account.'); }
+                  try { await deleteAccount(); } catch (e: any) { alert(e?.message || 'Failed to delete account.'); }
                 }
               }}
               role="menuitem"

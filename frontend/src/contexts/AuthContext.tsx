@@ -4,13 +4,14 @@ import authService from '../services/auth';
 import type { AuthResponse } from '../services/auth';
 
 interface AuthContextType {
-    user: { username: string; token: string; roles?: string[] } | null;
+    user: { username: string; token: string; roles?: string[]; email?: string } | null;
     login: (username: string, password: string) => Promise<void>;
     register: (username: string, password: string, email: string) => Promise<void>;
     logout: () => void;
     deleteAccount: () => Promise<void>;
     loading: boolean;
     isAdmin: () => boolean;
+    refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,7 +21,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    const [user, setUser] = useState<{ username: string; token: string; roles?: string[] } | null>(null);
+    const [user, setUser] = useState<{ username: string; token: string; roles?: string[]; email?: string } | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -38,12 +39,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const login = async (username: string, password: string) => {
         try {
             const response: AuthResponse = await authService.login({ username, password });
-            const userData = { 
-                username: response.username, 
+            const userData = {
+                username: response.username,
                 token: response.token,
-                roles: response.roles 
+                roles: response.roles
             };
             setUser(userData);
+            try { await refreshProfile(); } catch { /* ignore profile fetch errors */ }
             // Session-only persistence handled inside authService; removed duplicate localStorage writes
         } catch (error) {
             throw error;
@@ -75,8 +77,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return user?.roles?.includes('ROLE_ADMIN') || false;
     };
 
+    const refreshProfile = async () => {
+        if (!user) return;
+        try {
+            const profile = await authService.getProfile();
+            setUser({ ...user, email: profile.email, roles: profile.roles });
+        } catch (e) {
+            // swallow errors
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, deleteAccount, loading, isAdmin }}>
+        <AuthContext.Provider value={{ user, login, register, logout, deleteAccount, loading, isAdmin, refreshProfile }}>
             {children}
         </AuthContext.Provider>
     );

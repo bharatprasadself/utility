@@ -16,6 +16,10 @@ export interface RegisterRequest extends LoginRequest {
     email: string;
 }
 
+export interface UpdateEmailRequest { email: string; }
+export interface UpdatePasswordRequest { currentPassword?: string; newPassword: string; }
+export interface ProfileResponse { id: number; username: string; email: string; roles: string[]; }
+
 const setAuthToken = (token: string) => {
     if (token) {
         sessionStorage.setItem('token', token);
@@ -93,6 +97,37 @@ const authService = {
         } catch (error: any) {
             const payload = error?.response?.data;
             const message = (typeof payload === 'string' ? payload : payload?.message) || error?.message || 'Delete failed';
+            throw { message };
+        }
+    },
+
+    getProfile: async (): Promise<ProfileResponse> => {
+        try {
+            const res = await axiosInstance.get('/api/auth/profile');
+            return res.data as ProfileResponse;
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || 'Failed to load profile';
+            throw { message };
+        }
+    },
+
+    updateEmail: async (data: UpdateEmailRequest): Promise<any> => {
+        try {
+            return await axiosInstance.put('/api/auth/profile/email', data);
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || 'Failed to update email';
+            throw { message };
+        }
+    },
+
+    updatePassword: async (data: UpdatePasswordRequest): Promise<any> => {
+        try {
+            return await axiosInstance.put('/api/auth/profile/password', data);
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || 'Failed to update password';
             throw { message };
         }
     },

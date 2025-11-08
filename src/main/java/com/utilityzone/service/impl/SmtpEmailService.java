@@ -46,7 +46,8 @@ public class SmtpEmailService implements EmailService {
             mailSender.send(message);
             log.info("Password reset email sent to {}", email);
         } catch (Exception ex) {
-            log.warn("Failed sending password reset email to {}: {}", email, ex.getMessage());
+            // Log full stack trace for diagnostics (authentication failures, networking, etc.)
+            log.warn("Failed sending password reset email to {}", email, ex);
         }
     }
 }

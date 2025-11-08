@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +41,9 @@ import com.utilityzone.payload.request.PasswordResetConfirmRequest;
 import com.utilityzone.repository.PasswordResetTokenRepository;
 import com.utilityzone.model.PasswordResetToken;
 import com.utilityzone.service.EmailService;
+import com.utilityzone.payload.request.UpdateEmailRequest;
+import com.utilityzone.payload.request.UpdatePasswordRequest;
+import com.utilityzone.payload.response.ProfileResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -208,6 +213,12 @@ public class AuthController {
         return ResponseEntity.status(HttpServletResponse.SC_NOT_FOUND)
             .body(new MessageResponse("Account not found"));
     }
+        // Block deletion for admin users
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getName() == RoleType.ROLE_ADMIN);
+        if (isAdmin) {
+            return ResponseEntity.status(HttpServletResponse.SC_FORBIDDEN)
+                .body(new MessageResponse("Admin accounts cannot be deleted"));
+        }
         userRepository.delete(user);
     return ResponseEntity.ok(new MessageResponse("Account deleted successfully"));
     }
@@ -256,5 +267,62 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {
+            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .body(new MessageResponse("Unauthorized"));
+        }
+        UserDetailsImpl principal = (UserDetailsImpl) authentication.getPrincipal();
+        User user = userRepository.findById(principal.getId()).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpServletResponse.SC_NOT_FOUND)
+                    .body(new MessageResponse("User not found"));
+        }
+        return ResponseEntity.ok(new ProfileResponse(user.getId(), user.getUsername(), user.getEmail(), user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet())));
+    }
+
+    @PutMapping("/profile/email")
+    public ResponseEntity<?> updateEmail(Authentication authentication, @Valid @RequestBody UpdateEmailRequest req) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {
+            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .body(new MessageResponse("Unauthorized"));
+        }
+        if (userRepository.existsByEmailIgnoreCase(req.getEmail())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Email already in use"));
+        }
+        UserDetailsImpl principal = (UserDetailsImpl) authentication.getPrincipal();
+        User user = userRepository.findById(principal.getId()).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpServletResponse.SC_NOT_FOUND)
+                    .body(new MessageResponse("User not found"));
+        }
+        user.setEmail(req.getEmail());
+        userRepository.save(user);
+        return ResponseEntity.ok(new MessageResponse("Email updated successfully"));
+    }
+
+    @PutMapping("/profile/password")
+    public ResponseEntity<?> updatePassword(Authentication authentication, @Valid @RequestBody UpdatePasswordRequest req) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {
+            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .body(new MessageResponse("Unauthorized"));
+        }
+        UserDetailsImpl principal = (UserDetailsImpl) authentication.getPrincipal();
+        User user = userRepository.findById(principal.getId()).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpServletResponse.SC_NOT_FOUND)
+                    .body(new MessageResponse("User not found"));
+        }
+        // Optionally verify current password matches
+        if (req.getCurrentPassword() != null && !encoder.matches(req.getCurrentPassword(), user.getPassword())) {
+            return ResponseEntity.status(HttpServletResponse.SC_BAD_REQUEST)
+                    .body(new MessageResponse("Current password is incorrect"));
+        }
+        user.setPassword(encoder.encode(req.getNewPassword()));
+        userRepository.save(user);
+        return ResponseEntity.ok(new MessageResponse("Password updated successfully"));
     }
 }

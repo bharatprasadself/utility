@@ -20,6 +20,7 @@ import Ebooks from '@/components/Ebooks';
 import theme from './theme';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
+import Profile from './components/Profile';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/profile" element={<Profile />} />
                     <Route path="/articles/spring-boot/*" element={<SpringBootArticles />} />
                     <Route path="/articles/react/*" element={<ReactArticles />} />
                     <Route path="/articles/postgresql/*" element={<PostgreSQLArticles />} />
