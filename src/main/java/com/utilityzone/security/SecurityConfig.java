@@ -40,6 +40,7 @@ public class SecurityConfig {
             }))
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/auth/account").authenticated()
                 .requestMatchers(
                     "/api/auth/**",
                     "/h2-console/**",

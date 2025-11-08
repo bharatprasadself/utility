@@ -22,8 +22,10 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     (config) => {
         // Get token from localStorage - it could be stored directly or within user data
-        const token = localStorage.getItem('token') || 
-                     (localStorage.getItem('user') && JSON.parse(localStorage.getItem('user') || '{}').token);
+    // Prefer sessionStorage for session-based auth; fall back to legacy localStorage for backward compatibility
+    const token = sessionStorage.getItem('token') || 
+             localStorage.getItem('token') || 
+             (localStorage.getItem('user') && JSON.parse(localStorage.getItem('user') || '{}').token);
         
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -56,6 +58,10 @@ axiosInstance.interceptors.response.use(
                         return Promise.reject(error);
                     }
                     // For all other 401s, treat as session expiration
+                    sessionStorage.removeItem('token');
+                    sessionStorage.removeItem('username');
+                    sessionStorage.removeItem('roles');
+                    // Legacy cleanup
                     localStorage.removeItem('token');
                     localStorage.removeItem('username');
                     window.location.href = '/login';

@@ -6,8 +6,9 @@ import type { AuthResponse } from '../services/auth';
 interface AuthContextType {
     user: { username: string; token: string; roles?: string[] } | null;
     login: (username: string, password: string) => Promise<void>;
-    register: (username: string, password: string) => Promise<void>;
+    register: (username: string, password: string, email: string) => Promise<void>;
     logout: () => void;
+    deleteAccount: () => Promise<void>;
     loading: boolean;
     isAdmin: () => boolean;
 }
@@ -43,24 +44,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 roles: response.roles 
             };
             setUser(userData);
-            localStorage.setItem('username', response.username);
-            localStorage.setItem('roles', JSON.stringify(response.roles || []));
+            // Session-only persistence handled inside authService; removed duplicate localStorage writes
         } catch (error) {
             throw error;
         }
     };
 
-    const register = async (username: string, password: string) => {
+    const register = async (username: string, password: string, email: string) => {
         try {
-            await authService.register({ username, password });
+            await authService.register({ username, password, email });
         } catch (error) {
             throw error;
         }
     };
 
     const logout = () => {
-        authService.logout();
+        authService.logout(); // clears sessionStorage and legacy localStorage keys
         setUser(null);
+    };
+
+    const deleteAccount = async () => {
+        try {
+            await authService.deleteAccount();
+        } finally {
+            logout();
+        }
     };
 
     const isAdmin = () => {
@@ -68,7 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading, isAdmin }}>
+        <AuthContext.Provider value={{ user, login, register, logout, deleteAccount, loading, isAdmin }}>
             {children}
         </AuthContext.Provider>
     );

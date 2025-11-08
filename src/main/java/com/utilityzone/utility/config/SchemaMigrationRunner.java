@@ -34,6 +34,8 @@ public class SchemaMigrationRunner {
         try (Connection conn = dataSource.getConnection()) {
             ensureBlogsStatusColumn(conn);
             ensureArticlesStatusAndPublishDate(conn);
+            ensureUsersEmailColumn(conn);
+            ensurePasswordResetTokenTable(conn);
         } catch (SQLException e) {
             log.warn("Schema migration runner encountered an error: {}", e.getMessage());
         }
@@ -101,6 +103,49 @@ public class SchemaMigrationRunner {
         DatabaseMetaData meta = conn.getMetaData();
         try (ResultSet rs = meta.getColumns(catalog, schemaPattern, tableName, columnName)) {
             return rs.next();
+        }
+    }
+
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, null)) {
+            return rs.next();
+        }
+    }
+
+    private void ensureUsersEmailColumn(Connection conn) {
+        try {
+            if (!columnExists(conn, null, null, "USERS", "EMAIL")) {
+                log.info("Adding USERS.EMAIL column...");
+                try (Statement st = conn.createStatement()) {
+                    st.executeUpdate("ALTER TABLE users ADD COLUMN email VARCHAR(160)");
+                }
+                log.info("USERS.EMAIL column added. NOTE: existing rows have NULL; consider backfill.");
+            }
+        } catch (SQLException e) {
+            log.warn("Failed to ensure USERS.EMAIL column: {}", e.getMessage());
+        }
+    }
+
+    private void ensurePasswordResetTokenTable(Connection conn) {
+        try {
+            if (!tableExists(conn, "PASSWORD_RESET_TOKENS")) {
+                log.info("Creating PASSWORD_RESET_TOKENS table...");
+                try (Statement st = conn.createStatement()) {
+                    st.executeUpdate("CREATE TABLE password_reset_tokens (" +
+                            "id BIGSERIAL PRIMARY KEY," +
+                            "user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE," +
+                            "token_hash VARCHAR(128) NOT NULL UNIQUE," +
+                            "expires_at TIMESTAMP NOT NULL," +
+                            "used BOOLEAN NOT NULL DEFAULT FALSE)"
+                    );
+                    st.executeUpdate("CREATE INDEX idx_prt_user ON password_reset_tokens(user_id)");
+                    st.executeUpdate("CREATE INDEX idx_prt_expiry ON password_reset_tokens(expires_at)");
+                }
+                log.info("PASSWORD_RESET_TOKENS table created.");
+            }
+        } catch (SQLException e) {
+            log.warn("Failed to ensure PASSWORD_RESET_TOKENS table: {}", e.getMessage());
         }
     }
 }

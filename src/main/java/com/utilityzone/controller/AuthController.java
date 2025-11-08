@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +34,19 @@ import com.utilityzone.payload.request.LoginRequest;
 import com.utilityzone.payload.request.SignupRequest;
 import com.utilityzone.payload.response.JwtResponse;
 import com.utilityzone.payload.response.MessageResponse;
+import com.utilityzone.payload.request.PasswordResetRequest;
+import com.utilityzone.payload.request.PasswordResetConfirmRequest;
+import com.utilityzone.repository.PasswordResetTokenRepository;
+import com.utilityzone.model.PasswordResetToken;
+import com.utilityzone.service.EmailService;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -51,6 +65,12 @@ public class AuthController {
 
     @Autowired
     JwtUtils jwtUtils;
+
+    @Autowired
+    PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    EmailService emailService;
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -123,6 +143,75 @@ public class AuthController {
         }
     }
 
+    private String generateResetToken() {
+        byte[] raw = new byte[32];
+        new SecureRandom().nextBytes(raw);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<?> requestPasswordReset(@Valid @RequestBody PasswordResetRequest req) {
+        // Always return OK to avoid user enumeration
+        userRepository.findByEmailIgnoreCase(req.getEmail()).ifPresent(user -> {
+            String rawToken = generateResetToken();
+            String hash = hashToken(rawToken);
+            PasswordResetToken prt = new PasswordResetToken();
+            prt.setUser(user);
+            prt.setTokenHash(hash);
+            prt.setExpiresAt(Instant.now().plus(Duration.ofMinutes(30)));
+            passwordResetTokenRepository.save(prt);
+            emailService.sendPasswordReset(user.getEmail(), rawToken);
+        });
+        return ResponseEntity.ok(new MessageResponse("If the account exists, you will receive an email with reset instructions."));
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<?> confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest req) {
+        String hash = hashToken(req.getToken());
+        java.util.Optional<PasswordResetToken> prtOpt = passwordResetTokenRepository.findByTokenHashAndUsedFalse(hash)
+                .filter(t -> t.getExpiresAt().isAfter(Instant.now()));
+        if (prtOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired token"));
+        }
+        PasswordResetToken prt = prtOpt.get();
+        User user = prt.getUser();
+        user.setPassword(encoder.encode(req.getNewPassword()));
+        userRepository.save(user);
+        prt.setUsed(true);
+        passwordResetTokenRepository.save(prt);
+        return ResponseEntity.ok(new MessageResponse("Password reset successful"));
+    }
+
+    @DeleteMapping("/account")
+    @SuppressWarnings("null")
+    public ResponseEntity<?> deleteAccount(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl)) {
+            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .body(new MessageResponse("Unauthorized"));
+        }
+        UserDetailsImpl principal = (UserDetailsImpl) authentication.getPrincipal();
+        long uid = principal.getId() != null ? principal.getId().longValue() : -1L;
+        User user = userRepository.findById(Long.valueOf(uid)).orElse(null);
+        if (user == null) {
+        return ResponseEntity.status(HttpServletResponse.SC_NOT_FOUND)
+            .body(new MessageResponse("Account not found"));
+    }
+        userRepository.delete(user);
+    return ResponseEntity.ok(new MessageResponse("Account deleted successfully"));
+    }
+
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
@@ -134,10 +223,20 @@ public class AuthController {
                     "USERNAME_TAKEN"
                 ));
         }
+        if (userRepository.existsByEmailIgnoreCase(signUpRequest.getEmail())) {
+            return ResponseEntity.status(HttpServletResponse.SC_BAD_REQUEST)
+                .body(new com.utilityzone.exception.ErrorResponse(
+                    HttpServletResponse.SC_BAD_REQUEST,
+                    "Bad Request",
+                    "Email is already registered",
+                    "EMAIL_TAKEN"
+                ));
+        }
 
-        // Create new user account
+    // Create new user account
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
+    user.setEmail(signUpRequest.getEmail());
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
 
         Set<Role> roles = new HashSet<>();

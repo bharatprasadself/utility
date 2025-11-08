@@ -3,6 +3,8 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Link as RouterLink } from 'react-router-dom';
+import Link from '@mui/material/Link';
 
 export default function Login() {
     const [username, setUsername] = useState('');
@@ -91,6 +93,9 @@ export default function Login() {
                     >
                         {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
                     </Button>
+                    <Link component={RouterLink} to="/forgot-password" underline="hover" sx={{ textAlign: 'center' }}>
+                        Forgot password?
+                    </Link>
                     <Button 
                         type="button"
                         onClick={(e) => {
