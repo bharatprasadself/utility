@@ -166,8 +166,8 @@ const Blogs = () => {
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, px: 0, width: '100%' }}>
       <Box sx={{ p: 3, flexGrow: 1, minWidth: 0 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h5" gutterBottom sx={{ mb: 0, fontWeight: 'bold', color: '#2c3e50' }}>
-          Latest Blog Posts
+        <Typography variant="h4" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
+          Blog Posts
         </Typography>
         {isAdmin() && (
           <Stack direction="row" spacing={1}>
