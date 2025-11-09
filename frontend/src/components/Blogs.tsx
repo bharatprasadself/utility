@@ -256,8 +256,44 @@ const Blogs = () => {
                 )}
                 {isAdmin() && (
                   <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-                    <Button onClick={() => handleEdit(blog)} size="small">Edit</Button>
-                    <Button onClick={() => setConfirmDelete((blog as any).id)} size="small" color="error" startIcon={<DeleteIcon />}>Delete</Button>
+                    <Button
+                      onClick={() => handleEdit(blog)}
+                      variant="contained"
+                      color="success"
+                      startIcon={<EditIcon />}
+                      size="small"
+                      sx={{
+                        textTransform: 'none',
+                        borderRadius: 1,
+                        fontWeight: 500,
+                        px: 2,
+                        py: 0.75,
+                        boxShadow: 1,
+                        letterSpacing: 0.3,
+                        '&:hover': { boxShadow: 2 }
+                      }}
+                    >
+                      Update
+                    </Button>
+                    <Button
+                      onClick={() => setConfirmDelete((blog as any).id)}
+                      variant="contained"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      size="small"
+                      sx={{
+                        textTransform: 'none',
+                        borderRadius: 1,
+                        fontWeight: 500,
+                        px: 2,
+                        py: 0.75,
+                        boxShadow: 1,
+                        letterSpacing: 0.3,
+                        '&:hover': { boxShadow: 2 }
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </Box>
                 )}
               </Box>
