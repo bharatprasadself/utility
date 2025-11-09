@@ -19,6 +19,9 @@ public class SmtpEmailService implements EmailService {
     @Value("${app.mail.from}")
     private String from;
 
+    @Value("${spring.mail.username:}")
+    private String smtpUser;
+
     @Value("${app.mail.reply-to:}")
     private String replyTo;
 
@@ -35,6 +38,9 @@ public class SmtpEmailService implements EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
         message.setTo(email);
+        if (smtpUser != null && !smtpUser.isBlank() && from != null && !from.equalsIgnoreCase(smtpUser)) {
+            log.info("Email 'from' ({}) differs from SMTP username ({}). Ensure your provider allows this alias.", from, smtpUser);
+        }
         if (replyTo != null && !replyTo.isBlank()) {
             message.setReplyTo(replyTo);
         }

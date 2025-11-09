@@ -1,0 +1,17 @@
+# SPA fallback: send all non-file, non-directory requests to index.html
+# Exclude API and static upload routes handled by the backend
+<IfModule mod_rewrite.c>
+  Options -MultiViews
+  RewriteEngine On
+  RewriteBase /
+
+  # Bypass rewrites for API and file uploads
+  RewriteCond %{REQUEST_URI} ^/api/ [OR]
+  RewriteCond %{REQUEST_URI} ^/uploads/
+  RewriteRule ^ - [L]
+
+  # If the requested resource doesn't exist as a file or directory, serve index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L,QSA]
+</IfModule>
