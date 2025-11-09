@@ -12,6 +12,7 @@ import blogService from '../services/blog';
 import type { Blog } from '../types/Blog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Advertisement from './Advertisement';
 
 // Lightweight markdown preview styling (subset of BlogList's richer styling)
 const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
@@ -200,7 +201,8 @@ const Blogs = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, px: 0, width: '100%' }}>
+      <Box sx={{ p: 3, flexGrow: 1, minWidth: 0 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" gutterBottom sx={{ mb: 0, fontWeight: 'bold', color: '#2c3e50' }}>
           Latest Blog Posts
@@ -373,6 +375,22 @@ const Blogs = () => {
             color="error" variant="contained" startIcon={<DeleteIcon />}>Delete</Button>
         </DialogActions>
       </Dialog>
+      </Box>
+      <Box
+        sx={{
+          marginTop: '0',
+          ml: 6,
+          alignSelf: 'flex-start',
+          position: 'sticky',
+          top: '5rem',
+          width: '200px',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          mr: 1
+        }}
+      >
+        <Advertisement />
+      </Box>
     </Box>
   );
 };

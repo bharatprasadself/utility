@@ -504,39 +504,25 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                 >
                   Admin
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
                   <Button
                     variant={viewDrafts ? 'outlined' : 'contained'}
-                    color={viewDrafts ? 'secondary' : 'error'}
+                    color="secondary"
                     onClick={async () => { setViewDrafts(false); await loadPublished(); }}
                     sx={{
-                      px: 3,
-                      py: 1,
-                      borderRadius: 1,
-                      boxShadow: viewDrafts ? 0 : 2,
                       textTransform: 'none',
-                      fontWeight: 500,
-                      letterSpacing: 0.3,
-                      whiteSpace: 'nowrap',
-                      '&:hover': { boxShadow: viewDrafts ? 1 : 3 }
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     Published
                   </Button>
                   <Button
                     variant={viewDrafts ? 'contained' : 'outlined'}
-                    color={viewDrafts ? 'error' : 'secondary'}
+                    color="secondary"
                     onClick={async () => { setViewDrafts(true); await loadDrafts(); }}
                     sx={{
-                      px: 3,
-                      py: 1,
-                      borderRadius: 1,
-                      boxShadow: viewDrafts ? 2 : 0,
                       textTransform: 'none',
-                      fontWeight: 500,
-                      letterSpacing: 0.3,
-                      whiteSpace: 'nowrap',
-                      '&:hover': { boxShadow: viewDrafts ? 3 : 1 }
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     Drafts
@@ -557,15 +543,10 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     }}
                     startIcon={<EditIcon />}
                     sx={{
-                      px: 3,
-                      py: 1,
-                      borderRadius: 1,
+                      borderRadius: 2,
                       boxShadow: 2,
                       textTransform: 'none',
-                      fontWeight: 500,
-                      letterSpacing: 0.3,
-                      whiteSpace: 'nowrap',
-                      '&:hover': { boxShadow: 3 }
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     New Article
