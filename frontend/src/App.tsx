@@ -5,7 +5,6 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Register from './components/Register';
-import BlogList from './components/BlogList';
 import Blogs from './components/Blogs';
 import Navigation from './components/Navigation';
 import { AuthProvider } from './contexts/AuthContext';

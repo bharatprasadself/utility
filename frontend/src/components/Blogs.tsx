@@ -1,4 +1,4 @@
-import { Box, Typography, Card, CardContent, Avatar, CircularProgress, Pagination, Stack, Alert, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, Card, CardContent, Avatar, CircularProgress, Pagination, Stack, Alert, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,37 +60,7 @@ const metaRowSx = {
   gap: 1
 };
 
-const contentTypographySx = {
-  color: '#34495e',
-  lineHeight: 1.5,
-  '& .blog-content': {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem'
-  },
-  '& .blog-paragraph': {
-    margin: 0
-  },
-  '& a': {
-    color: 'primary.main',
-    textDecoration: 'none',
-    '&:hover': {
-      textDecoration: 'underline'
-    }
-  },
-  '& .blog-list': {
-    listStyleType: 'disc',
-    paddingLeft: '1.5rem',
-    margin: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem'
-  },
-  '& li': {
-    margin: 0,
-    paddingLeft: '0.5rem'
-  }
-};
+// removed unused contentTypographySx
 
 const Blogs = () => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -164,15 +134,7 @@ const Blogs = () => {
     setError(null);
   };
 
-  const handleSubmit = async (asDraft: boolean = false) => {
-    const blogData: BlogRequest = { title: title.trim(), content: content.trim(), status: asDraft ? 'DRAFT' : 'PUBLISHED' };
-    if (editBlogId !== null) {
-      await blogService.update(editBlogId, blogData);
-    } else {
-      await blogService.create(blogData);
-    }
-    await loadPage(1);
-  };
+  // handleSubmit is obsolete; BlogEditorDialog onSubmit handles create/update
 
   const handleEdit = (blog: Blog) => {
     if (!isAdmin()) { setError('You must be an admin to edit blogs'); return; }

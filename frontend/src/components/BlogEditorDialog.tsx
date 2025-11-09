@@ -6,7 +6,6 @@ import {
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import ClearIcon from '@mui/icons-material/Clear';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import remarkGfm from 'remark-gfm';
 import ReactMarkdown from 'react-markdown';
 
