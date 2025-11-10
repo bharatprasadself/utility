@@ -239,13 +239,24 @@ const Blogs = () => {
                 <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 500 }}>
                   By {blog.author}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  • {formatDate(blog.publishDate)}
-                </Typography>
-                {/* Updated timestamp check; backend may omit these fields. */}
-                {(blog as any).updatedAt && (blog as any).createdAt && (blog as any).updatedAt !== (blog as any).createdAt && (
-                  <Typography variant="body2" sx={{ color: 'warning.main', fontSize: '0.8rem' }}>• Updated: {formatDate((blog as any).updatedAt)}</Typography>
+                {((blog as any).publishDate || (blog as any).createdAt) && (
+                  <Typography variant="body2" color="text.secondary">
+                    • {formatDate(((blog as any).publishDate || (blog as any).createdAt) as string)}
+                  </Typography>
                 )}
+                {/* Updated timestamp only when it's newer than the published/created date. */}
+                {(() => {
+                  const updatedAt = (blog as any).updatedAt as string | undefined;
+                  const baseDate = ((blog as any).publishDate || (blog as any).createdAt) as string | undefined;
+                  if (!updatedAt || !baseDate) return null;
+                  const u = new Date(updatedAt).getTime();
+                  const b = new Date(baseDate).getTime();
+                  if (!isFinite(u) || !isFinite(b)) return null;
+                  if (u <= b) return null;
+                  return (
+                    <Typography variant="body2" sx={{ color: 'warning.main', fontSize: '0.8rem' }}>• Updated: {formatDate(updatedAt)}</Typography>
+                  );
+                })()}
                 {isAdmin() && (
                   <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
                     <Button
@@ -289,7 +300,17 @@ const Blogs = () => {
                   </Box>
                 )}
               </Box>
-              <Divider sx={{ mb: 2 }} aria-hidden />
+              <Divider
+                aria-hidden
+                sx={{
+                  mb: 2,
+                  height: 2,
+                  bgcolor: 'primary.main',
+                  opacity: 0.35,
+                  border: 'none',
+                  borderRadius: 1
+                }}
+              />
               <Box sx={{ mt: 1 }}>
                 {expandedPosts.includes(blog.id) ? (
                   <Box>
