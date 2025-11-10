@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -99,6 +100,10 @@ public class BlogService {
         }
         Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
         return blogRepository.findAllByStatus(PublicationStatus.DRAFT, pageable).getContent();
+    }
+
+    public Page<Blog> getPublishedBlogs(Pageable pageable) {
+        return blogRepository.findAllByStatus(PublicationStatus.PUBLISHED, pageable);
     }
 
     @CacheEvict(value = "blogs", allEntries = true)

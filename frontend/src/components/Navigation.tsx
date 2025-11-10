@@ -44,11 +44,13 @@ const navItems: NavItem[] = [
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const isMobile = useMediaQuery('(max-width:600px)');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [subMenuAnchorEl, setSubMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
+  const [userMenuAnchorEl, setUserMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const userMenuOpen = Boolean(userMenuAnchorEl);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -72,6 +74,14 @@ const Navigation = () => {
     navigate(path);
     handleClose();
     handleSubMenuClose();
+  };
+
+  const handleUserMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
+    setUserMenuAnchorEl(e.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setUserMenuAnchorEl(null);
   };
 
   const renderDesktopNav = () => (
@@ -150,18 +160,53 @@ const Navigation = () => {
       </Menu>
       <Box sx={{ display: 'flex', gap: 2 }}>
         {user ? (
-          <Button 
-            color="inherit" 
-            onClick={logout}
-            sx={{ 
-              px: 3,
-              py: 1,
-              bgcolor: 'primary.dark',
-              '&:hover': { bgcolor: 'primary.dark', opacity: 0.9 }
-            }}
-          >
-            Logout ({user.username})
-          </Button>
+          <>
+            <Button
+              color="inherit"
+              aria-controls={userMenuOpen ? 'user-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={userMenuOpen ? 'true' : undefined}
+              onClick={handleUserMenuOpen}
+              sx={{
+                px: 3,
+                py: 1,
+                borderRadius: 1,
+                bgcolor: 'rgba(255,255,255,0.1)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+              }}
+            >
+              {user.username} ▾
+            </Button>
+            <Menu
+              id="user-menu"
+              anchorEl={userMenuAnchorEl}
+              open={userMenuOpen}
+              onClose={handleUserMenuClose}
+              sx={{ '& .MuiPaper-root': { mt: 1, minWidth: 200, borderRadius: 2 } }}
+            >
+              <MenuItem
+                onClick={() => { navigate('/profile'); handleUserMenuClose(); }}
+              >
+                My Profile
+              </MenuItem>
+              <MenuItem
+                onClick={() => { logout(); handleUserMenuClose(); }}
+              >
+                Logout
+              </MenuItem>
+              <MenuItem
+                onClick={async () => {
+                  handleUserMenuClose();
+                  if (window.confirm('Are you sure you want to permanently delete your account? This action cannot be undone.')) {
+                    try { await deleteAccount(); } catch (e: any) { alert(e?.message || 'Failed to delete account.'); }
+                  }
+                }}
+                sx={{ color: 'error.main' }}
+              >
+                Delete Account
+              </MenuItem>
+            </Menu>
+          </>
         ) : (
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button
@@ -230,12 +275,31 @@ const Navigation = () => {
           </MenuItem>
         ))}
         {user ? (
-          <MenuItem 
-            onClick={() => { logout(); handleClose(); }}
-            role="menuitem"
-          >
-            Logout ({user.username})
-          </MenuItem>
+          <>
+            <MenuItem 
+              onClick={() => { handleNavigation('/profile'); }}
+              role="menuitem"
+            >
+              My Profile
+            </MenuItem>
+            <MenuItem 
+              onClick={() => { logout(); handleClose(); }}
+              role="menuitem"
+            >
+              Logout ({user.username})
+            </MenuItem>
+            <MenuItem
+              onClick={async () => {
+                handleClose();
+                if (window.confirm('Delete account permanently?')) {
+                  try { await deleteAccount(); } catch (e: any) { alert(e?.message || 'Failed to delete account.'); }
+                }
+              }}
+              role="menuitem"
+            >
+              Delete Account
+            </MenuItem>
+          </>
         ) : (
           <>
             <MenuItem 

@@ -25,12 +25,20 @@ export interface BlogError {
     status?: number;
 }
 
+export interface BlogPage {
+    content: Blog[];
+    page: number; // 1-based index
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+}
+
 const blogService = {
     getAll: async (): Promise<Blog[]> => {
         try {
-            console.log('Fetching blogs...');
             const response = await axiosInstance.get('/api/blogs');
-            console.log('Blogs response:', response);
 
             // Check if response has data
             if (!response.data) {
@@ -77,6 +85,37 @@ const blogService = {
             } else {
                 throw new Error('Failed to fetch blogs. Please try again later.');
             }
+        }
+    },
+
+    getPage: async (page: number = 1, size: number = 9): Promise<BlogPage> => {
+        try {
+            const response = await axiosInstance.get('/api/blogs/page', { params: { page, size } });
+            const data = response.data;
+            if (!data || !Array.isArray(data.content)) {
+                throw new Error('Invalid page response format');
+            }
+            const normalized: Blog[] = data.content.map((blog: any) => ({
+                id: blog.id,
+                title: blog.title || 'Untitled',
+                content: blog.content || 'No content',
+                author: blog.author || 'Unknown',
+                publishDate: blog.publishDate || new Date().toISOString(),
+                createdAt: blog.createdAt || new Date().toISOString(),
+                updatedAt: blog.updatedAt || new Date().toISOString(),
+                status: blog.status || 'PUBLISHED'
+            }));
+            return {
+                content: normalized,
+                page: data.page,
+                size: data.size,
+                totalElements: data.totalElements,
+                totalPages: data.totalPages,
+                hasNext: data.hasNext,
+                hasPrevious: data.hasPrevious
+            } as BlogPage;
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to fetch blog page');
         }
     },
 

@@ -478,90 +478,83 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
             </Typography>
             <Box sx={{ mb: 2 }}>
               <MarkdownPreview content={description} stripFootnotes />
-              {isAdmin && (
+            </Box>
+            {isAdmin && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  mb: 2,
+                  flexWrap: 'nowrap'
+                }}
+              >
                 <Typography
                   component="span"
                   sx={{
-                    ml: 1,
                     px: 1,
                     py: 0.5,
                     bgcolor: 'primary.main',
                     color: 'white',
                     borderRadius: 1,
-                    fontSize: '0.75rem'
+                    fontSize: '0.75rem',
+                    flexShrink: 0
                   }}
                 >
                   Admin
                 </Typography>
-              )}
-            </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                  <Button
+                    variant={viewDrafts ? 'outlined' : 'contained'}
+                    color="secondary"
+                    onClick={async () => { setViewDrafts(false); await loadPublished(); }}
+                    sx={{
+                      textTransform: 'none',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Published
+                  </Button>
+                  <Button
+                    variant={viewDrafts ? 'contained' : 'outlined'}
+                    color="secondary"
+                    onClick={async () => { setViewDrafts(true); await loadDrafts(); }}
+                    sx={{
+                      textTransform: 'none',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Drafts
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => {
+                      // Ensure fresh create mode and clear any stale edit state
+                      setEditArticleId(null);
+                      setTitleInput('');
+                      setContentInput('');
+                      setTagsInput(defaultTags);
+                      setReadTimeInput('');
+                      setError('');
+                      setImportedFileName('');
+                      setOpen(true);
+                    }}
+                    startIcon={<EditIcon />}
+                    sx={{
+                      borderRadius: 2,
+                      boxShadow: 2,
+                      textTransform: 'none',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    New Article
+                  </Button>
+                </Box>
+              </Box>
+            )}
           </Box>
-          {isAdmin && (
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              alignItems: 'center',
-              gap: 2,
-              mb: 2,
-              flexWrap: 'wrap'
-            }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => {
-                  // Ensure fresh create mode and clear any stale edit state
-                  setEditArticleId(null);
-                  setTitleInput('');
-                  setContentInput('');
-                  setTagsInput(defaultTags);
-                  setReadTimeInput('');
-                  setError('');
-                  setImportedFileName('');
-                  setOpen(true);
-                }}
-                startIcon={<EditIcon />}
-                sx={{
-                  px: 3,
-                  py: 1,
-                  borderRadius: 2,
-                  boxShadow: 2,
-                  '&:hover': { boxShadow: 4 }
-                }}
-              >
-                New Article
-              </Button>
-              <Button
-                variant={viewDrafts ? 'outlined' : 'contained'}
-                color={viewDrafts ? 'secondary' : 'error'}
-                onClick={async () => { setViewDrafts(false); await loadPublished(); }}
-                sx={{
-                  px: 3,
-                  py: 1,
-                  borderRadius: 2,
-                  boxShadow: viewDrafts ? 0 : 2,
-                  textTransform: 'none',
-                  '&:hover': { boxShadow: viewDrafts ? 1 : 4 }
-                }}
-              >
-                Published
-              </Button>
-              <Button
-                variant={viewDrafts ? 'contained' : 'outlined'}
-                color={viewDrafts ? 'error' : 'secondary'}
-                onClick={async () => { setViewDrafts(true); await loadDrafts(); }}
-                sx={{
-                  px: 3,
-                  py: 1,
-                  borderRadius: 2,
-                  boxShadow: viewDrafts ? 2 : 0,
-                  textTransform: 'none',
-                  '&:hover': { boxShadow: viewDrafts ? 4 : 1 }
-                }}
-              >
-                Drafts
-              </Button>
-            </Box>
-          )}
           
           <Box sx={{ borderTop: '2px solid #e0e0e0', mt: 1 }} />
           
@@ -610,6 +603,48 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                       • {article.readTime}
                     </Typography>
                   )}
+                  {isAdmin && (
+                    <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+                      <Button
+                        startIcon={<EditIcon />}
+                        onClick={() => openEditDialog(article)}
+                        color="success"
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          textTransform: 'none',
+                          borderRadius: 1,
+                          fontWeight: 500,
+                          px: 2,
+                          py: 0.75,
+                          boxShadow: 1,
+                          letterSpacing: 0.3,
+                          '&:hover': { boxShadow: 2 }
+                        }}
+                      >
+                        Update
+                      </Button>
+                      <Button
+                        startIcon={<DeleteIcon />}
+                        onClick={() => setConfirmDelete(article.id)}
+                        color="error"
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          textTransform: 'none',
+                          borderRadius: 1,
+                          fontWeight: 500,
+                          px: 2,
+                          py: 0.75,
+                          boxShadow: 1,
+                          letterSpacing: 0.3,
+                          '&:hover': { boxShadow: 2 }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
                 <Box sx={{ position: 'relative' }}>
 
@@ -651,37 +686,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     )
                   )}
                 </Box>
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  borderTop: '1px solid #e0e0e0',
-                  mt: 2,
-                  pt: 2
-                }}>
-                  {isAdmin && (
-                    <Box>
-                      <Button
-                        startIcon={<EditIcon />}
-                        onClick={() => openEditDialog(article)}
-                        color="primary"
-                        variant="contained"
-                        size="small"
-                        sx={{ mr: 1 }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        startIcon={<DeleteIcon />}
-                        onClick={() => setConfirmDelete(article.id)}
-                        color="error"
-                        variant="contained"
-                        size="small"
-                      >
-                        Delete
-                      </Button>
-                    </Box>
-                  )}
-                </Box>
+                {/* Action buttons now inline with category/read time above; bottom bar removed */}
               </CardContent>
             </Card>
           ))}

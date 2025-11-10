@@ -13,14 +13,18 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest extends LoginRequest {
-    email?: string;
+    email: string;
 }
+
+export interface UpdateEmailRequest { email: string; }
+export interface UpdatePasswordRequest { currentPassword?: string; newPassword: string; }
+export interface ProfileResponse { id: number; username: string; email: string; roles: string[]; }
 
 const setAuthToken = (token: string) => {
     if (token) {
-        localStorage.setItem('token', token);
+        sessionStorage.setItem('token', token);
     } else {
-        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
     }
 };
 
@@ -31,8 +35,8 @@ const authService = {
             console.log('Login response:', response.data); // Debug log
             if (response.data.token) {
                 setAuthToken(response.data.token);
-                localStorage.setItem('username', response.data.username);
-                localStorage.setItem('roles', JSON.stringify(response.data.roles || []));
+                sessionStorage.setItem('username', response.data.username);
+                sessionStorage.setItem('roles', JSON.stringify(response.data.roles || []));
                 console.log('Stored roles:', response.data.roles); // Debug log
                 return response.data;
             } else {
@@ -40,9 +44,9 @@ const authService = {
                 throw new Error('Server response missing authentication token');
             }
         } catch (error: any) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('username');
-            localStorage.removeItem('roles');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('username');
+            sessionStorage.removeItem('roles');
             console.error('Login error:', error); // Debug log
             if (error?.response) {
                 const data = error.response.data;
@@ -67,17 +71,82 @@ const authService = {
         }
     },
 
+    requestPasswordReset: async (email: string): Promise<any> => {
+        try {
+            return await axiosInstance.post('/api/auth/password-reset/request', { email });
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || error?.message || 'Request failed';
+            throw { message };
+        }
+    },
+
+    confirmPasswordReset: async (data: { token: string; newPassword: string }): Promise<any> => {
+        try {
+            return await axiosInstance.post('/api/auth/password-reset/confirm', data);
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || error?.message || 'Reset failed';
+            throw { message };
+        }
+    },
+
+    deleteAccount: async (): Promise<any> => {
+        try {
+            return await axiosInstance.delete('/api/auth/account');
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || error?.message || 'Delete failed';
+            throw { message };
+        }
+    },
+
+    getProfile: async (): Promise<ProfileResponse> => {
+        try {
+            const res = await axiosInstance.get('/api/auth/profile');
+            return res.data as ProfileResponse;
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || 'Failed to load profile';
+            throw { message };
+        }
+    },
+
+    updateEmail: async (data: UpdateEmailRequest): Promise<any> => {
+        try {
+            return await axiosInstance.put('/api/auth/profile/email', data);
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || 'Failed to update email';
+            throw { message };
+        }
+    },
+
+    updatePassword: async (data: UpdatePasswordRequest): Promise<any> => {
+        try {
+            return await axiosInstance.put('/api/auth/profile/password', data);
+        } catch (error: any) {
+            const payload = error?.response?.data;
+            const message = (typeof payload === 'string' ? payload : payload?.message) || 'Failed to update password';
+            throw { message };
+        }
+    },
+
     logout: () => {
         setAuthToken('');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('username');
+        sessionStorage.removeItem('roles');
+        // Backward-compat cleanup if any past logins used localStorage
         localStorage.removeItem('token');
         localStorage.removeItem('username');
         localStorage.removeItem('roles');
     },
 
     getCurrentUser: (): { username: string; token: string; roles?: string[] } | null => {
-        const token = localStorage.getItem('token');
-        const username = localStorage.getItem('username');
-        const rolesString = localStorage.getItem('roles');
+    const token = sessionStorage.getItem('token');
+    const username = sessionStorage.getItem('username');
+    const rolesString = sessionStorage.getItem('roles');
         
         // Debug logs to help troubleshoot
         console.log('Auth - getCurrentUser:', { token, username, rolesString });
@@ -103,9 +172,9 @@ const authService = {
         return user;
     },
 
-    // Initialize auth state from localStorage
+    // Initialize auth state from sessionStorage
     initializeAuth: () => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (token) {
             setAuthToken(token);
         }
