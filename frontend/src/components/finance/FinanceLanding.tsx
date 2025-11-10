@@ -6,6 +6,7 @@ const tools = [
   { label: 'SIP Calculator', path: '/finance/sip', description: 'Future value of monthly recurring investments.' },
   { label: 'ROI Calculator', path: '/finance/roi', description: 'Return on investment percentage.' },
   { label: 'Dividend Tracker', path: '/finance/dividends', description: 'Track dividend holdings & income.' },
+  { label: 'Compounding Calculator', path: '/finance/compounding', description: 'Future value with custom compounding and contributions.' },
 ];
 
 export default function FinanceLanding() {

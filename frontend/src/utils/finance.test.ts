@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcCAGR, futureValueSip, calcROI, totalAnnualDividends } from './finance';
+import { calcCAGR, futureValueSip, calcROI, totalAnnualDividends, futureValueCompound } from './finance';
 
 describe('finance utils', () => {
   it('calcCAGR basic case', () => {
@@ -39,5 +39,21 @@ describe('finance utils', () => {
       { shares: 5, dividendPerShare: 1.5 },
     ]);
     expect(total).toBe(10 * 2 + 5 * 1.5);
+  });
+  
+  it('futureValueCompound annual simple case no contributions', () => {
+    // 1000 principal, 10% annual, 2 years compounded annually => 1000*(1.1)^2 = 1210
+    const fv = futureValueCompound(1000, 0.10, 2, 1, 0);
+    expect(fv).toBeCloseTo(1210, 2);
+  });
+
+  it('futureValueCompound monthly with contributions', () => {
+    // Rough sanity: principal 0, $100 monthly, 12% annual ~ grows above simple sum
+    const fv = futureValueCompound(0, 0.12, 1, 12, 100); // 1 year
+    expect(fv).toBeGreaterThan(1200); // contributions sum
+  });
+
+  it('futureValueCompound invalid frequency', () => {
+    expect(isNaN(futureValueCompound(1000, 0.1, 2, 0, 0))).toBe(true);
   });
 });

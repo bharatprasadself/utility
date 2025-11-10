@@ -25,7 +25,8 @@ const navItems: NavItem[] = [
       { label: 'CAGR Calculator', path: '/finance/cagr' },
       { label: 'SIP Calculator', path: '/finance/sip' },
       { label: 'ROI Calculator', path: '/finance/roi' },
-      { label: 'Dividend Tracker', path: '/finance/dividends' }
+      { label: 'Dividend Tracker', path: '/finance/dividends' },
+      { label: 'Compounding Calculator', path: '/finance/compounding' }
     ]
   },
   { label: 'Ebooks', path: '/ebooks' },
@@ -69,7 +70,8 @@ const Navigation = () => {
     'CAGR Calculator': '📈',
     'SIP Calculator': '💰',
     'ROI Calculator': '📊',
-    'Dividend Tracker': '🧾'
+    'Dividend Tracker': '🧾',
+    'Compounding Calculator': '🔁'
   };
   // Emoji icons for Articles submenu items
   const articlesEmoji: Record<string, string> = {

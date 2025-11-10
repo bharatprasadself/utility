@@ -26,6 +26,7 @@ import CagrCalculator from './components/finance/CagrCalculator';
 import SipCalculator from './components/finance/SipCalculator';
 import RoiCalculator from './components/finance/RoiCalculator';
 import DividendTracker from './components/finance/DividendTracker';
+import CompoundingCalculator from './components/finance/CompoundingCalculator';
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
                     <Route path="/finance/sip" element={<SipCalculator />} />
                     <Route path="/finance/roi" element={<RoiCalculator />} />
                     <Route path="/finance/dividends" element={<DividendTracker />} />
+                    <Route path="/finance/compounding" element={<CompoundingCalculator />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>
