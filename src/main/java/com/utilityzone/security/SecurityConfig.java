@@ -40,6 +40,10 @@ public class SecurityConfig {
             }))
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/auth/account").authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/auth/profile").authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/auth/profile/email").authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/auth/profile/password").authenticated()
                 .requestMatchers(
                     "/api/auth/**",
                     "/h2-console/**",

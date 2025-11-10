@@ -1,0 +1,25 @@
+# SPA fallback for Apache: ensure deep links like /reset-password render the SPA
+# Exclude API and static upload routes handled by the backend
+
+# If mod_rewrite is available, prefer robust rewrite-based fallback
+<IfModule mod_rewrite.c>
+  Options -MultiViews
+  RewriteEngine On
+  RewriteBase /
+
+  # Short-circuit rewrites for API and file uploads
+  RewriteCond %{REQUEST_URI} ^/api/ [OR]
+  RewriteCond %{REQUEST_URI} ^/uploads/
+  RewriteRule ^ - [L]
+
+  # If the requested resource doesn't exist as a file or directory, serve index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L,QSA]
+</IfModule>
+
+# As a safety net on hosts where mod_rewrite is disabled or restricted,
+# serve the SPA for 404s as well. This helps avoid deep-link 404s when rewrite rules
+# are unavailable but ErrorDocument is honored.
+ErrorDocument 404 /index.html
+

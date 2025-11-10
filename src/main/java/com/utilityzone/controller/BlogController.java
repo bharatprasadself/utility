@@ -10,6 +10,10 @@ import org.springframework.cache.CacheManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +33,29 @@ public class BlogController {
         this.blogService = blogService;
         this.jwtUtils = jwtUtils;
         this.cacheManager = cacheManager;
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<?> getBlogsPage(
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "size", defaultValue = "9") int size) {
+        try {
+            int pageIndex = Math.max(0, page - 1); // convert to 0-based
+            int pageSize = Math.min(Math.max(1, size), 50); // guard rails: 1..50
+            Pageable pageable = PageRequest.of(pageIndex, pageSize, Sort.by(Sort.Direction.DESC, "publishDate"));
+            Page<Blog> result = blogService.getPublishedBlogs(pageable);
+            return ResponseEntity.ok(new com.utilityzone.payload.response.PageResponse<>(
+                    result.getContent(),
+                    result.getNumber() + 1, // return 1-based page
+                    result.getSize(),
+                    result.getTotalElements(),
+                    result.getTotalPages(),
+                    result.hasNext(),
+                    result.hasPrevious()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(java.util.Map.of("message", "Failed to fetch blogs: " + e.getMessage()));
+        }
     }
 
     @GetMapping

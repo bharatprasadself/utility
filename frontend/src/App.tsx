@@ -5,7 +5,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Register from './components/Register';
-import BlogList from './components/BlogList';
+import Blogs from './components/Blogs';
 import Navigation from './components/Navigation';
 import { AuthProvider } from './contexts/AuthContext';
 import ReactArticles from './components/articles/ReactArticles';
@@ -18,6 +18,9 @@ import FallingBall from './components/FallingBall';
 import DinoRunner from './components/DinoRunner';
 import Ebooks from '@/components/Ebooks';
 import theme from './theme';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
+import Profile from './components/Profile';
 
 function App() {
   return (
@@ -32,10 +35,15 @@ function App() {
                 <Container maxWidth="lg">
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
-                    <Route path="/blogs" element={<BlogList />} />
+                    {/** Public blogs listing (paginated) */}
+                    {/**<Route path="/blogs" element={<BlogList />} />*/}
+                    <Route path="/blogs" element={<Blogs />} />
                     <Route path="/ebooks" element={<Ebooks />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/profile" element={<Profile />} />
                     <Route path="/articles/spring-boot/*" element={<SpringBootArticles />} />
                     <Route path="/articles/react/*" element={<ReactArticles />} />
                     <Route path="/articles/postgresql/*" element={<PostgreSQLArticles />} />
