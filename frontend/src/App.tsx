@@ -21,6 +21,11 @@ import theme from './theme';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import Profile from './components/Profile';
+import FinanceLanding from './components/finance/FinanceLanding';
+import CagrCalculator from './components/finance/CagrCalculator';
+import SipCalculator from './components/finance/SipCalculator';
+import RoiCalculator from './components/finance/RoiCalculator';
+import DividendTracker from './components/finance/DividendTracker';
 
 function App() {
   return (
@@ -52,6 +57,11 @@ function App() {
                     <Route path="/articles/java/*" element={<JavaArticles />} />
                     <Route path="/games/falling-ball" element={<FallingBall />} />
                     <Route path="/games/dino-runner" element={<DinoRunner />} />
+                    <Route path="/finance" element={<FinanceLanding />} />
+                    <Route path="/finance/cagr" element={<CagrCalculator />} />
+                    <Route path="/finance/sip" element={<SipCalculator />} />
+                    <Route path="/finance/roi" element={<RoiCalculator />} />
+                    <Route path="/finance/dividends" element={<DividendTracker />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>

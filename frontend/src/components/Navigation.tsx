@@ -17,16 +17,19 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/' },
-  { label: 'Blogs', path: '/blogs' },
-  { label: 'Ebooks', path: '/ebooks' },
+
   {
-    label: 'Games',
-    path: '/games',
+    label: 'Finance',
+    path: '/finance',
     subItems: [
-      { label: 'Falling Ball', path: '/games/falling-ball' },
-      { label: 'Dino Runner', path: '/games/dino-runner' }
+      { label: 'CAGR Calculator', path: '/finance/cagr' },
+      { label: 'SIP Calculator', path: '/finance/sip' },
+      { label: 'ROI Calculator', path: '/finance/roi' },
+      { label: 'Dividend Tracker', path: '/finance/dividends' }
     ]
   },
+  { label: 'Ebooks', path: '/ebooks' },
+  { label: 'Blogs', path: '/blogs' },
   { 
     label: 'Articles',
     path: '/articles',
@@ -39,6 +42,15 @@ const navItems: NavItem[] = [
       { label: 'Microservices', path: '/articles/microservices' },
     ]
   }
+  //,
+  //{
+  //  label: 'Games',
+  //  path: '/games',
+  //  subItems: [
+  //    { label: 'Falling Ball', path: '/games/falling-ball' },
+  //    { label: 'Dino Runner', path: '/games/dino-runner' }
+  //  ]
+  //}
 ];
 
 const Navigation = () => {
@@ -51,6 +63,23 @@ const Navigation = () => {
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
   const [userMenuAnchorEl, setUserMenuAnchorEl] = useState<null | HTMLElement>(null);
   const userMenuOpen = Boolean(userMenuAnchorEl);
+
+  // Emoji icons for Finance submenu items
+  const financeEmoji: Record<string, string> = {
+    'CAGR Calculator': '📈',
+    'SIP Calculator': '💰',
+    'ROI Calculator': '📊',
+    'Dividend Tracker': '🧾'
+  };
+  // Emoji icons for Articles submenu items
+  const articlesEmoji: Record<string, string> = {
+    'Spring Boot': '🌱',
+    'React JS': '⚛️',
+    'Java': '☕',
+    'PostgreSQL': '🐘',
+    'Docker': '🐳',
+    'Microservices': '🧩'
+  };
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -128,35 +157,47 @@ const Navigation = () => {
           '& .MuiPaper-root': {
             borderRadius: 2,
             mt: 1,
-            minWidth: 180,
+            minWidth: 240,
             boxShadow: 3
           }
         }}
       >
-        {navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => (
-          <MenuItem
-            key={subItem.path}
-            onClick={() => { handleNavigation(subItem.path); handleSubMenuClose(); }}
-            selected={location.pathname === subItem.path}
-            sx={{
-              py: 1,
-              px: 2,
-              '&:hover': {
-                bgcolor: 'primary.light',
-                color: 'white'
-              },
-              '&.Mui-selected': {
-                bgcolor: 'primary.main',
-                color: 'white',
+        {navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => {
+          const isFinance = activeSubMenu === 'Finance';
+          const isArticles = activeSubMenu === 'Articles';
+          const emoji = isFinance ? financeEmoji[subItem.label] : (isArticles ? articlesEmoji[subItem.label] : undefined);
+          return (
+            <MenuItem
+              key={subItem.path}
+              onClick={() => { handleNavigation(subItem.path); handleSubMenuClose(); }}
+              selected={location.pathname === subItem.path}
+              sx={{
+                py: 1,
+                px: 2,
                 '&:hover': {
-                  bgcolor: 'primary.dark'
+                  bgcolor: 'primary.light',
+                  color: 'white'
+                },
+                '&.Mui-selected': {
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: 'primary.dark'
+                  }
                 }
-              }
-            }}
-          >
-            {subItem.label}
-          </MenuItem>
-        ))}
+              }}
+            >
+              {emoji ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 200 }}>
+                  <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{subItem.label}</Typography>
+                </Box>
+              ) : (
+                subItem.label
+              )}
+            </MenuItem>
+          );
+        })}
       </Menu>
       <Box sx={{ display: 'flex', gap: 2 }}>
         {user ? (
