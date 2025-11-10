@@ -1,4 +1,4 @@
-import { Box, Typography, Card, CardContent, Avatar, CircularProgress, Pagination, Stack, Alert, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Typography, Card, CardContent, Avatar, CircularProgress, Pagination, Stack, Alert, Button, Dialog, DialogTitle, DialogContent, DialogActions, Divider } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '@/contexts/AuthContext';
@@ -229,7 +229,7 @@ const Blogs = () => {
         {blogs.map((blog) => (
           <Card key={blog.id} sx={cardStyles}>
             <CardContent>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50', mb: 1 }}>
                 {blog.title}
               </Typography>
               <Box sx={metaRowSx}>
@@ -289,6 +289,7 @@ const Blogs = () => {
                   </Box>
                 )}
               </Box>
+              <Divider sx={{ mb: 2 }} aria-hidden />
               <Box sx={{ mt: 1 }}>
                 {expandedPosts.includes(blog.id) ? (
                   <Box>
