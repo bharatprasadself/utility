@@ -10,7 +10,6 @@ import ClearIcon from '@mui/icons-material/Clear';
 import remarkGfm from 'remark-gfm';
 import ReactMarkdown from 'react-markdown';
 import SearchIcon from '@mui/icons-material/Search';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
 export interface BlogEditorInitial {
   id?: number;
