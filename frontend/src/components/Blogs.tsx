@@ -26,13 +26,41 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
       '& h1, & h2, & h3, & h4, & h5, & h6': { mt: 3, mb: 1.5, color: 'primary.main', fontWeight: 600 },
       '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
       '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1 },
+      // Table styles (imported from BlogList)
+      '& table': { width: '100%', borderCollapse: 'collapse', my: 2 },
+      '& th, & td': { border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' },
+      '& thead th': { bgcolor: 'grey.100', fontWeight: 600 },
       '& ul, & ol': { mb: 2, pl: 3 },
       '& li': { mb: 0.5 },
       '& blockquote': { borderLeft: '4px solid', borderColor: 'primary.main', pl: 2, py: 0.5, my: 2, bgcolor: 'grey.50', fontStyle: 'italic' },
       '& code': { bgcolor: 'grey.100', px: 1, py: 0.25, borderRadius: 1, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace' },
       '& pre': { bgcolor: 'grey.100', p: 2, borderRadius: 1, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace', fontSize: '0.85rem', position: 'relative' }
     }}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          table: (props: any) => (
+            <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', my: 2 }}>
+              {props.children}
+            </Box>
+          ),
+          thead: (props: any) => <Box component="thead">{props.children}</Box>,
+          tbody: (props: any) => <Box component="tbody">{props.children}</Box>,
+          tr: (props: any) => <Box component="tr">{props.children}</Box>,
+          th: (props: any) => (
+            <Box component="th" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', bgcolor: 'grey.100', fontWeight: 600 }}>
+              {props.children}
+            </Box>
+          ),
+          td: (props: any) => (
+            <Box component="td" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' }}>
+              {props.children}
+            </Box>
+          )
+        }}
+      >
+        {cleaned}
+      </ReactMarkdown>
     </Box>
   );
 };
