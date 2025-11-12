@@ -18,6 +18,8 @@ import FallingBall from './components/FallingBall';
 import DinoRunner from './components/DinoRunner';
 import Ebooks from '@/components/Ebooks';
 import theme from './theme';
+import CanvaTemplates from './components/CanvaTemplates';
+import CanvaTemplatesPublic from './components/CanvaTemplatesPublic';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import Profile from './components/Profile';
@@ -64,6 +66,8 @@ function App() {
                     <Route path="/finance/roi" element={<RoiCalculator />} />
                     <Route path="/finance/dividends" element={<DividendTracker />} />
                     <Route path="/finance/compounding" element={<CompoundingCalculator />} />
+                    <Route path="/shop/canva-templates" element={<CanvaTemplatesPublic />} />
+                    <Route path="/admin/canva-templates" element={<CanvaTemplates />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>

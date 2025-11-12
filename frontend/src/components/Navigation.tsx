@@ -29,7 +29,15 @@ const navItems: NavItem[] = [
       { label: 'Compounding Calculator', path: '/finance/compounding' }
     ]
   },
-  { label: 'Ebooks', path: '/ebooks' },
+  // Shop menu groups commerce-related items like Ebooks
+  {
+    label: 'Shop',
+    path: '/shop',
+    subItems: [
+      { label: 'Ebooks', path: '/ebooks' },
+      { label: 'Canva Templates', path: '/shop/canva-templates' }
+    ]
+  },
   { label: 'Blogs', path: '/blogs' },
   { 
     label: 'Articles',
@@ -138,7 +146,7 @@ const Navigation = () => {
                 px: 3,
                 py: 1,
                 borderRadius: 1,
-                bgcolor: location.pathname.startsWith(item.path) ? 'rgba(255,255,255,0.1)' : 'transparent',
+                bgcolor: (location.pathname.startsWith(item.path) || (item.subItems && item.subItems.some(si => location.pathname.startsWith(si.path)))) ? 'rgba(255,255,255,0.1)' : 'transparent',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
               }}
             >
@@ -164,7 +172,7 @@ const Navigation = () => {
           }
         }}
       >
-        {navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => {
+  {navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => {
           const isFinance = activeSubMenu === 'Finance';
           const isArticles = activeSubMenu === 'Articles';
           const emoji = isFinance ? financeEmoji[subItem.label] : (isArticles ? articlesEmoji[subItem.label] : undefined);
@@ -306,16 +314,40 @@ const Navigation = () => {
           role: 'menu'
         }}
       >
-        {navItems.map((item) => (
-          <MenuItem 
-            key={item.path}
-            onClick={() => handleNavigation(item.path)}
-            selected={location.pathname === item.path}
-            role="menuitem"
-            aria-current={location.pathname === item.path ? 'page' : undefined}
-          >
-            {item.label}
-          </MenuItem>
+  {navItems.map((item) => (
+          item.subItems ? (
+            <Box key={item.label}>
+              <MenuItem
+                disabled
+                role="presentation"
+                sx={{ fontWeight: 600, opacity: 0.8 }}
+              >
+                {item.label}
+              </MenuItem>
+              {item.subItems.map((sub) => (
+                <MenuItem
+                  key={sub.path}
+                  onClick={() => handleNavigation(sub.path)}
+                  selected={location.pathname === sub.path}
+                  role="menuitem"
+                  aria-current={location.pathname === sub.path ? 'page' : undefined}
+                  sx={{ pl: 3 }}
+                >
+                  {sub.label}
+                </MenuItem>
+              ))}
+            </Box>
+          ) : (
+            <MenuItem 
+              key={item.path}
+              onClick={() => handleNavigation(item.path)}
+              selected={location.pathname === item.path}
+              role="menuitem"
+              aria-current={location.pathname === item.path ? 'page' : undefined}
+            >
+              {item.label}
+            </MenuItem>
+          )
         ))}
         {user ? (
           <>
