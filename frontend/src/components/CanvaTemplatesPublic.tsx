@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Card, CardMedia, CardActions, Button, Skeleton, Paper } from '@mui/material';
+import { Box, Typography, Grid, Card, CardMedia, CardActions, CardContent, Button, Skeleton, Paper, Container } from '@mui/material';
 import { listPublicTemplates, type PublicCanvaTemplate } from '@/services/canvaTemplates';
 import { API_BASE_URL } from '@/services/axiosConfig';
 import CanvaTemplatesAdmin from './CanvaTemplates';
+import Advertisement from './Advertisement';
 import { useAuth } from '@/contexts/AuthContext';
 
 const CanvaTemplatesPublic = () => {
@@ -26,27 +27,48 @@ const CanvaTemplatesPublic = () => {
   useEffect(() => { refresh(); }, []);
 
   return (
-    <Box sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom fontWeight={700}>Canva Templates</Typography>
+    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4, flexGrow: 1, minWidth: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 3,
+          borderBottom: '2px solid',
+          borderColor: 'grey.200',
+          pb: 2
+        }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+              Canva Templates
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Hand-picked editable designs. Click to view on Etsy.
+            </Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+            {loading ? 'Loading…' : `${items.length} item${items.length === 1 ? '' : 's'}`}
+          </Typography>
+        </Box>
 
-      {isAdmin && isAdmin() && (
-        <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Admin tools</Typography>
-          {/* Reuse full admin component inline */}
-          <CanvaTemplatesAdmin />
-        </Paper>
-      )}
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        Browse our editable Canva templates. Click a card to view the listing.
-      </Typography>
+        {isAdmin && isAdmin() && (
+          <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Admin tools</Typography>
+            {/* Reuse full admin component inline */}
+            <CanvaTemplatesAdmin />
+          </Paper>
+        )}
 
-      {err && <Typography color="error" sx={{ mb: 2 }}>{err}</Typography>}
+        {err && <Typography color="error" sx={{ mb: 2 }}>{err}</Typography>}
 
   <Grid container spacing={2}>
             {loading && Array.from({ length: 6 }).map((_, i) => (
-              <Grid key={i} item xs={12} sm={12} md={6}>
+              <Grid key={i} item xs={12} sm={6} md={6}>
                 <Card>
-                  <Skeleton variant="rectangular" height={300} />
+                  <Skeleton variant="rectangular" height={260} />
+                  <CardContent>
+                    <Skeleton variant="text" width="80%" />
+                  </CardContent>
                   <CardActions>
                     <Button fullWidth disabled>Loading…</Button>
                   </CardActions>
@@ -59,19 +81,24 @@ const CanvaTemplatesPublic = () => {
                 ? (t.mockupUrl.startsWith('http') ? t.mockupUrl : `${API_BASE_URL}${t.mockupUrl}`)
                 : undefined;
               return (
-              <Grid key={t.id} item xs={12} sm={12} md={6}>
-                <Card sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Grid key={t.id} item xs={12} sm={6} md={6}>
+                <Card sx={{ display: 'flex', flexDirection: 'column', transition: 'box-shadow .2s ease', '&:hover': { boxShadow: 6 } }}>
               {imgSrc ? (
                 <CardMedia
                   component="img"
                   src={imgSrc}
                   alt={t.title}
                   loading="lazy"
-                  sx={{ height: { xs: 260, sm: 300, md: 340 }, objectFit: 'cover' }}
+                  sx={{ height: { xs: 200, sm: 220, md: 260 }, objectFit: 'cover' }}
                 />
               ) : (
-                    <Box sx={{ height: { xs: 300, sm: 340, md: 380 }, bgcolor: 'grey.100' }} />
+                    <Box sx={{ height: { xs: 200, sm: 220, md: 260 }, bgcolor: 'grey.100' }} />
               )}
+              <CardContent sx={{ pb: 0 }}>
+                <Typography variant="subtitle1" fontWeight={600} noWrap title={t.title}>
+                  {t.title}
+                </Typography>
+              </CardContent>
               <CardActions>
                 <Button 
                   fullWidth
@@ -91,6 +118,23 @@ const CanvaTemplatesPublic = () => {
           <Grid item xs={12}><Typography color="text.secondary">No templates found.</Typography></Grid>
         )}
       </Grid>
+      </Container>
+      {/* Right rail ads: match Blog layout exactly */}
+      <Box
+        sx={{
+          marginTop: '0',
+          ml: 6,
+          alignSelf: 'flex-start',
+          position: 'sticky',
+          top: '5rem',
+          width: '200px',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          mr: 1
+        }}
+      >
+        <Advertisement />
+      </Box>
     </Box>
   );
 };
