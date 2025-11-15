@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import javax.imageio.ImageIO;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -108,7 +112,14 @@ public class CanvaTemplateController {
     public ResponseEntity<?> getMockup(@PathVariable("file") String fileName,
                                             @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) throws IOException {
         Path path = service.getMockupDir().resolve(fileName);
-        if (!Files.exists(path)) return ResponseEntity.notFound().build();
+        if (!Files.exists(path)) {
+            // Generate and return a lightweight placeholder instead of 404
+            byte[] png = generatePlaceholder("Image unavailable", 1200, 800);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .header("Cache-Control", "public, max-age=300")
+                    .body(png);
+        }
         String eTag = "\"" + fileName + '-' + Files.size(path) + "\"";
         if (ifNoneMatch != null && ifNoneMatch.equals(eTag)) {
             return ResponseEntity.status(304)
@@ -123,6 +134,29 @@ public class CanvaTemplateController {
                 .header("Cache-Control", "public, max-age=86400, immutable")
                 .eTag(eTag)
                 .body(bytes);
+    }
+
+    private byte[] generatePlaceholder(String text, int width, int height) throws IOException {
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        try {
+            g.setColor(new Color(245, 246, 248));
+            g.fillRect(0, 0, width, height);
+            g.setColor(new Color(200, 205, 210));
+            g.drawRect(0, 0, width - 1, height - 1);
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g.setColor(new Color(120, 126, 134));
+            g.setFont(new Font("Helvetica", Font.PLAIN, 28));
+            String msg = text == null || text.isBlank() ? "Image unavailable" : text;
+            int tw = g.getFontMetrics().stringWidth(msg);
+            int th = g.getFontMetrics().getAscent();
+            g.drawString(msg, (width - tw) / 2, (height + th) / 2 - 10);
+        } finally {
+            g.dispose();
+        }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", baos);
+        return baos.toByteArray();
     }
 
     @PostMapping("/api/admin/canva-templates/generate-buyer-pdf")

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Grid, Card, CardMedia, CardActions, Button, Skeleton, Paper } from '@mui/material';
 import { listPublicTemplates, type PublicCanvaTemplate } from '@/services/canvaTemplates';
+import { API_BASE_URL } from '@/services/axiosConfig';
 import CanvaTemplatesAdmin from './CanvaTemplates';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -53,13 +54,17 @@ const CanvaTemplatesPublic = () => {
               </Grid>
             ))}
 
-            {!loading && items.map(t => (
+            {!loading && items.map(t => {
+              const imgSrc = t.mockupUrl
+                ? (t.mockupUrl.startsWith('http') ? t.mockupUrl : `${API_BASE_URL}${t.mockupUrl}`)
+                : undefined;
+              return (
               <Grid key={t.id} item xs={12} sm={12} md={6}>
                 <Card sx={{ display: 'flex', flexDirection: 'column' }}>
-              {t.mockupUrl ? (
+              {imgSrc ? (
                 <CardMedia
                   component="img"
-                  src={t.mockupUrl}
+                  src={imgSrc}
                   alt={t.title}
                   loading="lazy"
                   sx={{ height: { xs: 260, sm: 300, md: 340 }, objectFit: 'cover' }}
@@ -80,7 +85,7 @@ const CanvaTemplatesPublic = () => {
               </CardActions>
             </Card>
           </Grid>
-        ))}
+        )})}
 
         {!loading && items.length === 0 && (
           <Grid item xs={12}><Typography color="text.secondary">No templates found.</Typography></Grid>

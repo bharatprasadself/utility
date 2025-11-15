@@ -7,9 +7,11 @@ services:
     startCommand: java -jar target/utility-1.2.0-SNAPSHOT.jar
     envVars:
       - key: SPRING_PROFILES_ACTIVE
-        value: prod-h2
+        value: prod
       - key: utility.database.type
         value: h2
+      - key: FILE_UPLOAD_DIR
+        value: /app/data/uploads
       - key: JAVA_OPTS
         value: -Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom
     disk:
