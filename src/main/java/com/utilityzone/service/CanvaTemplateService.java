@@ -14,8 +14,10 @@ import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,23 +45,41 @@ public class CanvaTemplateService {
         this.repo = repo;
     }
 
-    public List<CanvaTemplate> list() { return repo.findAll(); }
-    public CanvaTemplate create(CanvaTemplate t) { return repo.save(t); }
-    public Optional<CanvaTemplate> findById(Long id) { return repo.findById(id); }
+    // ---- Shared style constants for consistent layout ----
+    private static final float MARGIN = 36f;           // page margins
+    private static final float GAP = 12f;              // default vertical gap
+    private static final float GAP_SMALL = 8f;         // smaller gap for labels
+    private static final float HEAD_LG = 24f;          // large heading size
+    private static final float HEAD_MD = 20f;          // medium heading size
+    private static final float BODY = 13f;             // body text size
+    private static final float BODY_SMALL = 12f;       // small body text size
+    private static final float LINE_BODY = 16f;        // line height for body text
+    private static final float BUTTON_W = 300f;        // button width
+    private static final float BUTTON_H = 28f;         // button height
+    private static final float QR_SIZE = 120f;         // QR image size
 
-    public CanvaTemplate update(Long id, CanvaTemplate changes) {
+    public List<CanvaTemplate> list() { return repo.findAll(); }
+    public CanvaTemplate create(@NonNull CanvaTemplate t) { return repo.save(t); }
+    public Optional<CanvaTemplate> findById(@NonNull Long id) { return repo.findById(id); }
+
+    @SuppressWarnings("null")
+    public CanvaTemplate update(@NonNull Long id, @NonNull CanvaTemplate changes) {
         CanvaTemplate existing = repo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("CanvaTemplate not found: " + id));
         if (changes.getTitle() != null) existing.setTitle(changes.getTitle());
-        if (changes.getCanvaUseCopyUrl() != null) existing.setCanvaUseCopyUrl(changes.getCanvaUseCopyUrl());
+    if (changes.getCanvaUseCopyUrl() != null) existing.setCanvaUseCopyUrl(changes.getCanvaUseCopyUrl());
+    if (changes.getMobileCanvaUseCopyUrl() != null) existing.setMobileCanvaUseCopyUrl(changes.getMobileCanvaUseCopyUrl());
         if (changes.getMockupUrl() != null) existing.setMockupUrl(changes.getMockupUrl());
         if (changes.getEtsyListingUrl() != null) existing.setEtsyListingUrl(changes.getEtsyListingUrl());
+        if (changes.getSecondaryMockupUrl() != null) existing.setSecondaryMockupUrl(changes.getSecondaryMockupUrl());
+        if (changes.getMobileMockupUrl() != null) existing.setMobileMockupUrl(changes.getMobileMockupUrl());
         // buyerPdfUrl is managed by generation endpoint; keep as-is unless explicitly provided
         if (changes.getBuyerPdfUrl() != null) existing.setBuyerPdfUrl(changes.getBuyerPdfUrl());
-        return repo.save(existing);
+        CanvaTemplate saved = repo.save(existing);
+        return saved;
     }
 
-    public void delete(Long id) {
+    public void delete(@NonNull Long id) {
         repo.findById(id).ifPresent(t -> {
             // Try to delete generated PDF file to avoid orphan files
             try {
@@ -67,20 +87,22 @@ public class CanvaTemplateService {
                 if (Files.exists(pdf)) Files.delete(pdf);
             } catch (IOException ignored) {}
 
-            // Try to delete stored mockup file if mockupUrl points to our storage
+            // Try to delete stored mockup files if urls point to our storage
             try {
-                String url = t.getMockupUrl();
-                if (url != null && !url.isBlank()) {
-                    String fileName = url.substring(url.lastIndexOf('/') + 1);
-                    // Basic safety: disallow path traversal and separators
-                    if (!fileName.contains("..") && !fileName.contains("/") && !fileName.contains("\\")) {
-                        Path mockup = getMockupDir().resolve(fileName);
-                        if (Files.exists(mockup)) Files.delete(mockup);
-                    }
-                }
+                deleteMockupByUrl(t.getMockupUrl());
+                deleteMockupByUrl(t.getSecondaryMockupUrl());
+                deleteMockupByUrl(t.getMobileMockupUrl());
             } catch (IOException ignored) {}
             repo.deleteById(id);
         });
+    }
+
+    private void deleteMockupByUrl(String url) throws IOException {
+        if (url == null || url.isBlank()) return;
+        String fileName = url.substring(url.lastIndexOf('/') + 1);
+        if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) return;
+        Path mockup = getMockupDir().resolve(fileName);
+        if (Files.exists(mockup)) Files.delete(mockup);
     }
 
     public Path getBaseDir() throws IOException {
@@ -126,7 +148,7 @@ public class CanvaTemplateService {
         }
     }
 
-    public MediaType detectMediaType(Path path) {
+    public MediaType detectMediaType(@NonNull Path path) {
         try {
             String probe = Files.probeContentType(path);
             if (probe != null) return MediaType.parseMediaType(probe);
@@ -138,113 +160,277 @@ public class CanvaTemplateService {
         return MediaType.APPLICATION_OCTET_STREAM;
     }
 
-    public CanvaTemplate generateBuyerPdf(Long id) throws IOException {
+    public CanvaTemplate generateBuyerPdf(@NonNull Long id) throws IOException {
         CanvaTemplate t = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("CanvaTemplate not found: " + id));
         Path pdfPath = getPdfPathFor(t);
 
         try (PDDocument doc = new PDDocument()) {
-            PDPage page = new PDPage();
-            doc.addPage(page);
-            PDRectangle mediaBox = page.getMediaBox();
-            float pageWidth = mediaBox.getWidth();
-            float pageHeight = mediaBox.getHeight();
-            float margin = 50f;
+            Path logoFile = getBrandingLogoFileIfExists();
+            PDImageXObject logo = null;
+            if (logoFile != null) {
+                try {
+                    BufferedImage logoImg = ImageIO.read(logoFile.toFile());
+                    if (logoImg != null) logo = LosslessFactory.createFromImage(doc, logoImg);
+                } catch (Exception ignore) {}
+            }
+            PDImageXObject mockup = loadImageByUrl(doc, t.getMockupUrl());
+            PDImageXObject secondaryMockup = loadImageByUrl(doc, t.getSecondaryMockupUrl());
+            PDImageXObject mobileMockup = loadImageByUrl(doc, t.getMobileMockupUrl());
 
-            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
-                // Optional: draw shop logo (top-right)
-                Path logoFile = getBrandingLogoFileIfExists();
-                if (logoFile != null) {
-                    try {
-                        BufferedImage logoImg = ImageIO.read(logoFile.toFile());
-                        if (logoImg != null) {
-                            float targetW = 120f; // px in user space units
-                            float scale = targetW / logoImg.getWidth();
-                            float targetH = logoImg.getHeight() * scale;
-                            PDImageXObject logo = LosslessFactory.createFromImage(doc, logoImg);
-                            float logoX = pageWidth - margin - targetW;
-                            float logoY = pageHeight - margin - targetH;
-                            cs.drawImage(logo, logoX, logoY, targetW, targetH);
-                        }
-                    } catch (Exception ignore) { /* If logo missing or unreadable, skip */ }
+            // Page 1: Cover
+            PDPage p1 = new PDPage();
+            doc.addPage(p1);
+            PDRectangle mb1 = p1.getMediaBox();
+            float pageW = mb1.getWidth(), pageH = mb1.getHeight();
+            try (PDPageContentStream cs = new PDPageContentStream(doc, p1)) {
+                // Header with logo (top-right, better positioned)
+                if (logo != null) {
+                    float maxLogoW = 100f, maxLogoH = 70f;
+                    float logoAspect = (float) logo.getWidth() / logo.getHeight();
+                    float lw = Math.min(maxLogoW, maxLogoH * logoAspect);
+                    float lh = lw / logoAspect;
+                    float logoX = pageW - MARGIN - lw;
+                    float logoY = pageH - MARGIN - lh - 10f; // Better spacing from top
+                    cs.drawImage(logo, logoX, logoY, lw, lh);
                 }
-
-                float y = pageHeight - margin - 20f; // start near top
-                cs.beginText();
-                cs.setFont(PDType1Font.HELVETICA_BOLD, 20);
-                cs.newLineAtOffset(50, y);
-                cs.showText("Thank you for your purchase!");
-                cs.endText();
-
-                y -= 40;
-                cs.beginText();
-                cs.setFont(PDType1Font.HELVETICA, 12);
-                cs.newLineAtOffset(50, y);
-                cs.showText("Title: " + (t.getTitle() != null ? t.getTitle() : ""));
-                cs.endText();
-
-                y -= 20;
-                cs.beginText();
-                cs.setFont(PDType1Font.HELVETICA, 12);
-                cs.newLineAtOffset(50, y);
-                cs.showText("Canva link (Use a copy):");
-                cs.endText();
-
-                y -= 20;
-                cs.beginText();
-                cs.setFont(PDType1Font.COURIER, 11);
-                float linkX = margin;
-                float linkY = y;
-                cs.newLineAtOffset(linkX, linkY);
-                String link = t.getCanvaUseCopyUrl() != null ? t.getCanvaUseCopyUrl() : "not provided";
-                cs.showText(link);
-                cs.endText();
-
-                // Make the URL clickable if it looks valid
-                if (t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http")) {
-                    float fontSize = 11f;
-                    float linkWidth = (PDType1Font.COURIER.getStringWidth(link) / 1000f) * fontSize;
-                    float linkHeight = 14f;
-                    PDAnnotationLink linkAnnot = new PDAnnotationLink();
-                    PDRectangle rect = new PDRectangle(linkX, linkY - 2f, linkWidth, linkHeight);
-                    linkAnnot.setRectangle(rect);
-                    PDBorderStyleDictionary border = new PDBorderStyleDictionary();
-                    border.setStyle(PDBorderStyleDictionary.STYLE_UNDERLINE);
-                    border.setWidth(0.75f);
-                    linkAnnot.setBorderStyle(border);
-                    PDActionURI action = new PDActionURI();
-                    action.setURI(t.getCanvaUseCopyUrl());
-                    linkAnnot.setAction(action);
-                    page.getAnnotations().add(linkAnnot);
+                
+                // Title section with improved hierarchy
+                float y = pageH - MARGIN - 50f;
+                // Main heading - centered and prominent
+                float headingW = pageW - MARGIN * 2;
+                String mainHeading = "Thank you for your purchase!";
+                float headingX = (pageW - (PDType1Font.HELVETICA_BOLD.getStringWidth(mainHeading) / 1000f * HEAD_LG)) / 2f;
+                drawText(cs, mainHeading, headingX, y, PDType1Font.HELVETICA_BOLD, HEAD_LG);
+                y -= HEAD_LG + GAP * 2;
+                
+                // Product title with better emphasis and centering
+                String title = nonNull(t.getTitle());
+                if (!title.isEmpty()) {
+                    float titleX = (pageW - (PDType1Font.HELVETICA_BOLD.getStringWidth(title) / 1000f * HEAD_MD)) / 2f;
+                    drawText(cs, title, titleX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
+                    y -= HEAD_MD + GAP * 2;
                 }
+                
+                // Main mockup - centered and larger
+                float mockupW = Math.min(400f, pageW - MARGIN * 2);
+                float mockupH = 280f;
+                float mockupX = (pageW - mockupW) / 2f;
+                float mockupY = pageH * 0.35f; // Better vertical centering
+                drawImageOrPlaceholder(cs, mockup, mockupX, mockupY, mockupW, mockupH, "Main mockup");
+                
+                // Subtle footer text - centered
+                String footerText = "Digital template package";
+                float footerX = (pageW - (PDType1Font.HELVETICA_OBLIQUE.getStringWidth(footerText) / 1000f * 11f)) / 2f;
+                drawText(cs, footerText, footerX, MARGIN + 20f, PDType1Font.HELVETICA_OBLIQUE, 11f);
+            }
 
-                y -= 60;
-                cs.beginText();
-                cs.setFont(PDType1Font.HELVETICA_OBLIQUE, 10);
-                cs.newLineAtOffset(50, y);
-                cs.showText("Instructions: Open the link above and choose 'Use this template' to create your copy.");
-                cs.endText();
+            // Page 2: Canva Access
+            PDPage p2 = new PDPage();
+            doc.addPage(p2);
+            PDRectangle mb2 = p2.getMediaBox();
+            try (PDPageContentStream cs = new PDPageContentStream(doc, p2)) {
+                float y = mb2.getHeight() - MARGIN - GAP;
+                
+                // Main heading - centered for better visual impact
+                String mainHeading = "Access Your Templates";
+                float headingX = (mb2.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(mainHeading) / 1000f * HEAD_MD)) / 2f;
+                drawText(cs, mainHeading, headingX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
+                y -= HEAD_MD + GAP * 2;
+                
+                // Two-column layout with better proportions
+                float qrAreaW = 140f;
+                float rightX = mb2.getWidth() - MARGIN - qrAreaW;
+                float leftW = rightX - MARGIN - GAP * 2;
 
-                // Draw QR code on the right if URL is present
-                if (t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http")) {
+                // Print version section - better aligned
+                drawText(cs, "Print Invitation (5 x 7 in)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
+                y -= 25f; // Increased spacing for better readability
+                
+                String printLink = t.getCanvaUseCopyUrl();
+                float btnW = Math.min(280f, leftW);
+                float btnY = y - BUTTON_H - 8f; // More spacing above button
+                
+                if (printLink != null && printLink.startsWith("http")) {
+                    drawButtonWithLink(doc, p2, cs, MARGIN, btnY, btnW, BUTTON_H, "Edit Print Template", printLink);
+                    
+                    // QR code with better positioning and alignment
                     try {
-                        BufferedImage qr = createQrCodeImage(t.getCanvaUseCopyUrl(), 160);
+                        BufferedImage qr = createQrCodeImage(printLink, 200);
                         if (qr != null) {
                             PDImageXObject qrImg = LosslessFactory.createFromImage(doc, qr);
-                            float qrSize = 140f;
-                            float qrX = pageWidth - margin - qrSize;
-                            float qrY = y - qrSize - 10f; // below the instruction line
+                            float qrSize = 100f;
+                            float qrX = rightX + (qrAreaW - qrSize) / 2f;
+                            float qrY = btnY + (BUTTON_H - qrSize) / 2f + 15f; // Better vertical alignment
                             cs.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-
-                            // Caption
-                            cs.beginText();
-                            cs.setFont(PDType1Font.HELVETICA, 10);
-                            cs.newLineAtOffset(qrX, qrY - 14f);
-                            cs.showText("Scan to open the template");
-                            cs.endText();
+                            // Centered QR label
+                            String qrLabel = "Scan to open";
+                            float qrLabelX = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
+                            drawText(cs, qrLabel, qrLabelX, qrY - 15f, PDType1Font.HELVETICA, 9f);
                         }
-                    } catch (Exception ignore) { /* non-fatal */ }
+                    } catch (Exception ignore) {}
+                } else {
+                    drawButton(cs, MARGIN, btnY, btnW, BUTTON_H, "Print template (link needed)");
+                }
+                
+                y = btnY - GAP * 3; // More space between sections
+
+                // Mobile version section
+                drawText(cs, "Mobile Invitation (1080 x 1920 px)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
+                y -= 20f;
+                String mobileLink = t.getMobileCanvaUseCopyUrl();
+                float mBtnY = y - BUTTON_H - 6f;
+                
+                if (mobileLink != null && mobileLink.startsWith("http")) {
+                    drawButtonWithLink(doc, p2, cs, MARGIN, mBtnY, btnW, BUTTON_H, "Edit Mobile Template", mobileLink);
+                } else {
+                    drawButton(cs, MARGIN, mBtnY, btnW, BUTTON_H, "Mobile template (link needed)");
+                }
+                
+                y = mBtnY - GAP * 2;
+                
+                // What's included section
+                drawText(cs, "What's Included:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
+                y -= GAP;
+                String[] items = new String[]{
+                        "Fully editable Canva templates",
+                        "Customize text, colors, fonts & images", 
+                        "Download in multiple formats (PDF/PNG/JPG)",
+                        "Step-by-step usage guide"
+                };
+                y = drawBullets(cs, items, MARGIN, y, PDType1Font.HELVETICA, BODY, 16f);
+
+                // Secondary mockup - same size as primary mockup
+                if (y > MARGIN + 300f) {
+                    float secW = Math.min(400f, pageW - MARGIN * 2); // Same width as primary
+                    float secH = 280f; // Same height as primary
+                    float secX = (mb2.getWidth() - secW) / 2f; // Center horizontally like primary
+                    float secY = y - secH - 15f;
+                    drawImageOrPlaceholder(cs, (secondaryMockup != null ? secondaryMockup : mockup), secX, secY, secW, secH, "Preview");
                 }
             }
+
+            // Page 3: How to Edit
+            PDPage p3 = new PDPage();
+            doc.addPage(p3);
+            PDRectangle mb3 = p3.getMediaBox();
+            try (PDPageContentStream cs = new PDPageContentStream(doc, p3)) {
+                float y = mb3.getHeight() - MARGIN - GAP;
+                drawText(cs, "How to Customize Your Template", MARGIN, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
+                y -= HEAD_MD + GAP;
+                
+                // Single column layout with mobile mockup after steps
+                float contentW = mb3.getWidth() - MARGIN * 2;
+                
+                String[] steps = new String[]{
+                        "Click the Canva link and select 'Use this template'",
+                        "Customize text, colors, and fonts to match your style",
+                        "Upload your own images via the Uploads section",
+                        "Download your design: Share -> Download -> choose format"
+                };
+                
+                float stepY = y;
+                for (int i = 0; i < steps.length; i++) {
+                    // Step number in a circle
+                    float circleX = MARGIN + 8f;
+                    float circleY = stepY - 6f;
+                    cs.setNonStrokingColor(new Color(25, 118, 210));
+                    cs.addRect(circleX - 10f, circleY - 10f, 20f, 20f);
+                    cs.fill();
+                    cs.setNonStrokingColor(Color.WHITE);
+                    drawText(cs, String.valueOf(i + 1), circleX - 4f, circleY - 3f, PDType1Font.HELVETICA_BOLD, 12f);
+                    
+                    // Step text
+                    cs.setNonStrokingColor(Color.BLACK);
+                    stepY = drawWrapped(cs, steps[i], MARGIN + 30f, stepY, contentW - 30f, PDType1Font.HELVETICA, BODY, LINE_BODY);
+                    stepY -= GAP;
+                }
+                
+                // Mobile mockup - centered below steps with some spacing
+                stepY -= GAP;
+                float mobileW = Math.min(400f, contentW);
+                float mobileH = 280f;
+                float mobileX = (mb3.getWidth() - mobileW) / 2f; // Center horizontally
+                float mobileY = stepY - mobileH - 20f;
+                
+                // Only show mobile mockup if there's enough space
+                if (mobileY > MARGIN + 50f) {
+                    if (mobileMockup != null) {
+                        drawImageOrPlaceholder(cs, mobileMockup, mobileX, mobileY, mobileW, mobileH, "");
+                    } else {
+                        drawPlaceholder(cs, mobileX, mobileY, mobileW, mobileH, "Mobile mockup");
+                    }
+                    
+                    // Label for mobile mockup
+                    drawText(cs, "Mobile Preview", mobileX, mobileY - 15f, PDType1Font.HELVETICA_OBLIQUE, 10f);
+                }
+            }
+
+            // Page 4: License & Support
+            PDPage p4 = new PDPage();
+            doc.addPage(p4);
+            PDRectangle mb4 = p4.getMediaBox();
+            try (PDPageContentStream cs = new PDPageContentStream(doc, p4)) {
+                float y = mb4.getHeight() - MARGIN - GAP;
+                
+                // Main heading - centered for better visual impact
+                String mainHeading = "License & Support Information";
+                float headingX = (mb4.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(mainHeading) / 1000f * HEAD_MD)) / 2f;
+                drawText(cs, mainHeading, headingX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
+                y -= HEAD_MD + GAP * 2;
+                
+                // License section with better formatting and indentation
+                drawText(cs, "License Terms:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
+                y -= 25f; // Increased spacing
+                y = drawWrapped(cs,
+                        "Personal Use License: You may use this template for your personal projects, events, and non-commercial purposes. " +
+                        "Resale, redistribution, or sharing of the template files is strictly prohibited.",
+                        MARGIN + 15f, y, mb4.getWidth() - MARGIN*2 - 15f, PDType1Font.HELVETICA, BODY, LINE_BODY);
+                y -= GAP * 3; // More spacing between sections
+                
+                // Support section with better formatting
+                drawText(cs, "Support & Help:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
+                y -= 25f;
+                y = drawWrapped(cs,
+                        "Need assistance? We're here to help! Contact us through your order message or reach out via email. " +
+                        "We typically respond within 24 hours.",
+                        MARGIN + 15f, y, mb4.getWidth() - MARGIN*2 - 15f, PDType1Font.HELVETICA, BODY, LINE_BODY);
+                y -= GAP * 3;
+                
+                // Tips section with improved alignment
+                drawText(cs, "Quick Tips:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
+                y -= 25f;
+                String[] tips = {
+                        "Save your work frequently in Canva",
+                        "Export in high quality for best results",
+                        "Check print settings before ordering"
+                };
+                y = drawBullets(cs, tips, MARGIN + 15f, y, PDType1Font.HELVETICA, BODY, 18f);
+                y -= GAP * 3;
+                
+                // Thank you message - properly centered
+                String thankYou = "Thank you for choosing our templates!";
+                float thankYouX = (mb4.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(thankYou) / 1000f * 16f)) / 2f;
+                drawText(cs, thankYou, thankYouX, y, PDType1Font.HELVETICA_BOLD, 16f);
+                
+                // Footer with logo - better positioned and aligned
+                if (logo != null) {
+                    float maxLogoW = 90f, maxLogoH = 50f;
+                    float logoAspect = (float) logo.getWidth() / logo.getHeight();
+                    float lw = Math.min(maxLogoW, maxLogoH * logoAspect);
+                    float lh = lw / logoAspect;
+                    float logoX = mb4.getWidth() - MARGIN - lw;
+                    float logoY = MARGIN + 15f; // Better spacing from bottom
+                    cs.drawImage(logo, logoX, logoY, lw, lh);
+                    
+                    // Branding text - better aligned with logo
+                    String brandText = "Powered by";
+                    float brandX = logoX - (PDType1Font.HELVETICA.getStringWidth(brandText) / 1000f * 10f) - 10f;
+                    drawText(cs, brandText, brandX, logoY + lh/2f - 2f, PDType1Font.HELVETICA, 10f);
+                } else {
+                    drawPlaceholder(cs, mb4.getWidth() - MARGIN - 100f, MARGIN + 15f, 100f, 50f, "Your brand");
+                }
+            }
+
             Files.createDirectories(pdfPath.getParent());
             doc.save(pdfPath.toFile());
         }
@@ -252,8 +438,7 @@ public class CanvaTemplateService {
         t.setBuyerPdfUrl("/api/canva-templates/pdfs/" + t.getId() + ".pdf");
         return repo.save(t);
     }
-
-    private BufferedImage createQrCodeImage(String content, int size) {
+    private BufferedImage createQrCodeImage(@NonNull String content, int size) {
         try {
             QRCodeWriter writer = new QRCodeWriter();
             BitMatrix matrix = writer.encode(content, BarcodeFormat.QR_CODE, size, size);
@@ -262,4 +447,140 @@ public class CanvaTemplateService {
             return null;
         }
     }
+
+    // ---------- Helpers for drawing ----------
+    private void drawText(PDPageContentStream cs, String text, float x, float y, PDType1Font font, float size) throws IOException {
+        // Sanitize unsupported glyphs for Type1 fonts (Helvetica cannot encode certain Unicode)
+        String safe = text
+                .replace("\u2192", "->")
+                .replace("\u2013", "-")
+                .replace("\u2014", "-")
+                .replace("\u2022", "*") // replace bullet with asterisk
+                .replace("×", "x") // replace multiplication sign
+                .replace("→", "->"); // replace any remaining arrows
+        cs.beginText();
+        cs.setFont(font, size);
+        cs.newLineAtOffset(x, y);
+        cs.showText(safe);
+        cs.endText();
+    }
+
+    private void drawPlaceholder(PDPageContentStream cs, float x, float y, float w, float h, String label) throws IOException {
+        cs.setNonStrokingColor(new Color(240,240,240));
+        cs.addRect(x, y, w, h);
+        cs.fill();
+        cs.setStrokingColor(new Color(200,200,200));
+        cs.addRect(x, y, w, h);
+        cs.stroke();
+        cs.setNonStrokingColor(Color.DARK_GRAY);
+        drawText(cs, label, x + 8, y + h - 18, PDType1Font.HELVETICA_OBLIQUE, 10);
+    }
+
+    private void drawImageOrPlaceholder(PDPageContentStream cs, PDImageXObject img, float x, float y, float w, float h, String placeholderLabel) throws IOException {
+        if (img != null) {
+            float iw = img.getWidth();
+            float ih = img.getHeight();
+            float scale = Math.min(w / iw, h / ih);
+            float dw = iw * scale;
+            float dh = ih * scale;
+            float dx = x + (w - dw) / 2f;
+            float dy = y + (h - dh) / 2f;
+            cs.drawImage(img, dx, dy, dw, dh);
+            cs.setStrokingColor(new Color(200,200,200));
+            cs.addRect(x, y, w, h);
+            cs.stroke();
+        } else {
+            drawPlaceholder(cs, x, y, w, h, placeholderLabel);
+        }
+    }
+
+    private float drawWrapped(PDPageContentStream cs, String text, float x, float topY, float maxWidth, PDType1Font font, float size, float lineHeight) throws IOException {
+        String[] words = text.split(" ");
+        StringBuilder line = new StringBuilder();
+        float y = topY;
+        for (String w : words) {
+            String test = (line.length() == 0 ? w : line + " " + w);
+            float testWidth = font.getStringWidth(test) / 1000f * size;
+            if (testWidth > maxWidth && line.length() > 0) {
+                drawText(cs, line.toString(), x, y, font, size);
+                y -= lineHeight;
+                line = new StringBuilder(w);
+            } else {
+                line = new StringBuilder(test);
+            }
+        }
+        if (line.length() > 0) {
+            drawText(cs, line.toString(), x, y, font, size);
+            y -= lineHeight;
+        }
+        return y;
+    }
+
+    private float drawBullets(PDPageContentStream cs, String[] items, float x, float startY, PDType1Font font, float size, float lineHeight) throws IOException {
+        float y = startY;
+        for (String it : items) {
+            drawText(cs, "* "+it, x, y, font, size);
+            y -= lineHeight;
+        }
+        return y;
+    }
+
+    private float drawNumbered(PDPageContentStream cs, String[] items, float x, float startY, PDType1Font font, float size, float lineHeight) throws IOException {
+        float y = startY;
+        for (int i = 0; i < items.length; i++) {
+            drawText(cs, (i+1)+". "+items[i], x, y, font, size);
+            y -= lineHeight;
+        }
+        return y;
+    }
+
+    private void drawButton(PDPageContentStream cs, float x, float y, float w, float h, String label) throws IOException {
+        // Draw button shadow
+        cs.setNonStrokingColor(new Color(0, 0, 0, 30));
+        cs.addRect(x + 2, y - 2, w, h);
+        cs.fill();
+        
+        // Draw main button
+        cs.setNonStrokingColor(new Color(37, 99, 235)); // Modern blue
+        cs.addRect(x, y, w, h);
+        cs.fill();
+        
+        // Draw button border
+        cs.setStrokingColor(new Color(29, 78, 216));
+        cs.setLineWidth(1f);
+        cs.addRect(x, y, w, h);
+        cs.stroke();
+        
+        // Draw button text (centered)
+        cs.setNonStrokingColor(Color.WHITE);
+        float textY = y + h/2f - 5f;
+        drawText(cs, label, x + 12, textY, PDType1Font.HELVETICA_BOLD, 12);
+    }
+
+    private void drawButtonWithLink(PDDocument doc, PDPage page, PDPageContentStream cs, float x, float y, float w, float h, String label, String url) throws IOException {
+        drawButton(cs, x, y, w, h, label);
+        PDAnnotationLink linkAnnot = new PDAnnotationLink();
+        PDRectangle rect = new PDRectangle(x, y, w, h);
+        linkAnnot.setRectangle(rect);
+        PDBorderStyleDictionary border = new PDBorderStyleDictionary();
+        border.setWidth(0f);
+        linkAnnot.setBorderStyle(border);
+        PDActionURI action = new PDActionURI();
+        action.setURI(url);
+        linkAnnot.setAction(action);
+        page.getAnnotations().add(linkAnnot);
+    }
+
+    private PDImageXObject loadImageByUrl(@NonNull PDDocument doc, String url) throws IOException {
+        if (url == null || url.isBlank()) return null;
+        String fileName = url.substring(url.lastIndexOf('/') + 1);
+        if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) return null;
+        Path p = getMockupDir().resolve(fileName);
+        if (!Files.exists(p)) return null;
+        BufferedImage img = ImageIO.read(p.toFile());
+        if (img == null) return null;
+        return LosslessFactory.createFromImage(doc, img);
+    }
+
+    private String nonNull(String v) { return v == null ? "" : v; }
 }

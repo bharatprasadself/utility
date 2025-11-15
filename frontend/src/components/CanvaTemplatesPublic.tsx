@@ -42,29 +42,31 @@ const CanvaTemplatesPublic = () => {
       {err && <Typography color="error" sx={{ mb: 2 }}>{err}</Typography>}
 
   <Grid container spacing={2}>
-        {loading && Array.from({ length: 6 }).map((_, i) => (
-          <Grid key={i} item xs={12} sm={6} md={4}>
-            <Card>
-              <Skeleton variant="rectangular" height={180} />
-              <CardContent>
-                <Skeleton width="60%" />
-                <Skeleton width="40%" />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+            {loading && Array.from({ length: 6 }).map((_, i) => (
+              <Grid key={i} item xs={12} sm={12} md={6}>
+                <Card>
+                  <Skeleton variant="rectangular" height={300} />
+                  <CardActions>
+                    <Button fullWidth disabled>Loading…</Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
 
-        {!loading && items.map(t => (
-          <Grid key={t.id} item xs={12} sm={6} md={4}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {!loading && items.map(t => (
+              <Grid key={t.id} item xs={12} sm={12} md={6}>
+                <Card sx={{ display: 'flex', flexDirection: 'column' }}>
               {t.mockupUrl ? (
-                <CardMedia component="img" src={t.mockupUrl} alt={t.title} sx={{ height: 200, objectFit: 'cover' }} />
+                <CardMedia
+                  component="img"
+                  src={t.mockupUrl}
+                  alt={t.title}
+                  loading="lazy"
+                  sx={{ height: { xs: 260, sm: 300, md: 340 }, objectFit: 'cover' }}
+                />
               ) : (
-                <Box sx={{ height: 200, bgcolor: 'grey.100' }} />
+                    <Box sx={{ height: { xs: 300, sm: 340, md: 380 }, bgcolor: 'grey.100' }} />
               )}
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography fontWeight={600}>{t.title}</Typography>
-              </CardContent>
               <CardActions>
                 <Button 
                   fullWidth

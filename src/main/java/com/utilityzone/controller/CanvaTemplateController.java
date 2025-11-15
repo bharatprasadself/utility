@@ -50,9 +50,12 @@ public class CanvaTemplateController {
     public CanvaTemplate create(@RequestBody CanvaTemplate req) {
         CanvaTemplate ct = new CanvaTemplate();
         ct.setTitle(StringUtils.trimWhitespace(req.getTitle()));
-        ct.setCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getCanvaUseCopyUrl()));
+    ct.setCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getCanvaUseCopyUrl()));
+    ct.setMobileCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getMobileCanvaUseCopyUrl()));
         ct.setMockupUrl(StringUtils.trimWhitespace(req.getMockupUrl()));
         ct.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
+        ct.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
+        ct.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
         return service.create(ct);
     }
 
@@ -61,9 +64,12 @@ public class CanvaTemplateController {
     public CanvaTemplate update(@PathVariable("id") Long id, @RequestBody CanvaTemplate req) {
         CanvaTemplate changes = new CanvaTemplate();
         changes.setTitle(StringUtils.trimWhitespace(req.getTitle()));
-        changes.setCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getCanvaUseCopyUrl()));
+    changes.setCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getCanvaUseCopyUrl()));
+    changes.setMobileCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getMobileCanvaUseCopyUrl()));
         changes.setMockupUrl(StringUtils.trimWhitespace(req.getMockupUrl()));
         changes.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
+        changes.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
+        changes.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
         // do not touch buyerPdfUrl unless provided explicitly
         if (req.getBuyerPdfUrl() != null) changes.setBuyerPdfUrl(StringUtils.trimWhitespace(req.getBuyerPdfUrl()));
         return service.update(id, changes);
@@ -121,16 +127,28 @@ public class CanvaTemplateController {
     }
 
     @GetMapping("/api/canva-templates/pdfs/{id}.pdf")
-    public ResponseEntity<?> getTemplatePdf(@PathVariable("id") Long id) throws IOException {
+    public ResponseEntity<?> getTemplatePdf(
+            @PathVariable("id") Long id,
+            @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch
+    ) throws IOException {
         return service.findById(id)
                 .map(t -> {
                     Path path = service.getPdfPathFor(t);
                     if (!Files.exists(path)) return ResponseEntity.notFound().build();
                     try {
+                        String eTag = "\"buyer-" + id + '-' + Files.size(path) + '-' + Files.getLastModifiedTime(path).toMillis() + "\"";
+                        if (ifNoneMatch != null && ifNoneMatch.equals(eTag)) {
+                            return ResponseEntity.status(304)
+                                    .header("Cache-Control", "public, max-age=86400, immutable")
+                                    .eTag(eTag)
+                                    .build();
+                        }
                         byte[] bytes = Files.readAllBytes(path);
                         return ResponseEntity.ok()
                                 .contentType(MediaType.APPLICATION_PDF)
                                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=buyer-" + id + ".pdf")
+                                .header("Cache-Control", "public, max-age=86400, immutable")
+                                .eTag(eTag)
                                 .body(bytes);
                     } catch (IOException e) {
                         return ResponseEntity.internalServerError().build();

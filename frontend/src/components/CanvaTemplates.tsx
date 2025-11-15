@@ -1,13 +1,18 @@
-import { Box, Typography, Paper, Grid, TextField, Button, Stack, CircularProgress, Link as MuiLink, Alert, AlertTitle } from '@mui/material';
+import { Box, Typography, Paper, Grid, TextField, Button, Stack, CircularProgress, Link as MuiLink, Alert, AlertTitle, FormLabel } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { createTemplate, generateBuyerPdf, listTemplates, uploadMockup, updateTemplate, deleteTemplate, type CanvaTemplate } from '@/services/canvaTemplates';
 
 const CanvaTemplates = () => {
   const [title, setTitle] = useState('');
   const [canvaUrl, setCanvaUrl] = useState('');
+  const [mobileCanvaUrl, setMobileCanvaUrl] = useState('');
   const [mockupFile, setMockupFile] = useState<File | null>(null);
   const [mockupUrl, setMockupUrl] = useState<string>('');
   const [etsyUrl, setEtsyUrl] = useState<string>('');
+  const [secondaryFile, setSecondaryFile] = useState<File | null>(null);
+  const [secondaryUrl, setSecondaryUrl] = useState<string>('');
+  const [mobileFile, setMobileFile] = useState<File | null>(null);
+  const [mobileUrl, setMobileUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<CanvaTemplate[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -40,17 +45,50 @@ const CanvaTemplates = () => {
     }
   };
 
+  const handleUploadSecondary = async () => {
+    if (!secondaryFile) return;
+    try {
+      setLoading(true);
+      const url = await uploadMockup(secondaryFile);
+      setSecondaryUrl(url);
+      setSuccess('Secondary mockup uploaded');
+    } catch (e: any) {
+      setError(e.message || 'Upload failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUploadMobile = async () => {
+    if (!mobileFile) return;
+    try {
+      setLoading(true);
+      const url = await uploadMockup(mobileFile);
+      setMobileUrl(url);
+      setSuccess('Mobile mockup uploaded');
+    } catch (e: any) {
+      setError(e.message || 'Upload failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreate = async () => {
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
-  const p = await createTemplate({ title: title.trim(), canvaUseCopyUrl: canvaUrl.trim(), mockupUrl: mockupUrl.trim() || undefined, etsyListingUrl: etsyUrl.trim() || undefined });
+  const p = await createTemplate({ title: title.trim(), canvaUseCopyUrl: canvaUrl.trim(), mobileCanvaUseCopyUrl: mobileCanvaUrl.trim(), mockupUrl: mockupUrl.trim() || undefined, secondaryMockupUrl: secondaryUrl.trim() || undefined, mobileMockupUrl: mobileUrl.trim() || undefined, etsyListingUrl: etsyUrl.trim() || undefined });
       setTitle('');
       setCanvaUrl('');
+      setMobileCanvaUrl('');
       setMockupFile(null);
       setMockupUrl('');
     setEtsyUrl('');
+    setSecondaryFile(null);
+    setSecondaryUrl('');
+    setMobileFile(null);
+    setMobileUrl('');
   setSuccess(`Template created (id=${p.id})`);
       await refresh();
     } catch (e: any) {
@@ -66,13 +104,18 @@ const CanvaTemplates = () => {
       setLoading(true);
       setError(null);
       setSuccess(null);
-      await updateTemplate(editId, { title: title.trim(), canvaUseCopyUrl: canvaUrl.trim(), mockupUrl: mockupUrl.trim() || undefined, etsyListingUrl: etsyUrl.trim() || undefined });
+  await updateTemplate(editId, { title: title.trim(), canvaUseCopyUrl: canvaUrl.trim(), mobileCanvaUseCopyUrl: mobileCanvaUrl.trim() || undefined, mockupUrl: mockupUrl.trim() || undefined, secondaryMockupUrl: secondaryUrl.trim() || undefined, mobileMockupUrl: mobileUrl.trim() || undefined, etsyListingUrl: etsyUrl.trim() || undefined });
       setEditId(null);
       setTitle('');
       setCanvaUrl('');
+      setMobileCanvaUrl('');
       setMockupFile(null);
       setMockupUrl('');
       setEtsyUrl('');
+      setSecondaryFile(null);
+      setSecondaryUrl('');
+      setMobileFile(null);
+      setMobileUrl('');
       setSuccess('Template updated');
       await refresh();
     } catch (e: any) {
@@ -86,7 +129,10 @@ const CanvaTemplates = () => {
     setEditId(t.id);
     setTitle(t.title || '');
     setCanvaUrl(t.canvaUseCopyUrl || '');
+  setMobileCanvaUrl(t.mobileCanvaUseCopyUrl || '');
     setMockupUrl(t.mockupUrl || '');
+    setSecondaryUrl(t.secondaryMockupUrl || '');
+    setMobileUrl(t.mobileMockupUrl || '');
     setEtsyUrl(t.etsyListingUrl || '');
     setMockupFile(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -96,8 +142,13 @@ const CanvaTemplates = () => {
     setEditId(null);
     setTitle('');
     setCanvaUrl('');
+  setMobileCanvaUrl('');
     setMockupFile(null);
     setMockupUrl('');
+    setSecondaryFile(null);
+    setSecondaryUrl('');
+    setMobileFile(null);
+    setMobileUrl('');
     setEtsyUrl('');
   };
 
@@ -107,6 +158,8 @@ const CanvaTemplates = () => {
       setLoading(true);
       setError(null);
       await deleteTemplate(id);
+      // Clear any form/edit state so stale uploaded mockup URLs disappear after deletion
+      cancelEdit();
       setSuccess('Template deleted');
       await refresh();
     } catch (e: any) {
@@ -135,71 +188,103 @@ const CanvaTemplates = () => {
   return (
     <Box sx={{ py: 4 }}>
       <Typography variant="h4" gutterBottom fontWeight={700}>Canva Templates — Admin</Typography>
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <AlertTitle>What goes into each field?</AlertTitle>
-        <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
-          <li>
-            <strong>Title</strong>: A short, descriptive name that will appear in listings, e.g.
-            <em> "Wedding Invitation Set"</em> or <em>"Minimal Instagram Post Pack"</em>.
-          </li>
-          <li>
-            <strong>Canva “Use a copy” URL</strong>: In Canva, open your design → click <em>Share</em> → choose <em>More</em> (or <em>Template link</em>) → copy the
-            <em> Template/Use this template</em> link. Paste that URL here.
-          </li>
-          <li>
-            <strong>Mockup</strong>: Upload a PNG/JPG preview image that best represents your template (export from Canva via File → Download → PNG/JPG).
-          </li>
-        </ul>
-      </Alert>
+      <Grid container spacing={2} alignItems="stretch" sx={{ mb: 3 }}>
+        <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Stack spacing={2} direction="column">
+              <Grid container spacing={2} sx={{ width: '100%' }}>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Title"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    required
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Canva ‘Use a Copy’ URL (5 X 7 in)"
+                    value={canvaUrl}
+                    onChange={e => setCanvaUrl(e.target.value)}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Mobile Canva ‘Use a Copy’ URL (1080 X 1920 px)"
+                    value={mobileCanvaUrl}
+                    onChange={e => setMobileCanvaUrl(e.target.value)}
+                    fullWidth
+                  />
+                </Grid>
+              </Grid>
+              <Grid container spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                <Grid item xs={12} sm={4} md={4} lg={3}>
+                  <FormLabel>Primary mockup</FormLabel>
+                </Grid>
+                <Grid item xs={12} sm={8} md={8} lg={9}>
+                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                    <Button variant="outlined" component="label" sx={{ flex: 1 }}>
+                      Select Mockup
+                      <input type="file" hidden accept="image/*" onChange={e => setMockupFile(e.target.files?.[0] || null)} />
+                    </Button>
+                    <Button variant="contained" onClick={handleUploadMockup} disabled={!mockupFile || loading} sx={{ flex: 1 }}>
+                      Upload Mockup
+                    </Button>
+                  </Stack>
+                  {mockupFile && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {mockupFile.name}
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
 
-      <Alert severity="success" sx={{ mb: 3 }}>
-        <AlertTitle>End‑to‑end workflow</AlertTitle>
-        <ol style={{ margin: 0, paddingLeft: '1.2rem' }}>
-          <li>
-            <strong>Create the template</strong> in Canva and make sure you can share a <em>Template / Use this template</em> link
-            (Share → More/Template link → Copy).
-          </li>
-          <li>
-            <strong>Add it here</strong>: enter Title, paste the Canva “Use a copy” URL, and upload a primary mockup image.
-            Click <em>Upload Mockup</em> to get a public mockup URL, then click <em>Save Template</em>.
-          </li>
-          <li>
-            <strong>Generate the buyer PDF</strong>: in the list below, click <em>Generate Buyer PDF</em>. The backend creates a PDF with
-            the Canva link and simple instructions, stores it, and updates the template’s <code>buyerPdfUrl</code>.
-          </li>
-          <li>
-            <strong>Deliver to customers</strong>: use the Buyer PDF link (e.g., in your order confirmation page or email) so buyers can
-            open the PDF and click the Canva link to make their own copy.
-          </li>
-        </ol>
-        <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.6)' }}>
-          Storage notes: mockups are served from <code>/api/canva-templates/mockups/&lt;file&gt;</code>, and PDFs from
-          <code> /api/canva-templates/pdfs/{'{id}'} .pdf</code>. Files are persisted under <code>./data/uploads/canva-templates</code>.
-        </div>
-      </Alert>
+              <Grid container spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                <Grid item xs={12} sm={4} md={4} lg={3}>
+                  <FormLabel>Secondary mockup (optional)</FormLabel>
+                </Grid>
+                <Grid item xs={12} sm={8} md={8} lg={9}>
+                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                    <Button variant="outlined" component="label" sx={{ flex: 1 }}>
+                      Select Secondary Mockup
+                      <input type="file" hidden accept="image/*" onChange={e => setSecondaryFile(e.target.files?.[0] || null)} />
+                    </Button>
+                    <Button variant="contained" onClick={handleUploadSecondary} disabled={!secondaryFile || loading} sx={{ flex: 1 }}>
+                      Upload Secondary
+                    </Button>
+                  </Stack>
+                  {secondaryFile && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {secondaryFile.name}
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }} useFlexGap flexWrap="wrap">
-          <TextField
-            label="Title"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            required
-            sx={{ minWidth: 260 }}
-          />
-          <TextField
-            label="Canva ‘Use a copy’ URL"
-            value={canvaUrl}
-            onChange={e => setCanvaUrl(e.target.value)}
-            sx={{ minWidth: 320 }}
-          />
-          <Button variant="outlined" component="label">
-            {mockupFile ? `Mockup: ${mockupFile.name}` : 'Select Mockup'}
-            <input type="file" hidden accept="image/*" onChange={e => setMockupFile(e.target.files?.[0] || null)} />
-          </Button>
-          <Button variant="contained" onClick={handleUploadMockup} disabled={!mockupFile || loading}>
-            Upload Mockup
-          </Button>
+              <Grid container spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                <Grid item xs={12} sm={4} md={4} lg={3}>
+                  <FormLabel>Mobile mockup (optional)</FormLabel>
+                </Grid>
+                <Grid item xs={12} sm={8} md={8} lg={9}>
+                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                    <Button variant="outlined" component="label" sx={{ flex: 1 }}>
+                      Select Mobile Mockup
+                      <input type="file" hidden accept="image/*" onChange={e => setMobileFile(e.target.files?.[0] || null)} />
+                    </Button>
+                    <Button variant="contained" onClick={handleUploadMobile} disabled={!mobileFile || loading} sx={{ flex: 1 }}>
+                      Upload Mobile
+                    </Button>
+                  </Stack>
+                  {mobileFile && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {mobileFile.name}
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
+
           <TextField
             label="Etsy listing URL"
             value={etsyUrl}
@@ -223,21 +308,69 @@ const CanvaTemplates = () => {
           )}
           {loading && <CircularProgress size={24} />}
         </Stack>
-        {mockupUrl && (
+        {(mockupUrl || secondaryUrl || mobileUrl) && (
           <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>Uploaded mockup URL: {mockupUrl}</Typography>
+        )}
+        {secondaryUrl && (
+          <Typography variant="caption" sx={{ mt: 0.5, display: 'block' }}>Secondary mockup URL: {secondaryUrl}</Typography>
+        )}
+        {mobileUrl && (
+          <Typography variant="caption" sx={{ mt: 0.5, display: 'block' }}>Mobile mockup URL: {mobileUrl}</Typography>
         )}
         {error && <Typography color="error" sx={{ mt: 1 }}>{error}</Typography>}
   {success && <Typography sx={{ mt: 1, color: 'success.main' }}>{success}</Typography>}
-      </Paper>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
+          <Alert severity="success" sx={{ height: '100%', width: '100%', alignItems: 'flex-start' }}>
+            <AlertTitle>End‑to‑end workflow</AlertTitle>
+            <ol style={{ margin: 0, paddingLeft: '1.2rem' }}>
+              <li>
+                <strong>Design in Canva</strong>: finish your design and make sure you can copy a <em>Template / Use this template</em> link
+                (Share → More/Template link → Copy).
+              </li>
+              <li>
+                <strong>Create the template entry here</strong>: enter a Title, paste the Canva link, and upload mockups.
+                Use <em>Upload Mockup</em> for the primary, plus optional <em>Upload Secondary</em> and <em>Upload Mobile</em>.
+                Optionally add your Etsy listing URL. Click <em>Save Template</em>.
+              </li>
+              <li>
+                <strong>Generate the Buyer PDF (4 pages)</strong>: from the list below, click <em>Generate Buyer PDF</em>.
+                The PDF includes: Cover (primary mockup), Canva Access (button + QR, included items, secondary mockup),
+                How to Edit (step‑by‑step with mobile mockup), and License & Support. A shop logo is used when present
+                at <code>./data/uploads/branding/shop-logo.(png|jpg|jpeg)</code>.
+              </li>
+              <li>
+                <strong>Verify and publish</strong>: open the generated PDF to confirm links, QR, and images.
+                Share the PDF link in order confirmations or your storefront. The public catalog shows the Etsy link when set.
+              </li>
+              <li>
+                <strong>Maintain</strong>: use <em>Edit</em> to update fields (re‑generate the PDF after changes if needed) or <em>Delete</em>
+                to remove the template and its associated PDF and mockup files.
+              </li>
+            </ol>
+            <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.6)' }}>
+              Storage notes: mockups are served from <code>/api/canva-templates/mockups/&lt;file&gt;</code>; PDFs from
+              <code> /api/canva-templates/pdfs/{'{id}'} .pdf</code>. Files live under <code>./data/uploads/canva-templates/{'{mockups|pdfs}'}</code>.
+            </div>
+          </Alert>
+        </Grid>
+      </Grid>
 
       <Typography variant="h6" sx={{ mb: 1 }}>Templates</Typography>
       <Grid container spacing={2}>
         {templates.map(p => (
-          <Grid item xs={12} md={6} key={p.id}>
-            <Paper sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Grid item xs={12} key={p.id}>
+            <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', width: '100%' }}>
               <Box sx={{ flexGrow: 1 }}>
                 <Typography fontWeight={600}>{p.title}</Typography>
                 {p.canvaUseCopyUrl && <MuiLink href={p.canvaUseCopyUrl} target="_blank" rel="noreferrer">Canva link</MuiLink>}
+                {p.mobileCanvaUseCopyUrl && (
+                  <>
+                    <br />
+                    <MuiLink href={p.mobileCanvaUseCopyUrl} target="_blank" rel="noreferrer">Mobile Canva link</MuiLink>
+                  </>
+                )}
                 {p.buyerPdfUrl && (
                   <>
                     <br />
@@ -248,6 +381,18 @@ const CanvaTemplates = () => {
                   <>
                     <br />
                     <MuiLink href={p.etsyListingUrl} target="_blank" rel="noreferrer">Etsy Listing</MuiLink>
+                  </>
+                )}
+                {p.secondaryMockupUrl && (
+                  <>
+                    <br />
+                    <MuiLink href={p.secondaryMockupUrl} target="_blank" rel="noreferrer">Secondary Mockup</MuiLink>
+                  </>
+                )}
+                {p.mobileMockupUrl && (
+                  <>
+                    <br />
+                    <MuiLink href={p.mobileMockupUrl} target="_blank" rel="noreferrer">Mobile Mockup</MuiLink>
                   </>
                 )}
               </Box>
