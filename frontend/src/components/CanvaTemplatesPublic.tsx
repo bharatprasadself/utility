@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Card, CardMedia, CardContent, CardActions, Button, Skeleton, Paper } from '@mui/material';
+import { Box, Typography, Grid, Card, CardMedia, CardActions, Button, Skeleton, Paper } from '@mui/material';
 import { listPublicTemplates, type PublicCanvaTemplate } from '@/services/canvaTemplates';
 import CanvaTemplatesAdmin from './CanvaTemplates';
 import { useAuth } from '@/contexts/AuthContext';
