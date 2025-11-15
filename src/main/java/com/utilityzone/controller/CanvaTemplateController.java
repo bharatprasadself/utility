@@ -59,6 +59,12 @@ public class CanvaTemplateController {
         return service.create(ct);
     }
 
+    @GetMapping("/api/admin/canva-templates/next-title")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public Map<String, String> nextTitle() {
+        return Map.of("title", service.getNextDefaultTitle());
+    }
+
     @PutMapping("/api/admin/canva-templates/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public CanvaTemplate update(@PathVariable("id") Long id, @RequestBody CanvaTemplate req) {
@@ -139,15 +145,19 @@ public class CanvaTemplateController {
                         String eTag = "\"buyer-" + id + '-' + Files.size(path) + '-' + Files.getLastModifiedTime(path).toMillis() + "\"";
                         if (ifNoneMatch != null && ifNoneMatch.equals(eTag)) {
                             return ResponseEntity.status(304)
-                                    .header("Cache-Control", "public, max-age=86400, immutable")
-                                    .eTag(eTag)
-                                    .build();
+                                .header("Cache-Control", "no-cache, must-revalidate")
+                                .header("Pragma", "no-cache")
+                                .header("Expires", "0")
+                                .eTag(eTag)
+                                .build();
                         }
                         byte[] bytes = Files.readAllBytes(path);
                         return ResponseEntity.ok()
                                 .contentType(MediaType.APPLICATION_PDF)
                                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=buyer-" + id + ".pdf")
-                                .header("Cache-Control", "public, max-age=86400, immutable")
+                            .header("Cache-Control", "no-cache, must-revalidate")
+                            .header("Pragma", "no-cache")
+                            .header("Expires", "0")
                                 .eTag(eTag)
                                 .body(bytes);
                     } catch (IOException e) {

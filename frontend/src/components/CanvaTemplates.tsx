@@ -1,6 +1,6 @@
 import { Box, Typography, Paper, Grid, TextField, Button, Stack, CircularProgress, Link as MuiLink, Alert, AlertTitle, FormLabel } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { createTemplate, generateBuyerPdf, listTemplates, uploadMockup, updateTemplate, deleteTemplate, type CanvaTemplate } from '@/services/canvaTemplates';
+import { createTemplate, generateBuyerPdf, listTemplates, uploadMockup, updateTemplate, deleteTemplate, getNextTemplateTitle, type CanvaTemplate } from '@/services/canvaTemplates';
 
 const CanvaTemplates = () => {
   const [title, setTitle] = useState('');
@@ -29,7 +29,18 @@ const CanvaTemplates = () => {
     }
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+    // Prefill next default title when starting a new entry
+    (async () => {
+      try {
+        const next = await getNextTemplateTitle();
+        setTitle(prev => prev || next);
+      } catch {
+        // ignore prefill errors
+      }
+    })();
+  }, []);
 
   const handleUploadMockup = async () => {
     if (!mockupFile) return;
@@ -79,7 +90,13 @@ const CanvaTemplates = () => {
       setError(null);
       setSuccess(null);
   const p = await createTemplate({ title: title.trim(), canvaUseCopyUrl: canvaUrl.trim(), mobileCanvaUseCopyUrl: mobileCanvaUrl.trim(), mockupUrl: mockupUrl.trim() || undefined, secondaryMockupUrl: secondaryUrl.trim() || undefined, mobileMockupUrl: mobileUrl.trim() || undefined, etsyListingUrl: etsyUrl.trim() || undefined });
-      setTitle('');
+      // After create, prefill next suggested title for the next entry
+      try {
+        const next = await getNextTemplateTitle();
+        setTitle(next);
+      } catch {
+        setTitle('');
+      }
       setCanvaUrl('');
       setMobileCanvaUrl('');
       setMockupFile(null);
@@ -177,7 +194,9 @@ const CanvaTemplates = () => {
       setSuccess('Buyer PDF generated');
   await refresh();
       // Optionally open in new tab
-      window.open(pdfUrl, '_blank');
+      // Add a cache-busting param to avoid any intermediary caching
+      const bust = pdfUrl.includes('?') ? `${pdfUrl}&v=${Date.now()}` : `${pdfUrl}?v=${Date.now()}`;
+      window.open(bust, '_blank');
     } catch (e: any) {
       setError(e.message || 'Failed to generate PDF');
     } finally {
@@ -195,10 +214,9 @@ const CanvaTemplates = () => {
               <Grid container spacing={2} sx={{ width: '100%' }}>
                 <Grid item xs={12}>
                   <TextField
-                    label="Title"
+                    label="Title (auto-generated)"
                     value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    required
+                    InputProps={{ readOnly: true }}
                     fullWidth
                   />
                 </Grid>
@@ -293,12 +311,12 @@ const CanvaTemplates = () => {
           />
 
           {editId == null ? (
-            <Button variant="contained" color="success" onClick={handleCreate} disabled={!title.trim() || loading}>
+            <Button variant="contained" color="success" onClick={handleCreate} disabled={loading}>
               Save Template
             </Button>
           ) : (
             <>
-              <Button variant="contained" color="success" onClick={handleUpdate} disabled={!title.trim() || loading}>
+              <Button variant="contained" color="success" onClick={handleUpdate} disabled={loading}>
                 Save Changes
               </Button>
               <Button variant="text" color="inherit" onClick={cancelEdit} disabled={loading}>

@@ -48,18 +48,19 @@ public class CanvaTemplateService {
     // ---- Shared style constants for consistent layout ----
     private static final float MARGIN = 36f;           // page margins
     private static final float GAP = 12f;              // default vertical gap
-    private static final float GAP_SMALL = 8f;         // smaller gap for labels
     private static final float HEAD_LG = 24f;          // large heading size
     private static final float HEAD_MD = 20f;          // medium heading size
     private static final float BODY = 13f;             // body text size
-    private static final float BODY_SMALL = 12f;       // small body text size
     private static final float LINE_BODY = 16f;        // line height for body text
-    private static final float BUTTON_W = 300f;        // button width
     private static final float BUTTON_H = 28f;         // button height
-    private static final float QR_SIZE = 120f;         // QR image size
 
     public List<CanvaTemplate> list() { return repo.findAll(); }
-    public CanvaTemplate create(@NonNull CanvaTemplate t) { return repo.save(t); }
+    public CanvaTemplate create(@NonNull CanvaTemplate t) {
+        if (t.getTitle() == null || t.getTitle().isBlank()) {
+            t.setTitle(getNextDefaultTitle());
+        }
+        return repo.save(t);
+    }
     public Optional<CanvaTemplate> findById(@NonNull Long id) { return repo.findById(id); }
 
     @SuppressWarnings("null")
@@ -95,6 +96,17 @@ public class CanvaTemplateService {
             } catch (IOException ignored) {}
             repo.deleteById(id);
         });
+    }
+
+    public String getNextDefaultTitle() {
+        final String prefix = "NextStepLabs_Digital_Template_";
+        int max = 0;
+        try {
+            max = repo.findMaxNumericSuffixForPrefix(prefix);
+        } catch (Exception ignored) {}
+        int next = Math.max(0, max) + 1;
+        // Use 3-digit zero padding (e.g., 001, 002, 003)
+        return String.format(prefix + "%03d", next);
     }
 
     private void deleteMockupByUrl(String url) throws IOException {
@@ -161,70 +173,61 @@ public class CanvaTemplateService {
     }
 
     public CanvaTemplate generateBuyerPdf(@NonNull Long id) throws IOException {
-        CanvaTemplate t = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("CanvaTemplate not found: " + id));
+        CanvaTemplate t = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("CanvaTemplate not found: " + id));
         Path pdfPath = getPdfPathFor(t);
 
         try (PDDocument doc = new PDDocument()) {
-            Path logoFile = getBrandingLogoFileIfExists();
+            // Load logo if present
             PDImageXObject logo = null;
-            if (logoFile != null) {
-                try {
-                    BufferedImage logoImg = ImageIO.read(logoFile.toFile());
-                    if (logoImg != null) logo = LosslessFactory.createFromImage(doc, logoImg);
-                } catch (Exception ignore) {}
+            Path logoFile = getBrandingLogoFileIfExists();
+            if (logoFile != null && Files.exists(logoFile)) {
+                BufferedImage logoImg = ImageIO.read(logoFile.toFile());
+                if (logoImg != null) logo = LosslessFactory.createFromImage(doc, logoImg);
             }
+            // Load mockups
             PDImageXObject mockup = loadImageByUrl(doc, t.getMockupUrl());
             PDImageXObject secondaryMockup = loadImageByUrl(doc, t.getSecondaryMockupUrl());
             PDImageXObject mobileMockup = loadImageByUrl(doc, t.getMobileMockupUrl());
 
-            // Page 1: Cover
+            // Page 1
             PDPage p1 = new PDPage();
             doc.addPage(p1);
             PDRectangle mb1 = p1.getMediaBox();
             float pageW = mb1.getWidth(), pageH = mb1.getHeight();
             try (PDPageContentStream cs = new PDPageContentStream(doc, p1)) {
-                // Header with logo (top-right, better positioned)
                 if (logo != null) {
                     float maxLogoW = 100f, maxLogoH = 70f;
                     float logoAspect = (float) logo.getWidth() / logo.getHeight();
                     float lw = Math.min(maxLogoW, maxLogoH * logoAspect);
                     float lh = lw / logoAspect;
                     float logoX = pageW - MARGIN - lw;
-                    float logoY = pageH - MARGIN - lh - 10f; // Better spacing from top
+                    float logoY = pageH - MARGIN - lh - 10f;
                     cs.drawImage(logo, logoX, logoY, lw, lh);
                 }
-                
-                // Title section with improved hierarchy
                 float y = pageH - MARGIN - 50f;
-                // Main heading - centered and prominent
-                float headingW = pageW - MARGIN * 2;
                 String mainHeading = "Thank you for your purchase!";
                 float headingX = (pageW - (PDType1Font.HELVETICA_BOLD.getStringWidth(mainHeading) / 1000f * HEAD_LG)) / 2f;
                 drawText(cs, mainHeading, headingX, y, PDType1Font.HELVETICA_BOLD, HEAD_LG);
-                y -= HEAD_LG + GAP * 2;
-                
-                // Product title with better emphasis and centering
+                float lineY1 = y - HEAD_LG - 6f;
+                drawDivider(cs, MARGIN, lineY1, pageW - MARGIN * 2);
+                y = lineY1 - GAP * 4;
                 String title = nonNull(t.getTitle());
                 if (!title.isEmpty()) {
                     float titleX = (pageW - (PDType1Font.HELVETICA_BOLD.getStringWidth(title) / 1000f * HEAD_MD)) / 2f;
                     drawText(cs, title, titleX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
                     y -= HEAD_MD + GAP * 2;
                 }
-                
-                // Main mockup - centered and larger
                 float mockupW = Math.min(400f, pageW - MARGIN * 2);
                 float mockupH = 280f;
                 float mockupX = (pageW - mockupW) / 2f;
-                float mockupY = pageH * 0.35f; // Better vertical centering
+                float mockupY = pageH * 0.35f;
                 drawImageOrPlaceholder(cs, mockup, mockupX, mockupY, mockupW, mockupH, "Main mockup");
-                
-                // Subtle footer text - centered
-                String footerText = "Digital template package";
-                float footerX = (pageW - (PDType1Font.HELVETICA_OBLIQUE.getStringWidth(footerText) / 1000f * 11f)) / 2f;
-                drawText(cs, footerText, footerX, MARGIN + 20f, PDType1Font.HELVETICA_OBLIQUE, 11f);
+                // Footer: divider + centered text
+                drawFooterCentered(cs, mb1, "Digital template package");
             }
 
-            // Page 2: Canva Access
+            // Page 2
             PDPage p2 = new PDPage();
             doc.addPage(p2);
             PDRectangle mb2 = p2.getMediaBox();
@@ -235,7 +238,10 @@ public class CanvaTemplateService {
                 String mainHeading = "Access Your Templates";
                 float headingX = (mb2.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(mainHeading) / 1000f * HEAD_MD)) / 2f;
                 drawText(cs, mainHeading, headingX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
-                y -= HEAD_MD + GAP * 2;
+                // Divider under heading
+                float lineY2 = y - HEAD_MD - 6f;
+                drawDivider(cs, MARGIN, lineY2, mb2.getWidth() - MARGIN * 2);
+                y = lineY2 - GAP * 4; // extra spacing below divider
                 
                 // Two-column layout with better proportions
                 float qrAreaW = 140f;
@@ -307,16 +313,20 @@ public class CanvaTemplateService {
                     float secY = y - secH - 15f;
                     drawImageOrPlaceholder(cs, (secondaryMockup != null ? secondaryMockup : mockup), secX, secY, secW, secH, "Preview");
                 }
+                // Footer: divider + centered text
+                drawFooterCentered(cs, mb2, "Digital template package");
             }
 
-            // Page 3: How to Edit
+            // Page 3
             PDPage p3 = new PDPage();
             doc.addPage(p3);
             PDRectangle mb3 = p3.getMediaBox();
             try (PDPageContentStream cs = new PDPageContentStream(doc, p3)) {
                 float y = mb3.getHeight() - MARGIN - GAP;
                 drawText(cs, "How to Customize Your Template", MARGIN, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
-                y -= HEAD_MD + GAP;
+                float lineY3 = y - HEAD_MD - 6f;
+                drawDivider(cs, MARGIN, lineY3, mb3.getWidth() - MARGIN * 2);
+                y = lineY3 - GAP * 4; // extra spacing below divider
                 
                 // Single column layout with mobile mockup after steps
                 float contentW = mb3.getWidth() - MARGIN * 2;
@@ -328,21 +338,27 @@ public class CanvaTemplateService {
                         "Download your design: Share -> Download -> choose format"
                 };
                 
+                // Inline numbered steps: number box and text share baseline
                 float stepY = y;
+                final float boxSize = 24f; // square box for number
                 for (int i = 0; i < steps.length; i++) {
-                    // Step number in a circle
-                    float circleX = MARGIN + 8f;
-                    float circleY = stepY - 6f;
+                    float baselineY = stepY; // text baseline
+                    float boxX = MARGIN;     // left edge for number box
+                    float boxY = baselineY - (boxSize * 0.75f); // shift so box vertically centers on text
                     cs.setNonStrokingColor(new Color(25, 118, 210));
-                    cs.addRect(circleX - 10f, circleY - 10f, 20f, 20f);
+                    cs.addRect(boxX, boxY, boxSize, boxSize);
                     cs.fill();
+                    // Number inside box centered
                     cs.setNonStrokingColor(Color.WHITE);
-                    drawText(cs, String.valueOf(i + 1), circleX - 4f, circleY - 3f, PDType1Font.HELVETICA_BOLD, 12f);
-                    
-                    // Step text
+                    float numOffsetX = 9f; // empirically center for Helvetica 12
+                    float numOffsetY = 6f; // baseline offset inside box
+                    drawText(cs, String.valueOf(i + 1), boxX + numOffsetX, baselineY - numOffsetY, PDType1Font.HELVETICA_BOLD, 12f);
+                    // Step text inline to the right
                     cs.setNonStrokingColor(Color.BLACK);
-                    stepY = drawWrapped(cs, steps[i], MARGIN + 30f, stepY, contentW - 30f, PDType1Font.HELVETICA, BODY, LINE_BODY);
-                    stepY -= GAP;
+                    float textX = boxX + boxSize + 12f; // space after number box
+                    drawText(cs, steps[i], textX, baselineY, PDType1Font.HELVETICA, BODY);
+                    // Advance to next line
+                    stepY -= LINE_BODY + GAP;
                 }
                 
                 // Mobile mockup - centered below steps with some spacing
@@ -363,9 +379,11 @@ public class CanvaTemplateService {
                     // Label for mobile mockup
                     drawText(cs, "Mobile Preview", mobileX, mobileY - 15f, PDType1Font.HELVETICA_OBLIQUE, 10f);
                 }
+                // Footer: divider + centered text
+                drawFooterCentered(cs, mb3, "Digital template package");
             }
 
-            // Page 4: License & Support
+            // Page 4
             PDPage p4 = new PDPage();
             doc.addPage(p4);
             PDRectangle mb4 = p4.getMediaBox();
@@ -376,7 +394,9 @@ public class CanvaTemplateService {
                 String mainHeading = "License & Support Information";
                 float headingX = (mb4.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(mainHeading) / 1000f * HEAD_MD)) / 2f;
                 drawText(cs, mainHeading, headingX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
-                y -= HEAD_MD + GAP * 2;
+                float lineY4 = y - HEAD_MD - 6f;
+                drawDivider(cs, MARGIN, lineY4, mb4.getWidth() - MARGIN * 2);
+                y = lineY4 - GAP * 4; // extra spacing below divider
                 
                 // License section with better formatting and indentation
                 drawText(cs, "License Terms:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
@@ -412,29 +432,33 @@ public class CanvaTemplateService {
                 float thankYouX = (mb4.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(thankYou) / 1000f * 16f)) / 2f;
                 drawText(cs, thankYou, thankYouX, y, PDType1Font.HELVETICA_BOLD, 16f);
                 
-                // Footer with logo - better positioned and aligned
+                // Footer with enlarged logo + branding
                 if (logo != null) {
-                    float maxLogoW = 90f, maxLogoH = 50f;
+                    float maxLogoW = 140f, maxLogoH = 80f;
                     float logoAspect = (float) logo.getWidth() / logo.getHeight();
                     float lw = Math.min(maxLogoW, maxLogoH * logoAspect);
                     float lh = lw / logoAspect;
                     float logoX = mb4.getWidth() - MARGIN - lw;
-                    float logoY = MARGIN + 15f; // Better spacing from bottom
+                    float logoY = MARGIN + 25f;
                     cs.drawImage(logo, logoX, logoY, lw, lh);
-                    
-                    // Branding text - better aligned with logo
                     String brandText = "Powered by";
-                    float brandX = logoX - (PDType1Font.HELVETICA.getStringWidth(brandText) / 1000f * 10f) - 10f;
-                    drawText(cs, brandText, brandX, logoY + lh/2f - 2f, PDType1Font.HELVETICA, 10f);
+                    float brandFontSize = 16f;
+                    float textWidth = PDType1Font.HELVETICA_BOLD.getStringWidth(brandText) / 1000f * brandFontSize;
+                    float brandX = logoX - textWidth - 25f;
+                    float brandY = logoY + lh/2f - (brandFontSize/2f) + 2f;
+                    drawText(cs, brandText, brandX, brandY, PDType1Font.HELVETICA_BOLD, brandFontSize);
+                    // Divider above footer content (over the logo area)
+                    float footerDividerY = logoY + lh + 12f;
+                    drawDivider(cs, MARGIN, footerDividerY, mb4.getWidth() - MARGIN * 2);
                 } else {
-                    drawPlaceholder(cs, mb4.getWidth() - MARGIN - 100f, MARGIN + 15f, 100f, 50f, "Your brand");
+                    // No logo: standard footer with divider + placeholder on right
+                    drawFooterCentered(cs, mb4, "Digital template package");
+                    drawPlaceholder(cs, mb4.getWidth() - MARGIN - 140f, MARGIN + 25f, 140f, 80f, "Your brand");
                 }
             }
-
             Files.createDirectories(pdfPath.getParent());
             doc.save(pdfPath.toFile());
         }
-
         t.setBuyerPdfUrl("/api/canva-templates/pdfs/" + t.getId() + ".pdf");
         return repo.save(t);
     }
@@ -516,6 +540,22 @@ public class CanvaTemplateService {
         return y;
     }
 
+    private void drawDivider(PDPageContentStream cs, float x, float y, float width) throws IOException {
+        cs.setStrokingColor(new Color(210, 210, 210));
+        cs.setLineWidth(1f);
+        cs.moveTo(x, y);
+        cs.lineTo(x + width, y);
+        cs.stroke();
+    }
+
+    private void drawFooterCentered(PDPageContentStream cs, PDRectangle mb, String text) throws IOException {
+        float lineY = MARGIN + 30f; // divider position above footer text
+        drawDivider(cs, MARGIN, lineY, mb.getWidth() - MARGIN * 2);
+        float textSize = 11f;
+        float footerX = (mb.getWidth() - (PDType1Font.HELVETICA_OBLIQUE.getStringWidth(text) / 1000f * textSize)) / 2f;
+        drawText(cs, text, footerX, MARGIN + 14f, PDType1Font.HELVETICA_OBLIQUE, textSize);
+    }
+
     private float drawBullets(PDPageContentStream cs, String[] items, float x, float startY, PDType1Font font, float size, float lineHeight) throws IOException {
         float y = startY;
         for (String it : items) {
@@ -525,14 +565,7 @@ public class CanvaTemplateService {
         return y;
     }
 
-    private float drawNumbered(PDPageContentStream cs, String[] items, float x, float startY, PDType1Font font, float size, float lineHeight) throws IOException {
-        float y = startY;
-        for (int i = 0; i < items.length; i++) {
-            drawText(cs, (i+1)+". "+items[i], x, y, font, size);
-            y -= lineHeight;
-        }
-        return y;
-    }
+    // Removed unused drawNumbered helper
 
     private void drawButton(PDPageContentStream cs, float x, float y, float w, float h, String label) throws IOException {
         // Draw button shadow

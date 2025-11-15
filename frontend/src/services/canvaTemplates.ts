@@ -71,3 +71,10 @@ export const updateTemplate = async (
 export const deleteTemplate = async (id: number): Promise<void> => {
   await axiosInstance.delete(`/api/admin/canva-templates/${id}`);
 };
+
+export const getNextTemplateTitle = async (): Promise<string> => {
+  const res = await axiosInstance.get<{ title: string }>(
+    '/api/admin/canva-templates/next-title'
+  );
+  return res.data.title;
+};
