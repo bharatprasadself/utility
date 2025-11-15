@@ -432,14 +432,18 @@ public class CanvaTemplateService {
                 float thankYouX = (mb4.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(thankYou) / 1000f * 16f)) / 2f;
                 drawText(cs, thankYou, thankYouX, y, PDType1Font.HELVETICA_BOLD, 16f);
                 
-                // Footer with enlarged logo + branding
+                // Footer text (always present on page 4)
+                drawFooterCentered(cs, mb4, "Digital template package");
+
+                // Powered by + Logo block positioned ABOVE the footer divider
                 if (logo != null) {
                     float maxLogoW = 140f, maxLogoH = 80f;
                     float logoAspect = (float) logo.getWidth() / logo.getHeight();
                     float lw = Math.min(maxLogoW, maxLogoH * logoAspect);
                     float lh = lw / logoAspect;
                     float logoX = mb4.getWidth() - MARGIN - lw;
-                    float logoY = MARGIN + 25f;
+                    // Ensure logo sits fully above the footer divider (which is at MARGIN + 30)
+                    float logoY = MARGIN + 40f;
                     cs.drawImage(logo, logoX, logoY, lw, lh);
                     String brandText = "Powered by";
                     float brandFontSize = 16f;
@@ -447,13 +451,9 @@ public class CanvaTemplateService {
                     float brandX = logoX - textWidth - 25f;
                     float brandY = logoY + lh/2f - (brandFontSize/2f) + 2f;
                     drawText(cs, brandText, brandX, brandY, PDType1Font.HELVETICA_BOLD, brandFontSize);
-                    // Divider above footer content (over the logo area)
-                    float footerDividerY = logoY + lh + 12f;
-                    drawDivider(cs, MARGIN, footerDividerY, mb4.getWidth() - MARGIN * 2);
                 } else {
-                    // No logo: standard footer with divider + placeholder on right
-                    drawFooterCentered(cs, mb4, "Digital template package");
-                    drawPlaceholder(cs, mb4.getWidth() - MARGIN - 140f, MARGIN + 25f, 140f, 80f, "Your brand");
+                    // No logo: show a placeholder brand block above the footer divider
+                    drawPlaceholder(cs, mb4.getWidth() - MARGIN - 140f, MARGIN + 40f, 140f, 80f, "Your brand");
                 }
             }
             Files.createDirectories(pdfPath.getParent());

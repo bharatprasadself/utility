@@ -1,6 +1,7 @@
 import { Box, Typography, Paper, Grid, TextField, Button, Stack, CircularProgress, Link as MuiLink, Alert, AlertTitle, FormLabel } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { createTemplate, generateBuyerPdf, listTemplates, uploadMockup, updateTemplate, deleteTemplate, getNextTemplateTitle, type CanvaTemplate } from '@/services/canvaTemplates';
+import { API_BASE_URL } from '@/services/axiosConfig';
 
 const CanvaTemplates = () => {
   const [title, setTitle] = useState('');
@@ -195,8 +196,15 @@ const CanvaTemplates = () => {
   await refresh();
       // Optionally open in new tab
       // Add a cache-busting param to avoid any intermediary caching
-      const bust = pdfUrl.includes('?') ? `${pdfUrl}&v=${Date.now()}` : `${pdfUrl}?v=${Date.now()}`;
-      window.open(bust, '_blank');
+      const resolveUrl = (u?: string): string | undefined => {
+        if (!u) return undefined;
+        return u.startsWith('http') ? u : `${API_BASE_URL}${u}`;
+      };
+      const full = resolveUrl(pdfUrl);
+      if (full) {
+        const bust = full.includes('?') ? `${full}&v=${Date.now()}` : `${full}?v=${Date.now()}`;
+        window.open(bust, '_blank');
+      }
     } catch (e: any) {
       setError(e.message || 'Failed to generate PDF');
     } finally {
@@ -392,7 +400,7 @@ const CanvaTemplates = () => {
                 {p.buyerPdfUrl && (
                   <>
                     <br />
-                    <MuiLink href={p.buyerPdfUrl} target="_blank" rel="noreferrer">Buyer PDF</MuiLink>
+                    <MuiLink href={(p.buyerPdfUrl?.startsWith('http') ? p.buyerPdfUrl : `${API_BASE_URL}${p.buyerPdfUrl}`)} target="_blank" rel="noreferrer">Buyer PDF</MuiLink>
                   </>
                 )}
                 {p.etsyListingUrl && (

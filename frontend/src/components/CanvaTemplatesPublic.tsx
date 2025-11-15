@@ -107,7 +107,7 @@ const CanvaTemplatesPublic = () => {
                   disabled={!t.etsyListingUrl}
                   onClick={() => { if (t.etsyListingUrl) window.open(t.etsyListingUrl, '_blank'); }}
                 >
-                  View on Etsy
+                  Buy
                 </Button>
               </CardActions>
             </Card>
