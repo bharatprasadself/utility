@@ -32,12 +32,41 @@ public class SchemaMigrationRunner {
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
         try (Connection conn = dataSource.getConnection()) {
+            ensureCanvaTemplatesTable(conn);
             ensureBlogsStatusColumn(conn);
             ensureArticlesStatusAndPublishDate(conn);
             ensureUsersEmailColumn(conn);
             ensurePasswordResetTokenTable(conn);
         } catch (SQLException e) {
             log.warn("Schema migration runner encountered an error: {}", e.getMessage());
+        }
+    }
+
+    private void ensureCanvaTemplatesTable(Connection conn) {
+        try {
+            if (!tableExists(conn, "CANVA_TEMPLATES")) {
+                log.info("Creating CANVA_TEMPLATES table...");
+                try (Statement st = conn.createStatement()) {
+                    st.executeUpdate(
+                        "CREATE TABLE IF NOT EXISTS canva_templates (" +
+                        "id BIGSERIAL PRIMARY KEY," +
+                        "title VARCHAR(255) NOT NULL," +
+                        "canva_use_copy_url VARCHAR(1000)," +
+                        "mobile_canva_use_copy_url VARCHAR(1000)," +
+                        "mockup_url VARCHAR(1000)," +
+                        "buyer_pdf_url VARCHAR(1000)," +
+                        "etsy_listing_url VARCHAR(1000)," +
+                        "secondary_mockup_url VARCHAR(1000)," +
+                        "mobile_mockup_url VARCHAR(1000)," +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                        ")"
+                    );
+                }
+                log.info("CANVA_TEMPLATES table created.");
+            }
+        } catch (SQLException e) {
+            log.warn("Failed to ensure CANVA_TEMPLATES table: {}", e.getMessage());
         }
     }
 
