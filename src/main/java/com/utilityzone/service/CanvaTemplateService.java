@@ -12,6 +12,8 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.interactive.action.PDActionURI;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary;
+import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
@@ -135,13 +137,18 @@ public class CanvaTemplateService {
         return p;
     }
 
+    public Path getBrandingDir() throws IOException {
+        Path brandDir = getBaseDir().resolve("branding");
+        if (!Files.exists(brandDir)) Files.createDirectories(brandDir);
+        return brandDir;
+    }
+
     /**
      * Optional shop logo path (user-provided). We look for PNG/JPG in
      * ./data/uploads/branding/shop-logo.(png|jpg|jpeg)
      */
     public Path getBrandingLogoFileIfExists() throws IOException {
-        Path brandDir = getBaseDir().resolve("branding");
-        // no need to create, we only read if present
+        Path brandDir = getBrandingDir();
         Path png = brandDir.resolve("shop-logo.png");
         if (Files.exists(png)) return png;
         Path jpg = brandDir.resolve("shop-logo.jpg");
@@ -268,6 +275,21 @@ public class CanvaTemplateService {
                             float qrX = rightX + (qrAreaW - qrSize) / 2f;
                             float qrY = btnY + (BUTTON_H - qrSize) / 2f + 15f; // Better vertical alignment
                             cs.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+                            // Make the QR area itself clickable (helps mobile viewers)
+                            PDAnnotationLink qrLink = new PDAnnotationLink();
+                            PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
+                            qrLink.setRectangle(qrRect);
+                            PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
+                            qrBorder.setWidth(1f);
+                            qrLink.setBorderStyle(qrBorder);
+                            qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                            qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_INVERT);
+                            PDActionURI qrAction = new PDActionURI();
+                            qrAction.setURI(printLink);
+                            qrLink.setAction(qrAction);
+                            p2.getAnnotations().add(qrLink);
+
                             // Centered QR label
                             String qrLabel = "Scan to open";
                             float qrLabelX = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
@@ -553,6 +575,8 @@ public class CanvaTemplateService {
         drawDivider(cs, MARGIN, lineY, mb.getWidth() - MARGIN * 2);
         float textSize = 11f;
         float footerX = (mb.getWidth() - (PDType1Font.HELVETICA_OBLIQUE.getStringWidth(text) / 1000f * textSize)) / 2f;
+        // Ensure footer text is visible regardless of previously set non-stroking color
+        cs.setNonStrokingColor(Color.DARK_GRAY);
         drawText(cs, text, footerX, MARGIN + 14f, PDType1Font.HELVETICA_OBLIQUE, textSize);
     }
 
@@ -593,11 +617,16 @@ public class CanvaTemplateService {
     private void drawButtonWithLink(PDDocument doc, PDPage page, PDPageContentStream cs, float x, float y, float w, float h, String label, String url) throws IOException {
         drawButton(cs, x, y, w, h, label);
         PDAnnotationLink linkAnnot = new PDAnnotationLink();
-        PDRectangle rect = new PDRectangle(x, y, w, h);
+        // Slightly expand the tap target to help on mobile
+        final float pad = 2f;
+        PDRectangle rect = new PDRectangle(x - pad, y - pad, w + pad * 2, h + pad * 2);
         linkAnnot.setRectangle(rect);
+        // Make the link visually discoverable on mobile viewers
         PDBorderStyleDictionary border = new PDBorderStyleDictionary();
-        border.setWidth(0f);
+        border.setWidth(1f);
         linkAnnot.setBorderStyle(border);
+        linkAnnot.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE)); // blue border
+        linkAnnot.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_INVERT);
         PDActionURI action = new PDActionURI();
         action.setURI(url);
         linkAnnot.setAction(action);
