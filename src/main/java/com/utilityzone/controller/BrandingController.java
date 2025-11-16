@@ -52,10 +52,13 @@ public class BrandingController {
         Path dir = service.getBrandingDir();
         Path target = dir.resolve("shop-logo" + ext);
 
-        // Write to a temp file then move atomically
+        // Write to a temp file using InputStream to avoid servlet container path quirks,
+        // then move atomically to the final destination.
         Path temp = Files.createTempFile(dir, "logo-", ".tmp");
         try {
-            file.transferTo(temp.toFile());
+            try (var in = file.getInputStream()) {
+                Files.copy(in, temp, StandardCopyOption.REPLACE_EXISTING);
+            }
             Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } finally {
             try { Files.deleteIfExists(temp); } catch (IOException ignored) {}
