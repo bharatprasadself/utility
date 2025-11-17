@@ -34,10 +34,24 @@ public class SecurityConfig {
         
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
+            // Explicitly disable HTTP Basic and form login to avoid browser basic-auth popups
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(exception -> exception.authenticationEntryPoint((req, res, ex) -> {
-                res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Not authorized");
-            }))
+            .exceptionHandling(exception -> exception
+                // Return JSON on 401 instead of Basic challenge header which triggers browser popup
+                .authenticationEntryPoint((req, res, ex) -> {
+                    res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    res.setContentType("application/json");
+                    res.getWriter().write("{\"message\":\"Please login to continue\",\"status\":401}");
+                })
+                // Return JSON on 403 (forbidden)
+                .accessDeniedHandler((req, res, ex) -> {
+                    res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    res.setContentType("application/json");
+                    res.getWriter().write("{\"message\":\"You do not have permission to perform this action.\",\"status\":403}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/auth/account").authenticated()
@@ -53,6 +67,10 @@ public class SecurityConfig {
                     "/api/converter/**",
                     "/api/qr/**",
                     "/api/greeting/**",
+                    // Public Canva templates
+                    "/api/canva-templates",
+                    "/api/canva-templates/mockups/**",
+                    "/api/canva-templates/pdfs/**",
                     // Expose Actuator endpoints
                     "/api/actuator/**",
                     "/actuator/**",
@@ -69,13 +87,14 @@ public class SecurityConfig {
                 ).authenticated()
                 // Allow GET for blog endpoints
                 .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
+                // Allow GET for articles endpoints publicly
+                .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
                 // Require authentication for POST, PUT, DELETE on blog endpoints
                 .requestMatchers(HttpMethod.POST, "/api/blogs/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/blogs/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/blogs/**").authenticated()
                 // Article endpoints
                 .requestMatchers(HttpMethod.GET, "/api/articles/drafts/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/articles/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/articles/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/articles/**").hasRole("ADMIN")

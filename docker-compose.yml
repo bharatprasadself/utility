@@ -9,6 +9,7 @@ services:
       - ./data:/app/data
     environment:
       - SPRING_PROFILES_ACTIVE=prod-h2
+      - FILE_UPLOAD_DIR=/app/data/uploads
       - JAVA_OPTS=-Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom
 
   # Use this service for first-time initialization only
