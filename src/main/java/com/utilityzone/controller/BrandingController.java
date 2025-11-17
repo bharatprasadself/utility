@@ -13,7 +13,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
-
+//Command on windows cmd
+//curl -L -X POST "https://api.utilityzone.in/api/branding/logo" ^
+//  -F "file=@C:/Work/Personal/My System/Ebook/Shop/Etsy/Shop Icons/logo.png;type=image/png"
 @RestController
 @RequestMapping("/api/branding")
 public class BrandingController {

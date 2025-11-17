@@ -230,6 +230,27 @@ public class CanvaTemplateService {
                 float mockupX = (pageW - mockupW) / 2f;
                 float mockupY = pageH * 0.35f;
                 drawImageOrPlaceholder(cs, mockup, mockupX, mockupY, mockupW, mockupH, "Main mockup");
+
+                // Move "What's Included" to Page 1 (just below the primary mockup)
+                float includeStartY = mockupY - 36f; // more space below mockup for better look
+                if (includeStartY > MARGIN + 100f) { // ensure space above footer
+                    // Left-align to the primary mockup's left edge (do not go beyond it)
+                    float leftEdge = Math.max(MARGIN, mockupX);
+                    drawText(cs, "What's Included:", leftEdge, includeStartY, PDType1Font.HELVETICA_BOLD, 15f);
+                    float afterHeaderY = includeStartY - (GAP + 6f);
+                    String[] itemsPg1 = new String[]{
+                            "Fully editable Canva templates",
+                            "Customize text, colors, fonts & images",
+                            "Download in multiple formats (PDF/PNG/JPG)",
+                            "Step-by-step usage guide"
+                    };
+                    // Left-aligned bullets starting at the mockup's left edge
+                    float cy = afterHeaderY;
+                    for (String it : itemsPg1) {
+                        drawText(cs, "* " + it, leftEdge, cy, PDType1Font.HELVETICA, BODY);
+                        cy -= 18f; // slightly larger line height for readability
+                    }
+                }
                 // Footer: divider + centered text
                 drawFooterCentered(cs, mb1, "Digital template package");
             }
@@ -267,6 +288,7 @@ public class CanvaTemplateService {
                     drawButtonWithLink(doc, p2, cs, MARGIN, btnY, btnW, BUTTON_H, "Edit Print Template", printLink);
                     
                     // QR code with better positioning and alignment
+                    float qrLabelX1 = 0f; float qrLabelDefaultY1 = 0f; boolean qrDrawn1 = false;
                     try {
                         BufferedImage qr = createQrCodeImage(printLink, 200);
                         if (qr != null) {
@@ -281,26 +303,56 @@ public class CanvaTemplateService {
                             PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
                             qrLink.setRectangle(qrRect);
                             PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
-                            qrBorder.setWidth(1f);
+                            qrBorder.setWidth(0.5f);
                             qrLink.setBorderStyle(qrBorder);
                             qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
-                            qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_INVERT);
+                            qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
                             PDActionURI qrAction = new PDActionURI();
                             qrAction.setURI(printLink);
                             qrLink.setAction(qrAction);
                             p2.getAnnotations().add(qrLink);
 
-                            // Centered QR label
+                            // Defer QR label until after URL wrapping to avoid overlap
                             String qrLabel = "Scan to open";
-                            float qrLabelX = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
-                            drawText(cs, qrLabel, qrLabelX, qrY - 15f, PDType1Font.HELVETICA, 9f);
+                            qrLabelX1 = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
+                            qrLabelDefaultY1 = qrY - 15f;
+                            qrDrawn1 = true;
                         }
                     } catch (Exception ignore) {}
+
+                    // Invisible link row below the button (keep annotation only for clean layout)
+                    float urlStartY = btnY - 12f;
+                    cs.setNonStrokingColor(Color.BLACK);
+                    // clickable annotation spanning the whole left column for easier tapping/clicking
+                    PDAnnotationLink urlAnnot = new PDAnnotationLink();
+                    PDRectangle urlRect = new PDRectangle(MARGIN - 2f, urlStartY - 2f, leftW + 4f, 16f);
+                    urlAnnot.setRectangle(urlRect);
+                    PDBorderStyleDictionary urlBorder = new PDBorderStyleDictionary();
+                    urlBorder.setWidth(0.5f);
+                    urlAnnot.setBorderStyle(urlBorder);
+                    urlAnnot.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                    urlAnnot.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                    PDActionURI urlAction = new PDActionURI();
+                    urlAction.setURI(printLink);
+                    urlAnnot.setAction(urlAction);
+                    p2.getAnnotations().add(urlAnnot);
+
+                    // Now draw the QR label below whichever is lower: QR default label Y or wrapped URL block end
+                    if (qrDrawn1) {
+                        float qrLabelY = Math.min(qrLabelDefaultY1, (urlStartY - 12f) - 6f);
+                        drawText(cs, "Scan to open", qrLabelX1, qrLabelY, PDType1Font.HELVETICA, 9f);
+                    }
+
+                    // Advance y below the wrapped URL for cleaner spacing
+                    y = (urlStartY - 12f) - GAP * 2;
                 } else {
                     drawButton(cs, MARGIN, btnY, btnW, BUTTON_H, "Print template (link needed)");
                 }
-                
-                y = btnY - GAP * 3; // More space between sections
+
+                // If no link rendered, continue from button position
+                if (printLink == null || !printLink.startsWith("http")) {
+                    y = btnY - GAP * 3; // space between sections when URL not shown
+                }
 
                 // Mobile version section
                 drawText(cs, "Mobile Invitation (1080 x 1920 px)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
@@ -310,24 +362,75 @@ public class CanvaTemplateService {
                 
                 if (mobileLink != null && mobileLink.startsWith("http")) {
                     drawButtonWithLink(doc, p2, cs, MARGIN, mBtnY, btnW, BUTTON_H, "Edit Mobile Template", mobileLink);
+
+                    // Add a QR for the mobile link as well
+                    float qrLabelX2 = 0f; float qrLabelDefaultY2 = 0f; boolean qrDrawn2 = false;
+                    try {
+                        BufferedImage qr = createQrCodeImage(mobileLink, 200);
+                        if (qr != null) {
+                            PDImageXObject qrImg = LosslessFactory.createFromImage(doc, qr);
+                            float qrSize = 100f;
+                            float qrX = rightX + (qrAreaW - qrSize) / 2f;
+                            float qrY = mBtnY + (BUTTON_H - qrSize) / 2f + 15f; // align similarly to print section
+                            cs.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+                            PDAnnotationLink qrLink = new PDAnnotationLink();
+                            PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
+                            qrLink.setRectangle(qrRect);
+                            PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
+                            qrBorder.setWidth(0.5f);
+                            qrLink.setBorderStyle(qrBorder);
+                            qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                            qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                            PDActionURI qrAction = new PDActionURI();
+                            qrAction.setURI(mobileLink);
+                            qrLink.setAction(qrAction);
+                            p2.getAnnotations().add(qrLink);
+
+                            String qrLabel = "Scan to open";
+                            qrLabelX2 = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
+                            qrLabelDefaultY2 = qrY - 15f;
+                            qrDrawn2 = true;
+                        }
+                    } catch (Exception ignore) {}
+
+                    // Invisible link row under the mobile button (annotation only, no visible label)
+                    float urlStartY2 = mBtnY - 12f;
+                    cs.setNonStrokingColor(Color.BLACK);
+                    PDAnnotationLink urlAnnot2 = new PDAnnotationLink();
+                    PDRectangle urlRect2 = new PDRectangle(MARGIN - 2f, urlStartY2 - 2f, leftW + 4f, 16f);
+                    urlAnnot2.setRectangle(urlRect2);
+                    PDBorderStyleDictionary urlBorder2 = new PDBorderStyleDictionary();
+                    urlBorder2.setWidth(0.5f);
+                    urlAnnot2.setBorderStyle(urlBorder2);
+                    urlAnnot2.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                    urlAnnot2.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                    PDActionURI urlAction2 = new PDActionURI();
+                    urlAction2.setURI(mobileLink);
+                    urlAnnot2.setAction(urlAction2);
+                    p2.getAnnotations().add(urlAnnot2);
+
+                    // Draw the QR label after wrapping to prevent visual overlap with URL lines
+                    if (qrDrawn2) {
+                        float qrLabelY2 = Math.min(qrLabelDefaultY2, (urlStartY2 - 12f) - 6f);
+                        drawText(cs, "Scan to open", qrLabelX2, qrLabelY2, PDType1Font.HELVETICA, 9f);
+                    }
+
+                    // Viewer compatibility tip below the mobile section
+                    float tipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                    String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
+                    drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
+                    // update y below tip for clean separation
+                    y = tipY - GAP * 2;
                 } else {
                     drawButton(cs, MARGIN, mBtnY, btnW, BUTTON_H, "Mobile template (link needed)");
                 }
                 
-                y = mBtnY - GAP * 2;
+                if (mobileLink == null || !mobileLink.startsWith("http")) {
+                    y = mBtnY - GAP * 2; // fallback spacing when URL not shown
+                }
                 
-                // What's included section
-                drawText(cs, "What's Included:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
-                y -= GAP;
-                String[] items = new String[]{
-                        "Fully editable Canva templates",
-                        "Customize text, colors, fonts & images", 
-                        "Download in multiple formats (PDF/PNG/JPG)",
-                        "Step-by-step usage guide"
-                };
-                y = drawBullets(cs, items, MARGIN, y, PDType1Font.HELVETICA, BODY, 16f);
-
-                // Secondary mockup - same size as primary mockup
+                // Secondary mockup - same size as primary mockup (moved up since 'What's Included' is now on Page 1)
                 if (y > MARGIN + 300f) {
                     float secW = Math.min(400f, pageW - MARGIN * 2); // Same width as primary
                     float secH = 280f; // Same height as primary
@@ -511,6 +614,24 @@ public class CanvaTemplateService {
         cs.endText();
     }
 
+    private void drawCenteredText(PDPageContentStream cs, String text, float centerX, float y, PDType1Font font, float size) throws IOException {
+        // use same sanitization as drawText to keep width/enocding consistent
+        String safe = text
+                .replace("\u2192", "->")
+                .replace("\u2013", "-")
+                .replace("\u2014", "-")
+                .replace("\u2022", "*")
+                .replace("×", "x")
+                .replace("→", "->");
+        float w = font.getStringWidth(safe) / 1000f * size;
+        float x = centerX - w / 2f;
+        cs.beginText();
+        cs.setFont(font, size);
+        cs.newLineAtOffset(x, y);
+        cs.showText(safe);
+        cs.endText();
+    }
+
     private void drawPlaceholder(PDPageContentStream cs, float x, float y, float w, float h, String label) throws IOException {
         cs.setNonStrokingColor(new Color(240,240,240));
         cs.addRect(x, y, w, h);
@@ -612,6 +733,8 @@ public class CanvaTemplateService {
         cs.setNonStrokingColor(Color.WHITE);
         float textY = y + h/2f - 5f;
         drawText(cs, label, x + 12, textY, PDType1Font.HELVETICA_BOLD, 12);
+        // Reset text color for subsequent content on white background
+        cs.setNonStrokingColor(Color.BLACK);
     }
 
     private void drawButtonWithLink(PDDocument doc, PDPage page, PDPageContentStream cs, float x, float y, float w, float h, String label, String url) throws IOException {
@@ -623,10 +746,10 @@ public class CanvaTemplateService {
         linkAnnot.setRectangle(rect);
         // Make the link visually discoverable on mobile viewers
         PDBorderStyleDictionary border = new PDBorderStyleDictionary();
-        border.setWidth(1f);
+        border.setWidth(0.5f);
         linkAnnot.setBorderStyle(border);
         linkAnnot.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE)); // blue border
-        linkAnnot.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_INVERT);
+        linkAnnot.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
         PDActionURI action = new PDActionURI();
         action.setURI(url);
         linkAnnot.setAction(action);

@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import com.utilityzone.service.EmailService;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +26,19 @@ import java.util.stream.Collectors;
 
 @SpringBootTest
 class CanvaTemplatePdfLinkTest {
+
+    @TestConfiguration
+    static class StubEmailConfig {
+        @Bean
+        EmailService emailService() {
+            return new EmailService() {
+                @Override
+                public void sendPasswordReset(String email, String rawToken) {
+                    // no-op for tests
+                }
+            };
+        }
+    }
 
     @Autowired
     private CanvaTemplateRepository repo;
@@ -96,10 +112,14 @@ class CanvaTemplatePdfLinkTest {
             Assertions.assertTrue(hasButtonSized, "Expected a wide button-sized clickable area on page 2");
             Assertions.assertTrue(hasQrSized, "Expected a ~square QR-sized clickable area on page 2");
 
-            // Optional: verify highlight mode is set to invert for visibility
-            boolean anyInvert = toPrintLink.stream()
-                    .anyMatch(l -> PDAnnotationLink.HIGHLIGHT_MODE_INVERT.equals(l.getHighlightMode()));
-            Assertions.assertTrue(anyInvert, "At least one link should use invert highlight mode for visibility");
+                // Optional: verify highlight mode is set to a visible style (invert or outline)
+                boolean anyVisibleHighlight = toPrintLink.stream()
+                    .anyMatch(l -> {
+                    String hm = l.getHighlightMode();
+                    return PDAnnotationLink.HIGHLIGHT_MODE_INVERT.equals(hm)
+                        || PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE.equals(hm);
+                    });
+                Assertions.assertTrue(anyVisibleHighlight, "At least one link should use a visible highlight mode (invert or outline)");
 
             // Additionally verify the mobile template button link exists and is tappable
             List<PDAnnotationLink> toMobileLink = links.stream()
