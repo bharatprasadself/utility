@@ -303,7 +303,7 @@ public class CanvaTemplateService {
                             PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
                             qrLink.setRectangle(qrRect);
                             PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
-                            qrBorder.setWidth(0.5f);
+                            qrBorder.setWidth(0f);
                             qrLink.setBorderStyle(qrBorder);
                             qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
                             qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
@@ -328,7 +328,7 @@ public class CanvaTemplateService {
                     PDRectangle urlRect = new PDRectangle(MARGIN - 2f, urlStartY - 2f, leftW + 4f, 16f);
                     urlAnnot.setRectangle(urlRect);
                     PDBorderStyleDictionary urlBorder = new PDBorderStyleDictionary();
-                    urlBorder.setWidth(0.5f);
+                    urlBorder.setWidth(0f);
                     urlAnnot.setBorderStyle(urlBorder);
                     urlAnnot.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
                     urlAnnot.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
@@ -378,7 +378,7 @@ public class CanvaTemplateService {
                             PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
                             qrLink.setRectangle(qrRect);
                             PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
-                            qrBorder.setWidth(0.5f);
+                            qrBorder.setWidth(0f);
                             qrLink.setBorderStyle(qrBorder);
                             qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
                             qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
@@ -401,7 +401,7 @@ public class CanvaTemplateService {
                     PDRectangle urlRect2 = new PDRectangle(MARGIN - 2f, urlStartY2 - 2f, leftW + 4f, 16f);
                     urlAnnot2.setRectangle(urlRect2);
                     PDBorderStyleDictionary urlBorder2 = new PDBorderStyleDictionary();
-                    urlBorder2.setWidth(0.5f);
+                    urlBorder2.setWidth(0f);
                     urlAnnot2.setBorderStyle(urlBorder2);
                     urlAnnot2.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
                     urlAnnot2.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
@@ -744,12 +744,12 @@ public class CanvaTemplateService {
         final float pad = 2f;
         PDRectangle rect = new PDRectangle(x - pad, y - pad, w + pad * 2, h + pad * 2);
         linkAnnot.setRectangle(rect);
-        // Make the link visually discoverable on mobile viewers
+        // Remove visible border to avoid blue outlines around buttons
         PDBorderStyleDictionary border = new PDBorderStyleDictionary();
-        border.setWidth(0.5f);
+        border.setWidth(0f);
         linkAnnot.setBorderStyle(border);
-        linkAnnot.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE)); // blue border
-        linkAnnot.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+        // No annotation color and no highlight outline
+        linkAnnot.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_NONE);
         PDActionURI action = new PDActionURI();
         action.setURI(url);
         linkAnnot.setAction(action);
