@@ -7,26 +7,27 @@ services:
     startCommand: java -jar target/utility-1.2.0-SNAPSHOT.jar
     envVars:
       - key: SPRING_PROFILES_ACTIVE
-        value: prod-h2
+        value: prod
       - key: utility.database.type
         value: h2
+      - key: FILE_UPLOAD_DIR
+        value: /app/data/uploads
       - key: JAVA_OPTS
         value: -Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom
     disk:
       name: data
       mountPath: /app/data
       sizeGB: 1
-  healthCheckPath: /api/actuator/health
+    healthCheckPath: /api/actuator/health
     autoDeploy: true
 
-  # Optional: If you want to serve frontend separately as a static site
-  # - type: static
-  #   name: utility-zone-frontend
-  #   buildCommand: cd frontend && npm install && npm run build
-  #   publishDir: frontend/dist
-  #   envVars:
-  #     - key: API_URL
-  #       fromService:
-  #         name: utility-zone
-  #         type: web
-  #         property: url
+  - type: static
+    name: utility-zone-frontend
+    buildCommand: cd frontend && npm ci && npm run build
+    publishDir: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: utility-zone
+          type: web
+          property: url

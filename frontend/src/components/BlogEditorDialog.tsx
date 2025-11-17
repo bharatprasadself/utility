@@ -5,9 +5,11 @@ import {
   IconButton, Tooltip
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import ClearIcon from '@mui/icons-material/Clear';
 import remarkGfm from 'remark-gfm';
 import ReactMarkdown from 'react-markdown';
+import SearchIcon from '@mui/icons-material/Search';
 
 export interface BlogEditorInitial {
   id?: number;
@@ -39,6 +41,10 @@ const BlogEditorDialog: React.FC<BlogEditorDialogProps> = ({ open, onClose, onSu
   const [content, setContent] = useState(initial?.content || '');
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [matchCount, setMatchCount] = useState<number | null>(null);
 
   // Track size
   const contentBytes = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(content).length : content.length;
@@ -80,6 +86,19 @@ const BlogEditorDialog: React.FC<BlogEditorDialogProps> = ({ open, onClose, onSu
       setContent(body);
     };
     reader.readAsText(file);
+  };
+
+  const exportMarkdown = () => {
+    const safeTitle = (title || 'blog-post').trim().replace(/[^a-z0-9\-]+/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+    const filename = `${safeTitle || 'blog-post'}.md`;
+    const md = `# ${title || 'Untitled'}\n\n${content || ''}`;
+    const blob = new Blob(['\uFEFF' + md], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const splitMdHeading = (md: string): { heading: string | null; body: string } => {
@@ -145,6 +164,21 @@ const BlogEditorDialog: React.FC<BlogEditorDialogProps> = ({ open, onClose, onSu
     }, 0);
   };
 
+  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const countMatches = () => {
+    if (!findText) { setMatchCount(0); return; }
+    const re = new RegExp(escapeRegExp(findText), 'g');
+    const matches = content.match(re);
+    setMatchCount(matches ? matches.length : 0);
+  };
+  const replaceAll = () => {
+    if (!findText) return;
+    const re = new RegExp(escapeRegExp(findText), 'g');
+    const newContent = content.replace(re, replaceText);
+    setContent(newContent);
+    countMatches();
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
       PaperProps={{ sx: { borderRadius: 2, boxShadow: 3 } }}>
@@ -169,6 +203,7 @@ const BlogEditorDialog: React.FC<BlogEditorDialogProps> = ({ open, onClose, onSu
               <Stack spacing={1}>
                 <input type="file" accept=".md" style={{ display: 'none' }} ref={fileInputRef} onChange={importMarkdown} />
                 <Tooltip title="Import Markdown (.md)"><IconButton onClick={() => fileInputRef.current?.click()} color="primary"><UploadFileIcon /></IconButton></Tooltip>
+                <Tooltip title="Export Markdown (.md)"><span><IconButton onClick={exportMarkdown} color="primary" disabled={!title && !content}><FileDownloadIcon /></IconButton></span></Tooltip>
                 {content && <Tooltip title="Clear content"><IconButton onClick={() => setContent('')} color="error"><ClearIcon /></IconButton></Tooltip>}
               </Stack>
             </Box>
@@ -178,6 +213,7 @@ const BlogEditorDialog: React.FC<BlogEditorDialogProps> = ({ open, onClose, onSu
                 <Button size="small" onClick={boldText}>Bold</Button>
                 <Button size="small" onClick={bulletedList}>Bullets</Button>
                 <Button size="small" onClick={numberedList}>Numbers</Button>
+                <Button size="small" startIcon={<SearchIcon />} onClick={() => { setFindOpen(true); setMatchCount(null); }}>Find / Replace</Button>
               </Stack>
               <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
                 Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB)' : overSoft ? ' (getting large)' : ''}
@@ -207,6 +243,27 @@ const BlogEditorDialog: React.FC<BlogEditorDialogProps> = ({ open, onClose, onSu
           </>
         )}
       </DialogActions>
+      {/* Find / Replace Dialog */}
+      <Dialog open={findOpen} onClose={() => setFindOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Find & Replace</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField label="Find" value={findText} onChange={e => setFindText(e.target.value)} fullWidth autoFocus />
+            <TextField label="Replace With" value={replaceText} onChange={e => setReplaceText(e.target.value)} fullWidth />
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button variant="outlined" size="small" onClick={countMatches} disabled={!findText}>Count</Button>
+              <Button variant="contained" size="small" color="primary" onClick={replaceAll} disabled={!findText}>Replace All</Button>
+              {matchCount !== null && (
+                <Typography variant="caption" color="text.secondary">Matches: {matchCount}</Typography>
+              )}
+            </Stack>
+            <Typography variant="caption" color="text.secondary">Simple literal matching (case-sensitive). Use consistent casing for best results.</Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFindOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
