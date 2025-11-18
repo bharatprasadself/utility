@@ -7,6 +7,7 @@ import { useState } from 'react';
 interface SubNavItem {
   label: string;
   path: string;
+  isHeader?: boolean;
 }
 
 interface NavItem {
@@ -19,14 +20,20 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/' },
 
   {
-    label: 'Finance',
+    label: 'Tools',
+    // keep path '/finance' so current routes continue to highlight correctly
     path: '/finance',
     subItems: [
+      { label: 'Finance', path: '/finance', isHeader: true },
+      { label: 'ROI Calculator', path: '/finance/roi' },
+      { label: 'Compounding Calculator', path: '/finance/compounding' },
       { label: 'CAGR Calculator', path: '/finance/cagr' },
       { label: 'SIP Calculator', path: '/finance/sip' },
-      { label: 'ROI Calculator', path: '/finance/roi' },
       { label: 'Dividend Tracker', path: '/finance/dividends' },
-      { label: 'Compounding Calculator', path: '/finance/compounding' }
+      { label: 'Ebook', path: '/tools/ebook', isHeader: true },
+      { label: 'Ebook Writer', path: '/tools/ebook-writer' },
+      { label: 'Template', path: '/tools/templates', isHeader: true },
+      { label: 'Template Organiser', path: '/admin/canva-templates' }
     ]
   },
   // Shop menu groups commerce-related items like Ebooks
@@ -35,7 +42,7 @@ const navItems: NavItem[] = [
     path: '/shop',
     subItems: [
       { label: 'Ebooks', path: '/ebooks' },
-      { label: 'Canva Templates', path: '/shop/canva-templates' }
+      { label: 'Templates', path: '/shop/canva-templates' }
     ]
   },
   { label: 'Blogs', path: '/blogs' },
@@ -70,10 +77,13 @@ const Navigation = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [subMenuAnchorEl, setSubMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
+  // Second-level submenu for Tools groups
+  const [toolsGroupAnchorEl, setToolsGroupAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeToolsGroup, setActiveToolsGroup] = useState<string | null>(null);
   const [userMenuAnchorEl, setUserMenuAnchorEl] = useState<null | HTMLElement>(null);
   const userMenuOpen = Boolean(userMenuAnchorEl);
 
-  // Emoji icons for Finance submenu items
+  // Emoji icons for Tools > Finance submenu items
   const financeEmoji: Record<string, string> = {
     'CAGR Calculator': '📈',
     'SIP Calculator': '💰',
@@ -89,6 +99,13 @@ const Navigation = () => {
     'PostgreSQL': '🐘',
     'Docker': '🐳',
     'Microservices': '🧩'
+  };
+  // Additional icons for other Tools items
+  const toolsExtraEmoji: Record<string, string> = {
+    'Ebook Writer': '📘',
+    'Template Organiser': '🎨',
+    'Ebooks': '📚',
+    'Templates': '🎨'
   };
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -107,6 +124,9 @@ const Navigation = () => {
   const handleSubMenuClose = () => {
     setSubMenuAnchorEl(null);
     setActiveSubMenu(null);
+    // also close any second-level tools submenu
+    setToolsGroupAnchorEl(null);
+    setActiveToolsGroup(null);
   };
 
   const handleNavigation = (path: string) => {
@@ -172,42 +192,133 @@ const Navigation = () => {
           }
         }}
       >
-  {navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => {
-          const isFinance = activeSubMenu === 'Finance';
-          const isArticles = activeSubMenu === 'Articles';
-          const emoji = isFinance ? financeEmoji[subItem.label] : (isArticles ? articlesEmoji[subItem.label] : undefined);
-          return (
-            <MenuItem
-              key={subItem.path}
-              onClick={() => { handleNavigation(subItem.path); handleSubMenuClose(); }}
-              selected={location.pathname === subItem.path}
-              sx={{
-                py: 1,
-                px: 2,
-                '&:hover': {
-                  bgcolor: 'primary.light',
-                  color: 'white'
-                },
-                '&.Mui-selected': {
-                  bgcolor: 'primary.main',
-                  color: 'white',
-                  '&:hover': {
-                    bgcolor: 'primary.dark'
-                  }
+        {activeSubMenu === 'Tools'
+          ? (() => {
+              const tools = navItems.find(i => i.label === 'Tools');
+              const sub = tools?.subItems || [];
+              const groups: Record<string, SubNavItem[]> = {};
+              let current: string | null = null;
+              sub.forEach(si => {
+                if (si.isHeader) {
+                  current = si.label;
+                  if (!groups[current]) groups[current] = [];
+                } else if (current) {
+                  groups[current].push(si);
                 }
-              }}
-            >
-              {emoji ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 200 }}>
-                  <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{subItem.label}</Typography>
-                </Box>
-              ) : (
-                subItem.label
-              )}
-            </MenuItem>
-          );
-        })}
+              });
+              const groupLabels = Object.keys(groups);
+              return groupLabels.map(gl => (
+                <MenuItem
+                  key={`tools-group-${gl}`}
+                  aria-haspopup="true"
+                  aria-controls={`tools-${gl}-submenu`}
+                  onMouseEnter={(e) => { setActiveToolsGroup(gl); setToolsGroupAnchorEl(e.currentTarget); }}
+                  onClick={(e) => { setActiveToolsGroup(gl); setToolsGroupAnchorEl(e.currentTarget); }}
+                  sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{gl}</Typography>
+                  <Box component="span" aria-hidden>▸</Box>
+                </MenuItem>
+              ));
+            })()
+          : navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => {
+              const isArticles = activeSubMenu === 'Articles';
+              const emoji = isArticles ? articlesEmoji[subItem.label] : toolsExtraEmoji[subItem.label];
+              if (subItem.isHeader) {
+                return (
+                  <MenuItem key={`${subItem.path}-header`} disabled sx={{ fontWeight: 700, opacity: 0.8, cursor: 'default' }}>
+                    {subItem.label}
+                  </MenuItem>
+                );
+              }
+              return (
+                <MenuItem
+                  key={subItem.path}
+                  onClick={() => { handleNavigation(subItem.path); handleSubMenuClose(); }}
+                  selected={location.pathname === subItem.path}
+                  sx={{
+                    py: 1,
+                    px: 2,
+                    '&:hover': {
+                      bgcolor: 'primary.light',
+                      color: 'white'
+                    },
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: 'primary.dark'
+                      }
+                    }
+                  }}
+                >
+                  {emoji ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 200 }}>
+                      <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{subItem.label}</Typography>
+                    </Box>
+                  ) : (
+                    subItem.label
+                  )}
+                </MenuItem>
+              );
+            })}
+      </Menu>
+      {/* Second-level submenu for Tools groups */}
+      <Menu
+        id={activeToolsGroup ? `tools-${activeToolsGroup}-submenu` : 'tools-submenu'}
+        anchorEl={toolsGroupAnchorEl}
+        open={Boolean(toolsGroupAnchorEl)}
+        onClose={() => { setToolsGroupAnchorEl(null); setActiveToolsGroup(null); }}
+        sx={{
+          '& .MuiPaper-root': {
+            borderRadius: 2,
+            mt: 1,
+            minWidth: 260,
+            boxShadow: 3
+          }
+        }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        {(() => {
+          const tools = navItems.find(i => i.label === 'Tools');
+          const sub = tools?.subItems || [];
+          const groups: Record<string, SubNavItem[]> = {};
+          let current: string | null = null;
+          sub.forEach(si => {
+            if (si.isHeader) {
+              current = si.label;
+              if (!groups[current]) groups[current] = [];
+            } else if (current) {
+              groups[current].push(si);
+            }
+          });
+          const items = activeToolsGroup ? groups[activeToolsGroup] || [] : [];
+          return items.map((si) => {
+            const emoji = activeToolsGroup === 'Finance' ? (financeEmoji[si.label] || toolsExtraEmoji[si.label]) : toolsExtraEmoji[si.label];
+            return (
+              <MenuItem
+                key={si.path}
+                onClick={() => { handleNavigation(si.path); handleSubMenuClose(); }}
+                selected={location.pathname === si.path}
+                sx={{
+                  py: 1,
+                  px: 2,
+                  '&:hover': { bgcolor: 'primary.light', color: 'white' },
+                  '&.Mui-selected': { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }
+                }}
+              >
+                {emoji ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 220 }}>
+                    <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{si.label}</Typography>
+                  </Box>
+                ) : si.label}
+              </MenuItem>
+            );
+          });
+        })()}
       </Menu>
       <Box sx={{ display: 'flex', gap: 2 }}>
         {user ? (
@@ -325,16 +436,27 @@ const Navigation = () => {
                 {item.label}
               </MenuItem>
               {item.subItems.map((sub) => (
-                <MenuItem
-                  key={sub.path}
-                  onClick={() => handleNavigation(sub.path)}
-                  selected={location.pathname === sub.path}
-                  role="menuitem"
-                  aria-current={location.pathname === sub.path ? 'page' : undefined}
-                  sx={{ pl: 3 }}
-                >
-                  {sub.label}
-                </MenuItem>
+                sub.isHeader ? (
+                  <MenuItem key={`${sub.path}-header`} disabled role="presentation" sx={{ pl: 2, fontWeight: 700, opacity: 0.8 }}>
+                    {sub.label}
+                  </MenuItem>
+                ) : (
+                  <MenuItem
+                    key={sub.path}
+                    onClick={() => handleNavigation(sub.path)}
+                    selected={location.pathname === sub.path}
+                    role="menuitem"
+                    aria-current={location.pathname === sub.path ? 'page' : undefined}
+                    sx={{ pl: 3 }}
+                  >
+                    {toolsExtraEmoji[sub.label] ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                        <Box component="span" aria-hidden sx={{ fontSize: 18 }}>{toolsExtraEmoji[sub.label]}</Box>
+                        {sub.label}
+                      </Box>
+                    ) : sub.label}
+                  </MenuItem>
+                )
               ))}
             </Box>
           ) : (

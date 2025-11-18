@@ -29,6 +29,7 @@ import SipCalculator from './components/finance/SipCalculator';
 import RoiCalculator from './components/finance/RoiCalculator';
 import DividendTracker from './components/finance/DividendTracker';
 import CompoundingCalculator from './components/finance/CompoundingCalculator';
+import EbookWriter from './components/tools/EbookWriter';
 
 function App() {
   return (
@@ -66,6 +67,7 @@ function App() {
                     <Route path="/finance/roi" element={<RoiCalculator />} />
                     <Route path="/finance/dividends" element={<DividendTracker />} />
                     <Route path="/finance/compounding" element={<CompoundingCalculator />} />
+                    <Route path="/tools/ebook-writer" element={<EbookWriter />} />
                     <Route path="/shop/canva-templates" element={<CanvaTemplatesPublic />} />
                     <Route path="/admin/canva-templates" element={<CanvaTemplates />} />
                     <Route path="*" element={<Navigate to="/" />} />

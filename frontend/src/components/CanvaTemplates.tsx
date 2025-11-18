@@ -214,7 +214,7 @@ const CanvaTemplates = () => {
 
   return (
     <Box sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom fontWeight={700}>Canva Templates — Admin</Typography>
+      <Typography variant="h4" gutterBottom fontWeight={700}>Buyer PDF Generator</Typography>
       <Grid container spacing={2} alignItems="stretch" sx={{ mb: 3 }}>
         <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
           <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
