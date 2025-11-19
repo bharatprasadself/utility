@@ -2,7 +2,7 @@ import { AppBar, Toolbar, Typography, Button, Box, IconButton, useMediaQuery, Me
 import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 interface SubNavItem {
   label: string;
@@ -32,8 +32,11 @@ const navItems: NavItem[] = [
       { label: 'Dividend Tracker', path: '/finance/dividends' },
       { label: 'Ebook', path: '/tools/ebook', isHeader: true },
       { label: 'Ebook Writer', path: '/tools/ebook-writer' },
+      { label: 'Author Page', path: '/tools/author-page' },
+      { label: 'Publish Ebooks', path: '/tools/publish-ebooks' },
       { label: 'Template', path: '/tools/templates', isHeader: true },
-      { label: 'Template Organiser', path: '/admin/canva-templates' }
+      { label: 'Publish Template', path: '/tools/publish-template' },
+      { label: 'Buyer PDF', path: '/admin/canva-templates' }
     ]
   },
   // Shop menu groups commerce-related items like Ebooks
@@ -100,13 +103,28 @@ const Navigation = () => {
     'Docker': '🐳',
     'Microservices': '🧩'
   };
-  // Additional icons for other Tools items
-  const toolsExtraEmoji: Record<string, string> = {
-    'Ebook Writer': '📘',
-    'Template Organiser': '🎨',
-    'Ebooks': '📚',
-    'Templates': '🎨'
-  };
+    // Expanded icons for Tools submenu
+    const toolsExtraEmoji: Record<string, string> = {
+      'Finance': '💰',
+      'ROI Calculator': '📊',
+      'Compounding Calculator': '🔁',
+      'CAGR Calculator': '📈',
+      'SIP Calculator': '💸',
+      'Dividend Tracker': '🧾',
+      'Ebook': '📚',
+      'Ebook Writer': '✍️',
+      'Author Page': '👤',
+      'Publish Ebooks': '🚀',
+      'Template': '🎨',
+      'Publish Template': '📝',
+      'Buyer PDF': '📄'
+    };
+
+    // Icons for Shop submenu
+    const shopExtraEmoji: Record<string, string> = {
+      'Ebooks': '📚',
+      'Templates': '🎨'
+    };
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -212,8 +230,10 @@ const Navigation = () => {
                   key={`tools-group-${gl}`}
                   aria-haspopup="true"
                   aria-controls={`tools-${gl}-submenu`}
-                  onMouseEnter={(e) => { setActiveToolsGroup(gl); setToolsGroupAnchorEl(e.currentTarget); }}
-                  onClick={(e) => { setActiveToolsGroup(gl); setToolsGroupAnchorEl(e.currentTarget); }}
+                  onClick={e => {
+                    setActiveToolsGroup(gl);
+                    setToolsGroupAnchorEl(e.currentTarget);
+                  }}
                   sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
                 >
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{gl}</Typography>
@@ -223,7 +243,11 @@ const Navigation = () => {
             })()
           : navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => {
               const isArticles = activeSubMenu === 'Articles';
-              const emoji = isArticles ? articlesEmoji[subItem.label] : toolsExtraEmoji[subItem.label];
+              const isShop = activeSubMenu === 'Shop';
+              let emoji = '';
+              if (isArticles) emoji = articlesEmoji[subItem.label];
+              else if (isShop) emoji = shopExtraEmoji[subItem.label];
+              else emoji = toolsExtraEmoji[subItem.label];
               if (subItem.isHeader) {
                 return (
                   <MenuItem key={`${subItem.path}-header`} disabled sx={{ fontWeight: 700, opacity: 0.8, cursor: 'default' }}>
@@ -234,7 +258,7 @@ const Navigation = () => {
               return (
                 <MenuItem
                   key={subItem.path}
-                  onClick={() => { handleNavigation(subItem.path); handleSubMenuClose(); }}
+                  onClick={() => handleNavigation(subItem.path)}
                   selected={location.pathname === subItem.path}
                   sx={{
                     py: 1,
@@ -268,7 +292,7 @@ const Navigation = () => {
       <Menu
         id={activeToolsGroup ? `tools-${activeToolsGroup}-submenu` : 'tools-submenu'}
         anchorEl={toolsGroupAnchorEl}
-        open={Boolean(toolsGroupAnchorEl)}
+        open={Boolean(activeToolsGroup && toolsGroupAnchorEl)}
         onClose={() => { setToolsGroupAnchorEl(null); setActiveToolsGroup(null); }}
         sx={{
           '& .MuiPaper-root': {
@@ -435,8 +459,12 @@ const Navigation = () => {
               >
                 {item.label}
               </MenuItem>
-              {item.subItems.map((sub) => (
-                sub.isHeader ? (
+              {item.subItems.map((sub) => {
+                const isShop = item.label === 'Shop';
+                let emoji = '';
+                if (isShop) emoji = shopExtraEmoji[sub.label];
+                else emoji = toolsExtraEmoji[sub.label];
+                return sub.isHeader ? (
                   <MenuItem key={`${sub.path}-header`} disabled role="presentation" sx={{ pl: 2, fontWeight: 700, opacity: 0.8 }}>
                     {sub.label}
                   </MenuItem>
@@ -449,15 +477,15 @@ const Navigation = () => {
                     aria-current={location.pathname === sub.path ? 'page' : undefined}
                     sx={{ pl: 3 }}
                   >
-                    {toolsExtraEmoji[sub.label] ? (
+                    {emoji ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                        <Box component="span" aria-hidden sx={{ fontSize: 18 }}>{toolsExtraEmoji[sub.label]}</Box>
+                        <Box component="span" aria-hidden sx={{ fontSize: 18 }}>{emoji}</Box>
                         {sub.label}
                       </Box>
                     ) : sub.label}
                   </MenuItem>
-                )
-              ))}
+                );
+              })}
             </Box>
           ) : (
             <MenuItem 

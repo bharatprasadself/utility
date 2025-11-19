@@ -30,6 +30,9 @@ import RoiCalculator from './components/finance/RoiCalculator';
 import DividendTracker from './components/finance/DividendTracker';
 import CompoundingCalculator from './components/finance/CompoundingCalculator';
 import EbookWriter from './components/tools/EbookWriter';
+import PublishEbooks from './components/tools/PublishEbooks';
+import AuthorPage from './components/tools/AuthorPage';
+import PublishTemplate from './components/tools/PublishTemplate';
 
 function App() {
   return (
@@ -68,8 +71,11 @@ function App() {
                     <Route path="/finance/dividends" element={<DividendTracker />} />
                     <Route path="/finance/compounding" element={<CompoundingCalculator />} />
                     <Route path="/tools/ebook-writer" element={<EbookWriter />} />
+                    <Route path="/tools/publish-ebooks" element={<PublishEbooks />} />
+                    <Route path="/tools/author-page" element={<AuthorPage />} />
                     <Route path="/shop/canva-templates" element={<CanvaTemplatesPublic />} />
                     <Route path="/admin/canva-templates" element={<CanvaTemplates />} />
+                    <Route path="/tools/publish-template" element={<PublishTemplate />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>

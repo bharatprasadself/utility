@@ -1,7 +1,7 @@
 package com.utilityzone.controller;
 
-import com.utilityzone.model.CanvaTemplate;
-import com.utilityzone.service.CanvaTemplateService;
+import com.utilityzone.model.Template;
+import com.utilityzone.service.TemplateService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,36 +23,38 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-public class CanvaTemplateController {
-    private final CanvaTemplateService service;
+public class TemplateController {
+    private final TemplateService service;
 
-    public CanvaTemplateController(CanvaTemplateService service) {
+    public TemplateController(TemplateService service) {
         this.service = service;
     }
 
     @GetMapping("/api/admin/canva-templates")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public List<CanvaTemplate> list() {
+    public List<Template> list() {
         return service.list();
     }
 
-    // Public listing for shop (no sensitive fields like Canva use-copy URL)
+    // Public listing for shop (only published templates)
     @GetMapping("/api/canva-templates")
     public List<Map<String, Object>> publicList() {
-        return service.list().stream().map(t -> {
-            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
-            m.put("id", t.getId());
-            m.put("title", t.getTitle());
-            m.put("mockupUrl", t.getMockupUrl());
-            m.put("etsyListingUrl", t.getEtsyListingUrl());
-            return m;
-        }).collect(Collectors.toList());
+        return service.list().stream()
+            .filter(t -> "published".equalsIgnoreCase(t.getStatus()))
+            .map(t -> {
+                java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("id", t.getId());
+                m.put("title", t.getTitle());
+                m.put("mockupUrl", t.getMockupUrl());
+                m.put("etsyListingUrl", t.getEtsyListingUrl());
+                return m;
+            }).collect(Collectors.toList());
     }
 
     @PostMapping("/api/admin/canva-templates")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public CanvaTemplate create(@RequestBody CanvaTemplate req) {
-        CanvaTemplate ct = new CanvaTemplate();
+    public Template create(@RequestBody Template req) {
+        Template ct = new Template();
         ct.setTitle(StringUtils.trimWhitespace(req.getTitle()));
     ct.setCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getCanvaUseCopyUrl()));
     ct.setMobileCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getMobileCanvaUseCopyUrl()));
@@ -71,8 +73,8 @@ public class CanvaTemplateController {
 
     @PutMapping("/api/admin/canva-templates/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public CanvaTemplate update(@PathVariable("id") Long id, @RequestBody CanvaTemplate req) {
-        CanvaTemplate changes = new CanvaTemplate();
+    public Template update(@PathVariable("id") Long id, @RequestBody Template req) {
+        Template changes = new Template();
         changes.setTitle(StringUtils.trimWhitespace(req.getTitle()));
     changes.setCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getCanvaUseCopyUrl()));
     changes.setMobileCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getMobileCanvaUseCopyUrl()));
@@ -162,7 +164,7 @@ public class CanvaTemplateController {
     @PostMapping("/api/admin/canva-templates/generate-buyer-pdf")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> generateBuyerPdf(@RequestParam("templateId") Long templateId) throws IOException {
-        CanvaTemplate updated = service.generateBuyerPdf(templateId);
+        Template updated = service.generateBuyerPdf(templateId);
         return ResponseEntity.ok(Map.of("success", true, "buyerPdfUrl", updated.getBuyerPdfUrl()));
     }
 
@@ -199,5 +201,12 @@ public class CanvaTemplateController {
                     }
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // Publish endpoint
+    @PostMapping("/api/admin/canva-templates/{id}/publish")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public Template publish(@PathVariable("id") Long id) {
+        return service.publish(id);
     }
 }

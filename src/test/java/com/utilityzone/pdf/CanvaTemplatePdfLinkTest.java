@@ -1,8 +1,8 @@
 package com.utilityzone.pdf;
 
-import com.utilityzone.model.CanvaTemplate;
-import com.utilityzone.repository.CanvaTemplateRepository;
-import com.utilityzone.service.CanvaTemplateService;
+import com.utilityzone.model.Template;
+import com.utilityzone.repository.TemplateRepository;
+import com.utilityzone.service.TemplateService;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -41,10 +41,10 @@ class CanvaTemplatePdfLinkTest {
     }
 
     @Autowired
-    private CanvaTemplateRepository repo;
+    private TemplateRepository repo;
 
     @Autowired
-    private CanvaTemplateService service;
+    private TemplateService service;
 
     @Test
     void page2_contains_clickable_links_for_button_and_qr() throws Exception {
@@ -52,14 +52,14 @@ class CanvaTemplatePdfLinkTest {
         String printLink = "https://example.com/canva/print";
         String mobileLink = "https://example.com/canva/mobile";
 
-        CanvaTemplate t = new CanvaTemplate();
+        Template t = new Template();
         t.setTitle("Test Template");
         t.setCanvaUseCopyUrl(printLink);
         t.setMobileCanvaUseCopyUrl(mobileLink);
         t = repo.save(t);
 
         // Act: generate the buyer PDF
-        CanvaTemplate updated = service.generateBuyerPdf(Objects.requireNonNull(t.getId()));
+        Template updated = service.generateBuyerPdf(Objects.requireNonNull(t.getId()));
         Path pdfPath = service.getPdfPathFor(updated);
         Assertions.assertTrue(Files.exists(pdfPath), "Generated PDF should exist: " + pdfPath);
 

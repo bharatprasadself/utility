@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Grid, Card, CardMedia, CardActions, CardContent, Button, Skeleton, Container } from '@mui/material';
-import { listPublicTemplates, type PublicCanvaTemplate } from '@/services/canvaTemplates';
+import { listTemplates, type Template } from '@/services/templates';
 import { API_BASE_URL } from '@/services/axiosConfig';
 import Advertisement from './Advertisement';
 
 const CanvaTemplatesPublic = () => {
-  const [items, setItems] = useState<PublicCanvaTemplate[]>([]);
+  const [items, setItems] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   const refresh = async () => {
     try {
       setLoading(true);
-      const data = await listPublicTemplates();
-      setItems(data);
+      const data = await listTemplates();
+      setItems(data.filter(t => t.status === 'published'));
     } catch (e: any) {
       setErr(e.message || 'Failed to load templates');
     } finally {

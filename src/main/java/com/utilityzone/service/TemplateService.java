@@ -1,7 +1,7 @@
 package com.utilityzone.service;
 
-import com.utilityzone.model.CanvaTemplate;
-import com.utilityzone.repository.CanvaTemplateRepository;
+import com.utilityzone.model.Template;
+import com.utilityzone.repository.TemplateRepository;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -37,13 +38,13 @@ import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 
 @Service
-public class CanvaTemplateService {
-    private final CanvaTemplateRepository repo;
+public class TemplateService {
+    private final TemplateRepository repo;
 
     @Value("${file.upload.dir:./data/uploads}")
     private String uploadBaseDir;
 
-    public CanvaTemplateService(CanvaTemplateRepository repo) {
+    public TemplateService(TemplateRepository repo) {
         this.repo = repo;
     }
 
@@ -56,29 +57,34 @@ public class CanvaTemplateService {
     private static final float LINE_BODY = 16f;        // line height for body text
     private static final float BUTTON_H = 28f;         // button height
 
-    public List<CanvaTemplate> list() { return repo.findAll(); }
-    public CanvaTemplate create(@NonNull CanvaTemplate t) {
+    public List<Template> list() { return repo.findAll(); }
+    @Transactional
+    public Template create(@NonNull Template t) {
         if (t.getTitle() == null || t.getTitle().isBlank()) {
             t.setTitle(getNextDefaultTitle());
         }
-        return repo.save(t);
+        t.setStatus("draft"); // Always set to draft on create
+        Template saved = repo.save(t);
+        repo.flush(); // Ensure commit is visible to all connections (important for H2)
+        return saved;
     }
-    public Optional<CanvaTemplate> findById(@NonNull Long id) { return repo.findById(id); }
+    public Optional<Template> findById(@NonNull Long id) { return repo.findById(id); }
 
     @SuppressWarnings("null")
-    public CanvaTemplate update(@NonNull Long id, @NonNull CanvaTemplate changes) {
-        CanvaTemplate existing = repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("CanvaTemplate not found: " + id));
+    public Template update(@NonNull Long id, @NonNull Template changes) {
+        Template existing = repo.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
         if (changes.getTitle() != null) existing.setTitle(changes.getTitle());
-    if (changes.getCanvaUseCopyUrl() != null) existing.setCanvaUseCopyUrl(changes.getCanvaUseCopyUrl());
-    if (changes.getMobileCanvaUseCopyUrl() != null) existing.setMobileCanvaUseCopyUrl(changes.getMobileCanvaUseCopyUrl());
+        if (changes.getCanvaUseCopyUrl() != null) existing.setCanvaUseCopyUrl(changes.getCanvaUseCopyUrl());
+        if (changes.getMobileCanvaUseCopyUrl() != null) existing.setMobileCanvaUseCopyUrl(changes.getMobileCanvaUseCopyUrl());
         if (changes.getMockupUrl() != null) existing.setMockupUrl(changes.getMockupUrl());
         if (changes.getEtsyListingUrl() != null) existing.setEtsyListingUrl(changes.getEtsyListingUrl());
         if (changes.getSecondaryMockupUrl() != null) existing.setSecondaryMockupUrl(changes.getSecondaryMockupUrl());
         if (changes.getMobileMockupUrl() != null) existing.setMobileMockupUrl(changes.getMobileMockupUrl());
         // buyerPdfUrl is managed by generation endpoint; keep as-is unless explicitly provided
         if (changes.getBuyerPdfUrl() != null) existing.setBuyerPdfUrl(changes.getBuyerPdfUrl());
-        CanvaTemplate saved = repo.save(existing);
+        existing.setStatus("draft"); // Always set to draft on update from this page
+        Template saved = repo.save(existing);
         return saved;
     }
 
@@ -158,7 +164,7 @@ public class CanvaTemplateService {
         return null;
     }
 
-    public Path getPdfPathFor(CanvaTemplate t) {
+    public Path getPdfPathFor(Template t) {
         try {
             return getPdfDir().resolve("buyer-" + t.getId() + ".pdf");
         } catch (IOException e) {
@@ -179,9 +185,9 @@ public class CanvaTemplateService {
         return MediaType.APPLICATION_OCTET_STREAM;
     }
 
-    public CanvaTemplate generateBuyerPdf(@NonNull Long id) throws IOException {
-        CanvaTemplate t = repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("CanvaTemplate not found: " + id));
+    public Template generateBuyerPdf(@NonNull Long id) throws IOException {
+        Template t = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
         Path pdfPath = getPdfPathFor(t);
 
         try (PDDocument doc = new PDDocument()) {
@@ -768,4 +774,11 @@ public class CanvaTemplateService {
     }
 
     private String nonNull(String v) { return v == null ? "" : v; }
+
+    public Template publish(@NonNull Long id) {
+        Template t = repo.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
+        t.setStatus("published");
+        return repo.save(t);
+    }
 }
