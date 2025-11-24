@@ -59,7 +59,7 @@ class CanvaTemplatePdfLinkTest {
         t = repo.save(t);
 
         // Act: generate the buyer PDF
-        Template updated = service.generateBuyerPdf(Objects.requireNonNull(t.getId()));
+        Template updated = service.generateBuyerPdf(Objects.requireNonNull(t.getId()), "print-mobile");
         Path pdfPath = service.getPdfPathFor(updated);
         Assertions.assertTrue(Files.exists(pdfPath), "Generated PDF should exist: " + pdfPath);
 

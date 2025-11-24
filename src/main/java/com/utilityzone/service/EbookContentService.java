@@ -27,7 +27,12 @@ public class EbookContentService {
 
     @CacheEvict(value = "ebooks", key = "'content'", beforeInvocation = false)
     public EbookContentDto upsert(EbookContentDto dto) {
-        EbookContentEntity entity = repository.findAll().stream().findFirst().orElseGet(EbookContentEntity::new);
+        EbookContentEntity entity;
+        if (dto.getId() != null) {
+            entity = repository.findById(dto.getId()).orElseGet(EbookContentEntity::new);
+        } else {
+            entity = repository.findAll().stream().findFirst().orElseGet(EbookContentEntity::new);
+        }
         dto.setUpdatedAt(Instant.now());
         entity.setContentJson(toJson(dto));
         entity.setUpdatedAt(dto.getUpdatedAt());
@@ -35,7 +40,7 @@ public class EbookContentService {
         return dto;
     }
 
-    private String toJson(EbookContentDto dto) {
+    public String toJson(EbookContentDto dto) {
         try {
             return objectMapper.writeValueAsString(dto);
         } catch (Exception e) {
@@ -43,9 +48,15 @@ public class EbookContentService {
         }
     }
 
-    private EbookContentDto fromEntity(EbookContentEntity entity) {
+    public EbookContentRepository getRepository() {
+        return repository;
+    }
+
+    public EbookContentDto fromEntity(EbookContentEntity entity) {
         try {
-            return objectMapper.readValue(entity.getContentJson(), EbookContentDto.class);
+            EbookContentDto dto = objectMapper.readValue(entity.getContentJson(), EbookContentDto.class);
+            dto.setId(entity.getId());
+            return dto;
         } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize ebook content", e);
         }

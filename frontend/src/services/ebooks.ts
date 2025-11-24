@@ -1,3 +1,4 @@
+import type { EbookStatus, EbookItem } from '@/types/Ebooks';
 import type { EbookContent } from '@/types/Ebooks';
 import axiosInstance from './axiosConfig';
 import publicApi from './publicApi';
@@ -23,32 +24,64 @@ const saveToLocal = (content: EbookContent) => {
   } catch {}
 };
 
+// Utility to generate a UUID (RFC4122 v4)
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0,
+      v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+// Ensure every book has a unique id
+function ensureBookIds(content: EbookContent): EbookContent {
+  return {
+    ...content,
+    books: (content.books || []).map((book) => ({
+      ...book,
+      id: book.id || generateUUID(),
+    })),
+  };
+}
+
 export const EbookService = {
+  // Admin: delete a book by DB row ID
+  async deleteBook(rowId: number): Promise<void> {
+    await axiosInstance.delete(`${ADMIN_BASE}/${rowId}`);
+  },
+  // Admin: create new ebook content (always insert)
+  async createContent(content: EbookContent): Promise<EbookContent> {
+    const fixed = ensureBookIds(content);
+    const res = await axiosInstance.post<EbookContent>(`${ADMIN_BASE}/create`, fixed);
+    saveToLocal(res.data);
+    return res.data;
+  },
+  // Admin: list all ebooks
+  async listAll(): Promise<any[]> {
+    const res = await axiosInstance.get<any[]>(`${ADMIN_BASE}/all`);
+    return res.data;
+  },
+
+  // Admin: update ebook status
+  async updateStatus(id: string, status: EbookStatus): Promise<EbookItem> {
+    const res = await axiosInstance.patch<EbookItem>(`${ADMIN_BASE}/${id}/status`, { status });
+    return res.data;
+  },
   // Public read
   async getContent(): Promise<EbookContent> {
-    try {
-      const res = await publicApi.get<EbookContent>(PUBLIC_BASE);
-      const content = res.data;
-      saveToLocal(content);
-      return content;
-    } catch (err) {
-      // Fallback to local cache for demo/dev
-      const cached = loadFromLocal();
-      if (cached) return cached;
-      throw err;
-    }
+    const res = await publicApi.get<EbookContent>(PUBLIC_BASE);
+    return res.data;
   },
 
   // Admin upsert
   async upsertContent(content: EbookContent): Promise<EbookContent> {
     try {
-      const res = await axiosInstance.post<EbookContent>(ADMIN_BASE, content);
+      const fixed = ensureBookIds(content);
+      const res = await axiosInstance.put<EbookContent>(ADMIN_BASE, fixed);
       saveToLocal(res.data);
       return res.data;
-    } catch (err) {
-      // As a last resort (dev/demo), persist locally
-      saveToLocal(content);
-      return content;
+    } catch (e: any) {
+      throw new Error(e?.response?.data?.message || 'Failed to save');
     }
   },
 

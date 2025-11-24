@@ -1,3 +1,4 @@
+import React from 'react';
 import { ThemeProvider, CssBaseline, Box, Container } from '@mui/material';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -47,8 +48,8 @@ function App() {
                 <Container maxWidth="lg">
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
-                    {/** Public blogs listing (paginated) */}
-                    {/**<Route path="/blogs" element={<BlogList />} />*/}
+                    {/* Public blogs listing (paginated) */}
+                    {/*<Route path="/blogs" element={<BlogList />} />*/}
                     <Route path="/blogs" element={<Blogs />} />
                     <Route path="/ebooks" element={<Ebooks />} />
                     <Route path="/login" element={<Login />} />
@@ -58,7 +59,6 @@ function App() {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/articles/spring-boot/*" element={<SpringBootArticles />} />
                     <Route path="/articles/react/*" element={<ReactArticles />} />
-                    <Route path="/articles/postgresql/*" element={<PostgreSQLArticles />} />
                     <Route path="/articles/docker/*" element={<DockerArticles />} />
                     <Route path="/articles/microservices/*" element={<MicroservicesArticles />} />
                     <Route path="/articles/java/*" element={<JavaArticles />} />
@@ -88,4 +88,4 @@ function App() {
   );
 }
 
-export default App
+export default App;

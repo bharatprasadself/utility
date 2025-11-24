@@ -29,6 +29,8 @@ const CanvaTemplates = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [rsvpCanvaLink, setRsvpCanvaLink] = useState('');
+  const [detailCardCanvaLink, setDetailCardCanvaLink] = useState('');
 
   useEffect(() => {
     if (isAdmin()) {
@@ -86,7 +88,9 @@ const CanvaTemplates = () => {
         secondaryMockupUrl,
         mobileMockupUrl,
         canvaUseCopyUrl: canvaLink,
-        mobileCanvaUseCopyUrl: mobileCanvaLink
+        mobileCanvaUseCopyUrl: mobileCanvaLink,
+        rsvpCanvaUseCopyUrl: rsvpCanvaLink,
+        detailCardCanvaUseCopyUrl: detailCardCanvaLink
       };
       // Remove empty fields
       Object.keys(payload).forEach(k => (payload[k] === '' || payload[k] === undefined) && delete payload[k]);
@@ -101,24 +105,10 @@ const CanvaTemplates = () => {
   };
 
   if (isAdmin()) {
-    // Admin view (original)
+    // Admin view (no PDF type dropdown, show type under each template)
     return (
       <Box sx={{ py: 4 }}>
         <Typography variant="h4" gutterBottom fontWeight={700}>Buyer PDF Generator</Typography>
-        <FormControl fullWidth sx={{ maxWidth: 340, mb: 3 }}>
-          <InputLabel id="pdf-type-label">Buyer PDF Type</InputLabel>
-          <Select
-            labelId="pdf-type-label"
-            id="pdf-type-select"
-            value={pdfType}
-            label="Buyer PDF Type"
-            onChange={handlePdfTypeChange}
-          >
-            <MenuItem value="print-mobile">Print + Mobile (default)</MenuItem>
-            <MenuItem value="print-only">Print-only</MenuItem>
-            <MenuItem value="wedding-set">Full Wedding Set (Invitation + RSVP + Details)</MenuItem>
-          </Select>
-        </FormControl>
         <Typography variant="h6" sx={{ mb: 1 }}>Templates</Typography>
         <Grid container spacing={2}>
           {templates.map(p => (
@@ -126,11 +116,24 @@ const CanvaTemplates = () => {
               <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', width: '100%' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography fontWeight={600}>{p.title}</Typography>
+                  {/* PDF type is not available on Template; remove or replace as needed */}
                   {p.canvaUseCopyUrl && <MuiLink href={p.canvaUseCopyUrl} target="_blank" rel="noreferrer">Canva link</MuiLink>}
                   {p.mobileCanvaUseCopyUrl && (
                     <>
                       <br />
                       <MuiLink href={p.mobileCanvaUseCopyUrl} target="_blank" rel="noreferrer">Mobile Canva link</MuiLink>
+                    </>
+                  )}
+                  {p.rsvpCanvaUseCopyUrl && (
+                    <>
+                      <br />
+                      <MuiLink href={p.rsvpCanvaUseCopyUrl} target="_blank" rel="noreferrer">RSVP Canva Link</MuiLink>
+                    </>
+                  )}
+                  {p.detailCardCanvaUseCopyUrl && (
+                    <>
+                      <br />
+                      <MuiLink href={p.detailCardCanvaUseCopyUrl} target="_blank" rel="noreferrer">Detail Card Canva Link</MuiLink>
                     </>
                   )}
                   {p.buyerPdfUrl && (
@@ -212,10 +215,16 @@ const CanvaTemplates = () => {
             }} />
           </Box>
         )}
-        <TextField label="Canva Link" value={canvaLink} onChange={e => setCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
-        {(pdfType === 'print-mobile' || pdfType === 'wedding-set') && (
-          <TextField label="Mobile Canva Link" value={mobileCanvaLink} onChange={e => setMobileCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
-        )}
+         <TextField label="Canva Link" value={canvaLink} onChange={e => setCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
+         {(pdfType === 'print-mobile' || pdfType === 'wedding-set') && (
+           <TextField label="Mobile Canva Link" value={mobileCanvaLink} onChange={e => setMobileCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
+         )}
+         {pdfType === 'wedding-set' && (
+           <>
+             <TextField label="RSVP Canva Link" value={rsvpCanvaLink} onChange={e => setRsvpCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
+             <TextField label="Detail Card Canva Link" value={detailCardCanvaLink} onChange={e => setDetailCardCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
+           </>
+         )}
         {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
         <Button type="submit" variant="contained" color="primary" disabled={formLoading} fullWidth>
           {formLoading ? <CircularProgress size={24} /> : 'Generate Buyer PDF'}

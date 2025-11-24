@@ -163,8 +163,11 @@ public class TemplateController {
 
     @PostMapping("/api/admin/canva-templates/generate-buyer-pdf")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<Map<String, Object>> generateBuyerPdf(@RequestParam("templateId") Long templateId) throws IOException {
-        Template updated = service.generateBuyerPdf(templateId);
+    public ResponseEntity<Map<String, Object>> generateBuyerPdf(
+            @RequestParam("templateId") Long templateId,
+            @RequestParam(value = "pdfType", required = false) String pdfType
+    ) throws IOException {
+        Template updated = service.generateBuyerPdf(templateId, pdfType);
         return ResponseEntity.ok(Map.of("success", true, "buyerPdfUrl", updated.getBuyerPdfUrl()));
     }
 

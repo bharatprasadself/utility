@@ -16,6 +16,8 @@ export default function PublishTemplate() {
   const [title, setTitle] = useState('');
   const [canvaUrl, setCanvaUrl] = useState('');
   const [mobileCanvaUrl, setMobileCanvaUrl] = useState('');
+  const [rsvpCanvaUrl, setRsvpCanvaUrl] = useState('');
+  const [detailCardCanvaUrl, setDetailCardCanvaUrl] = useState('');
   const [mockupFile, setMockupFile] = useState<File | null>(null);
   const [mockupUrl, setMockupUrl] = useState<string>('');
   const [secondaryFile, setSecondaryFile] = useState<File | null>(null);
@@ -103,6 +105,8 @@ export default function PublishTemplate() {
           title: title.trim(),
           canvaUseCopyUrl: canvaUrl.trim(),
           mobileCanvaUseCopyUrl: mobileCanvaUrl.trim(),
+          rsvpCanvaUseCopyUrl: rsvpCanvaUrl.trim() || undefined,
+          detailCardCanvaUseCopyUrl: detailCardCanvaUrl.trim() || undefined,
           mockupUrl: mockupUrl.trim() || undefined,
           secondaryMockupUrl: secondaryUrl.trim() || undefined,
           mobileMockupUrl: mobileUrl.trim() || undefined,
@@ -138,6 +142,8 @@ export default function PublishTemplate() {
     setTitle(t.title || '');
     setCanvaUrl(t.canvaUseCopyUrl || '');
     setMobileCanvaUrl(t.mobileCanvaUseCopyUrl || '');
+    setRsvpCanvaUrl(t.rsvpCanvaUseCopyUrl || '');
+    setDetailCardCanvaUrl(t.detailCardCanvaUseCopyUrl || '');
     setMockupUrl(t.mockupUrl || '');
     setSecondaryUrl(t.secondaryMockupUrl || '');
     setMobileUrl(t.mobileMockupUrl || '');
@@ -173,6 +179,8 @@ export default function PublishTemplate() {
           title: title.trim(),
           canvaUseCopyUrl: canvaUrl.trim(),
           mobileCanvaUseCopyUrl: mobileCanvaUrl.trim() || undefined,
+          rsvpCanvaUseCopyUrl: rsvpCanvaUrl.trim() || undefined,
+          detailCardCanvaUseCopyUrl: detailCardCanvaUrl.trim() || undefined,
           mockupUrl: mockupUrl.trim() || undefined,
           secondaryMockupUrl: secondaryUrl.trim() || undefined,
           mobileMockupUrl: mobileUrl.trim() || undefined,
@@ -251,6 +259,22 @@ export default function PublishTemplate() {
                   />
                 </Grid>
                 <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel id="pdf-type-label">Buyer PDF Type</InputLabel>
+                    <Select
+                      labelId="pdf-type-label"
+                      id="pdf-type-select"
+                      value={pdfType}
+                      label="Buyer PDF Type"
+                      onChange={handlePdfTypeChange}
+                    >
+                      <MenuItem value="print-mobile">Print + Mobile (default)</MenuItem>
+                      <MenuItem value="print-only">Print-only</MenuItem>
+                      <MenuItem value="wedding-set">Full Wedding Set (Invitation + RSVP + Details)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
                   <TextField
                     label="Canva ‘Use a Copy’ URL (5 X 7 in)"
                     value={canvaUrl}
@@ -258,14 +282,36 @@ export default function PublishTemplate() {
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    label="Mobile Canva ‘Use a Copy’ URL (1080 X 1920 px)"
-                    value={mobileCanvaUrl}
-                    onChange={e => setMobileCanvaUrl(e.target.value)}
-                    fullWidth
-                  />
-                </Grid>
+                {(pdfType === 'print-mobile' || pdfType === 'wedding-set') && (
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Mobile Canva ‘Use a Copy’ URL (1080 X 1920 px)"
+                      value={mobileCanvaUrl}
+                      onChange={e => setMobileCanvaUrl(e.target.value)}
+                      fullWidth
+                    />
+                  </Grid>
+                )}
+                {pdfType === 'wedding-set' && (
+                  <>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="RSVP Canva ‘Use a Copy’ URL"
+                        value={rsvpCanvaUrl}
+                        onChange={e => setRsvpCanvaUrl(e.target.value)}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Detail Card Canva ‘Use a Copy’ URL"
+                        value={detailCardCanvaUrl}
+                        onChange={e => setDetailCardCanvaUrl(e.target.value)}
+                        fullWidth
+                      />
+                    </Grid>
+                  </>
+                )}
               </Grid>
               <Grid container spacing={2} alignItems="center" sx={{ width: '100%' }}>
                 <Grid item xs={12} sm={4} md={4} lg={3}>
@@ -310,25 +356,29 @@ export default function PublishTemplate() {
                 </Grid>
               </Grid>
               <Grid container spacing={2} alignItems="center" sx={{ width: '100%' }}>
-                <Grid item xs={12} sm={4} md={4} lg={3}>
-                  <FormLabel>Mobile mockup (optional)</FormLabel>
-                </Grid>
-                <Grid item xs={12} sm={8} md={8} lg={9}>
-                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-                    <Button variant="outlined" component="label" sx={{ flex: 1 }}>
-                      Select Mobile Mockup
-                      <input type="file" hidden accept="image/*" onChange={e => setMobileFile(e.target.files?.[0] || null)} />
-                    </Button>
-                    <Button variant="contained" onClick={handleUploadMobile} disabled={!mobileFile || loading} sx={{ flex: 1 }}>
-                      Upload Mobile
-                    </Button>
-                  </Stack>
-                  {mobileFile && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {mobileFile.name}
-                    </Typography>
-                  )}
-                </Grid>
+                {(pdfType !== 'print-only') && (
+                  <>
+                    <Grid item xs={12} sm={4} md={4} lg={3}>
+                      <FormLabel>Mobile mockup (optional)</FormLabel>
+                    </Grid>
+                    <Grid item xs={12} sm={8} md={8} lg={9}>
+                      <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                        <Button variant="outlined" component="label" sx={{ flex: 1 }}>
+                          Select Mobile Mockup
+                          <input type="file" hidden accept="image/*" onChange={e => setMobileFile(e.target.files?.[0] || null)} />
+                        </Button>
+                        <Button variant="contained" onClick={handleUploadMobile} disabled={!mobileFile || loading} sx={{ flex: 1 }}>
+                          Upload Mobile
+                        </Button>
+                      </Stack>
+                      {mobileFile && (
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {mobileFile.name}
+                        </Typography>
+                      )}
+                    </Grid>
+                  </>
+                )}
               </Grid>
               <TextField
                 label="Etsy listing URL"
@@ -337,20 +387,7 @@ export default function PublishTemplate() {
                 sx={{ minWidth: 320 }}
               />
 
-              <FormControl fullWidth sx={{ mt: 2 }}>
-                <InputLabel id="pdf-type-label">Buyer PDF Type</InputLabel>
-                <Select
-                  labelId="pdf-type-label"
-                  id="pdf-type-select"
-                  value={pdfType}
-                  label="Buyer PDF Type"
-                  onChange={handlePdfTypeChange}
-                >
-                  <MenuItem value="print-mobile">Print + Mobile (default)</MenuItem>
-                  <MenuItem value="print-only">Print-only</MenuItem>
-                  <MenuItem value="wedding-set">Full Wedding Set (Invitation + RSVP + Details)</MenuItem>
-                </Select>
-              </FormControl>
+              {/* Removed duplicate PDF type selector and unclosed FormControl */}
               <Button
                 variant="contained"
                 color="success"

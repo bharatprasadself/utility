@@ -33,6 +33,14 @@ public class Template {
     @Column(name = "secondary_mockup_url", length = 1000)
     private String secondaryMockupUrl;
 
+    // RSVP Canva template link (optional)
+    @Column(name = "rsvp_canva_use_copy_url", length = 1000)
+    private String rsvpCanvaUseCopyUrl;
+
+    // Detail Card Canva template link (optional)
+    @Column(name = "detail_card_canva_use_copy_url", length = 1000)
+    private String detailCardCanvaUseCopyUrl;
+
     @Column(name = "mobile_mockup_url", length = 1000)
     private String mobileMockupUrl;
 
@@ -80,6 +88,12 @@ public class Template {
 
     public String getSecondaryMockupUrl() { return secondaryMockupUrl; }
     public void setSecondaryMockupUrl(String secondaryMockupUrl) { this.secondaryMockupUrl = secondaryMockupUrl; }
+
+    public String getRsvpCanvaUseCopyUrl() { return rsvpCanvaUseCopyUrl; }
+    public void setRsvpCanvaUseCopyUrl(String rsvpCanvaUseCopyUrl) { this.rsvpCanvaUseCopyUrl = rsvpCanvaUseCopyUrl; }
+
+    public String getDetailCardCanvaUseCopyUrl() { return detailCardCanvaUseCopyUrl; }
+    public void setDetailCardCanvaUseCopyUrl(String detailCardCanvaUseCopyUrl) { this.detailCardCanvaUseCopyUrl = detailCardCanvaUseCopyUrl; }
 
     public String getMobileMockupUrl() { return mobileMockupUrl; }
     public void setMobileMockupUrl(String mobileMockupUrl) { this.mobileMockupUrl = mobileMockupUrl; }

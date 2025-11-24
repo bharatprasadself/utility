@@ -11,7 +11,10 @@ export interface EbookCover {
   content?: string;      // optional cover page markdown/text
 }
 
+
 export interface EbookProject {
+  id?: number; // DB row id for upsert
+  bookId?: string; // optional, for tracking book id
   title: string;
   cover: EbookCover;
   preface: string;
@@ -22,6 +25,8 @@ export interface EbookProject {
 }
 
 export const emptyProject = (): EbookProject => ({
+  id: undefined,
+  bookId: undefined,
   title: '',
   cover: { title: '', subtitle: '', imageDataUrl: undefined, content: '' },
   preface: '',
