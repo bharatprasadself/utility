@@ -219,7 +219,10 @@ export default function PublishEbooks() {
         let books: EbookItem[] = [];
         (all as any[]).forEach((content: any) => {
           if (Array.isArray(content.books)) {
-            content.books.forEach((book: any) => books.push({ ...book, status: content.status || 'draft', rowId: content.id }));
+            content.books.forEach((book: any) => {
+              const status = (book && book.status) ? book.status : 'draft';
+              books.push({ ...book, status, rowId: content.id });
+            });
           }
         });
         // Ensure all books have an id
