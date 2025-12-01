@@ -24,7 +24,7 @@ import DialogActions from '@mui/material/DialogActions';
 import { Box, Typography, Button, Stack, Alert, Paper, TextField } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
 import Advertisement from '../Advertisement';
-import type { EbookContent, EbookItem } from '@/types/Ebooks';
+import type { EbookContent, EbookItem, EbookStatus } from '@/types/Ebooks';
 import { defaultEbookContent } from '@/types/Ebooks';
 import { API_BASE_URL } from '@/services/axiosConfig';
 import EbookService from '@/services/ebooks';
@@ -68,9 +68,12 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
     setSaving(true);
     setError(null);
     try {
-      const book = booksSafe[index];
-      const contentToPublish = { ...value, books: [book] };
+      // Set status to 'published' for the selected book, keep others unchanged
+      const nextBooks: EbookItem[] = booksSafe.map((b, i) => (i === index ? { ...b, status: 'published' as EbookStatus } : b));
+      const contentToPublish = { ...value, books: nextBooks };
       await EbookService.upsertContent(contentToPublish);
+      // Reflect change in local state
+      onChange(contentToPublish);
     } catch (e: any) {
       setError(e?.message || 'Failed to publish');
     } finally {
