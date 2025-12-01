@@ -104,72 +104,7 @@ const CanvaTemplates = () => {
     }
   };
 
-  if (isAdmin()) {
-    // Admin view (no PDF type dropdown, show type under each template)
-    return (
-      <Box sx={{ py: 4 }}>
-        <Typography variant="h4" gutterBottom fontWeight={700}>Buyer PDF Generator</Typography>
-        <Typography variant="h6" sx={{ mb: 1 }}>Templates</Typography>
-        <Grid container spacing={2}>
-          {templates.map(p => (
-            <Grid item xs={12} key={p.id}>
-              <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', width: '100%' }}>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography fontWeight={600}>{p.title}</Typography>
-                  {/* PDF type is not available on Template; remove or replace as needed */}
-                  {p.canvaUseCopyUrl && <MuiLink href={p.canvaUseCopyUrl} target="_blank" rel="noreferrer">Canva link</MuiLink>}
-                  {p.mobileCanvaUseCopyUrl && (
-                    <>
-                      <br />
-                      <MuiLink href={p.mobileCanvaUseCopyUrl} target="_blank" rel="noreferrer">Mobile Canva link</MuiLink>
-                    </>
-                  )}
-                  {p.rsvpCanvaUseCopyUrl && (
-                    <>
-                      <br />
-                      <MuiLink href={p.rsvpCanvaUseCopyUrl} target="_blank" rel="noreferrer">RSVP Canva Link</MuiLink>
-                    </>
-                  )}
-                  {p.detailCardCanvaUseCopyUrl && (
-                    <>
-                      <br />
-                      <MuiLink href={p.detailCardCanvaUseCopyUrl} target="_blank" rel="noreferrer">Detail Card Canva Link</MuiLink>
-                    </>
-                  )}
-                  {p.buyerPdfUrl && (
-                    <>
-                      <br />
-                      <MuiLink href={(p.buyerPdfUrl?.startsWith('http') ? p.buyerPdfUrl : `${API_BASE_URL}${p.buyerPdfUrl}`)} target="_blank" rel="noreferrer">Buyer PDF</MuiLink>
-                    </>
-                  )}
-                  {p.secondaryMockupUrl && (
-                    <>
-                      <br />
-                      <MuiLink href={p.secondaryMockupUrl} target="_blank" rel="noreferrer">Secondary Mockup</MuiLink>
-                    </>
-                  )}
-                  {p.mobileMockupUrl && (
-                    <>
-                      <br />
-                      <MuiLink href={p.mobileMockupUrl} target="_blank" rel="noreferrer">Mobile Mockup</MuiLink>
-                    </>
-                  )}
-                </Box>
-                <Stack direction="row" spacing={1}>
-                  <Button variant="contained" onClick={() => handleGeneratePdf(p.id)} disabled={loading}>Generate Buyer PDF</Button>
-                </Stack>
-              </Paper>
-            </Grid>
-          ))}
-          {templates.length === 0 && (
-            <Grid item xs={12}><Typography color="text.secondary">No templates yet.</Typography></Grid>
-          )}
-        </Grid>
-      </Box>
-    );
-  }
-
-  // Public user view: show Buyer PDF generator form
+ // Public user view: show Buyer PDF generator form
   return (
     <Box sx={{ py: 4, maxWidth: 600, mx: 'auto' }}>
       <Typography variant="h4" gutterBottom fontWeight={700}>Online Buyer PDF Generator</Typography>

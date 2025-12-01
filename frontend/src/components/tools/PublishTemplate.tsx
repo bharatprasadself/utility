@@ -3,7 +3,7 @@ import type { SelectChangeEvent } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Alert, CircularProgress, Grid, Stack, TextField, FormLabel, AlertTitle } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
-import { listTemplates, publishTemplate } from '../../services/templates';
+import { listTemplates, publishTemplate, generateBuyerPdf } from '../../services/templates';
 import type { Template } from '../../services/templates';
 
 export default function PublishTemplate() {
@@ -27,6 +27,8 @@ export default function PublishTemplate() {
   const [etsyUrl, setEtsyUrl] = useState<string>('');
   const [editId, setEditId] = useState<number | null>(null);
   const [publishingId, setPublishingId] = useState<number | null>(null);
+  const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   // PDF type selection
   const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'wedding-set'>('print-mobile');
   // Handler for PDF type dropdown
@@ -238,6 +240,30 @@ export default function PublishTemplate() {
     }
   };
 
+  const handleGeneratePdf = async (id: number) => {
+    setGeneratingPdfId(id);
+    setPdfError(null);
+    setSuccess(null);
+    try {
+      const url = await generateBuyerPdf(id, pdfType);
+      setSuccess('Buyer PDF generated successfully.');
+      // Auto-download the PDF
+      if (url) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `buyer-template-${id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => document.body.removeChild(link), 100);
+      }
+      await refresh();
+    } catch (e: any) {
+      setPdfError(e.message || 'Failed to generate Buyer PDF.');
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
+
   if (!admin) {
     return <Alert severity="error">You do not have permission to publish templates.</Alert>;
   }
@@ -256,10 +282,11 @@ export default function PublishTemplate() {
                     value={title}
                     InputProps={{ readOnly: true }}
                     fullWidth
+                    sx={{ minWidth: 320 }}
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth sx={{ minWidth: 320 }}>
                     <InputLabel id="pdf-type-label">Buyer PDF Type</InputLabel>
                     <Select
                       labelId="pdf-type-label"
@@ -280,6 +307,7 @@ export default function PublishTemplate() {
                     value={canvaUrl}
                     onChange={e => setCanvaUrl(e.target.value)}
                     fullWidth
+                    sx={{ minWidth: 320 }}
                   />
                 </Grid>
                 {(pdfType === 'print-mobile' || pdfType === 'wedding-set') && (
@@ -289,6 +317,7 @@ export default function PublishTemplate() {
                       value={mobileCanvaUrl}
                       onChange={e => setMobileCanvaUrl(e.target.value)}
                       fullWidth
+                      sx={{ minWidth: 320 }}
                     />
                   </Grid>
                 )}
@@ -300,6 +329,7 @@ export default function PublishTemplate() {
                         value={rsvpCanvaUrl}
                         onChange={e => setRsvpCanvaUrl(e.target.value)}
                         fullWidth
+                        sx={{ minWidth: 320 }}
                       />
                     </Grid>
                     <Grid item xs={12}>
@@ -308,6 +338,7 @@ export default function PublishTemplate() {
                         value={detailCardCanvaUrl}
                         onChange={e => setDetailCardCanvaUrl(e.target.value)}
                         fullWidth
+                        sx={{ minWidth: 320 }}
                       />
                     </Grid>
                   </>
@@ -451,6 +482,7 @@ export default function PublishTemplate() {
         </Grid>
       </Grid>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {pdfError && <Alert severity="error" sx={{ mb: 2 }}>{pdfError}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       {loading ? <CircularProgress /> : (
         <TableContainer component={Paper}>
@@ -471,6 +503,14 @@ export default function PublishTemplate() {
                   <TableCell>{t.status === 'published' ? 'Published' : 'Draft'}</TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={1}>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        disabled={!!generatingPdfId}
+                        onClick={() => handleGeneratePdf(t.id)}
+                      >
+                        {generatingPdfId === t.id ? <CircularProgress size={20} /> : 'Generate Buyer PDF'}
+                      </Button>
                       <Button
                         variant="contained"
                         color="primary"

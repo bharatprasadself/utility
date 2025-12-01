@@ -1,7 +1,10 @@
 package com.utilityzone.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "author_data")
@@ -15,10 +18,46 @@ public class AuthorData {
     private String contactEmail;
     private String socialLinks; // JSON or comma-separated
     private String profileImageUrl;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String contactsJson; // stores contacts as JSON
+
+    @Transient
+    private List<ContactLink> contacts;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     // Getters and setters
+        public String getContactsJson() { return contactsJson; }
+        public void setContactsJson(String contactsJson) { this.contactsJson = contactsJson; }
+
+        public List<ContactLink> getContacts() {
+            if (contacts == null && contactsJson != null && !contactsJson.isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    contacts = mapper.readValue(contactsJson, new TypeReference<List<ContactLink>>() {});
+                } catch (Exception e) {
+                    contacts = null;
+                }
+            }
+            return contacts;
+        }
+
+        public void setContacts(List<ContactLink> contacts) {
+            this.contacts = contacts;
+            if (contacts != null) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    this.contactsJson = mapper.writeValueAsString(contacts);
+                } catch (Exception e) {
+                    this.contactsJson = null;
+                }
+            } else {
+                this.contactsJson = null;
+            }
+        }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }

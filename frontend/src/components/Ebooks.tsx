@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { EbookContent, EbookItem, ContactLink } from '@/types/Ebooks';
 import { defaultEbookContent } from '@/types/Ebooks';
 import EbookService from '@/services/ebooks';
+import { AuthorService } from '@/services/author';
 import { API_BASE_URL } from '@/services/axiosConfig';
 import Advertisement from './Advertisement';
 
@@ -155,11 +156,17 @@ const BooksGrid = ({ books, updatedAt }: { books: EbookItem[]; updatedAt?: strin
 
 const ContactLinks = ({ links }: { links: ContactLink[] }) => (
   <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap' }}>
-    {links.map((l, idx) => (
-      <Button key={(l.url ?? idx.toString()) + l.label} variant="outlined" href={l.url} target="_blank" rel="noopener noreferrer">
-        {l.label}
-      </Button>
-    ))}
+    {links.map((l, idx) => {
+      let url = l.url || '';
+      if (l.label && l.label.trim().toLowerCase() === 'email' && url && !url.startsWith('mailto:')) {
+        url = 'mailto:' + url;
+      }
+      return (
+        <Button key={(l.url ?? idx.toString()) + l.label} variant="outlined" href={url} target="_blank" rel="noopener noreferrer">
+          {l.label}
+        </Button>
+      );
+    })}
   </Stack>
 );
 
@@ -168,6 +175,7 @@ const ContactLinks = ({ links }: { links: ContactLink[] }) => (
 export default function Ebooks() {
   const { isAdmin } = useAuth();
   const [content, setContent] = useState<EbookContent>(defaultEbookContent);
+  const [author, setAuthor] = useState<{ name: string; bio: string; contacts?: ContactLink[] }>({ name: '', bio: '', contacts: [] });
   const [email, setEmail] = useState('');
   const [subResult, setSubResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -175,12 +183,20 @@ export default function Ebooks() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await EbookService.getContent();
+        const [data, authorData] = await Promise.all([
+          EbookService.getContent(),
+          AuthorService.get()
+        ]);
         setContent({
           ...defaultEbookContent,
           ...data,
           books: data?.books ?? [],
           contacts: data?.contacts ?? []
+        });
+        setAuthor({
+          name: authorData?.name || '',
+          bio: authorData?.bio || '',
+          contacts: authorData?.contacts || []
         });
       } catch {
         // keep defaults
@@ -208,14 +224,14 @@ export default function Ebooks() {
   };
 
   const hasBooks = useMemo(() => content.books?.length > 0, [content.books]);
-  const hasContacts = useMemo(() => content.contacts?.length > 0, [content.contacts]);
+  const hasContacts = useMemo(() => (author.contacts?.length ?? 0) > 0, [author.contacts]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, px: 0, width: '100%' }}>
       <Box sx={{ p: 3, flexGrow: 1, minWidth: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h4" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
-            {content.headerTitle || 'Ebooks'}
+            Author{author.name ? ` : ${author.name}` : ''}
           </Typography>
         </Box>
         {loading && (
@@ -225,17 +241,17 @@ export default function Ebooks() {
 
         {/* Books */}
         <SectionHeader title="Books" />
-        {hasBooks ? (
-          <BooksGrid books={content.books} updatedAt={content.updatedAt} />
+        {hasBooks && content.books.filter(b => b.status === 'published').length > 0 ? (
+          <BooksGrid books={content.books.filter(b => b.status === 'published')} updatedAt={content.updatedAt} />
         ) : (
-          <Typography color="text.secondary">No books added yet.</Typography>
+          <Typography color="text.secondary">No published books available.</Typography>
         )}
 
         {/* About */}
         <SectionHeader title="About" />
         <Box sx={{ maxWidth: { xs: '100%', md: 980 }, ml: 0, mr: 'auto' }}>
           <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-            {content.about || 'Short bio goes here.'}
+            {author.bio || 'Short bio goes here.'}
           </Typography>
         </Box>
 
@@ -262,7 +278,7 @@ export default function Ebooks() {
         {/* Contact / Links */}
         <SectionHeader title="Contact / Links" />
         {hasContacts ? (
-          <ContactLinks links={content.contacts} />
+          <ContactLinks links={author.contacts || []} />
         ) : (
           <Typography color="text.secondary">No links added yet.</Typography>
         )}
