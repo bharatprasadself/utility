@@ -9,14 +9,7 @@ const ADMIN_BASE = '/api/admin/ebooks';
 // Fallback local storage key for demo/offline
 const LS_KEY = 'ebook_content_cache_v1';
 
-const loadFromLocal = (): EbookContent | null => {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? (JSON.parse(raw) as EbookContent) : null;
-  } catch {
-    return null;
-  }
-};
+// Removed unused loadFromLocal helper (was not referenced)
 
 const saveToLocal = (content: EbookContent) => {
   try {

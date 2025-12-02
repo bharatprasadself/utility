@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Box, Typography, Grid, Card, CardMedia, CardContent, Button, TextField, Alert, Stack } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useAuth } from '@/contexts/AuthContext';
 import type { EbookContent, EbookItem, ContactLink } from '@/types/Ebooks';
 import { defaultEbookContent } from '@/types/Ebooks';
 import EbookService from '@/services/ebooks';
@@ -108,7 +107,7 @@ const BooksGrid = ({ books, updatedAt }: { books: EbookItem[]; updatedAt?: strin
                 {/* Title and content flow around the floated cover */}
                 {/* Only show separate title if markdown doesn't already include a heading */}
                 {!extractFirstMdHeading(b.description || '') && (
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700 }}>
                     {b.title}
                   </Typography>
                 )}
@@ -173,7 +172,7 @@ const ContactLinks = ({ links }: { links: ContactLink[] }) => (
 // Admin editor removed from public /ebooks page; moved to Tools > Publish Ebooks
 
 export default function Ebooks() {
-  const { isAdmin } = useAuth();
+  // const { isAdmin } = useAuth();
   const [content, setContent] = useState<EbookContent>(defaultEbookContent);
   const [author, setAuthor] = useState<{ name: string; bio: string; contacts?: ContactLink[] }>({ name: '', bio: '', contacts: [] });
   const [email, setEmail] = useState('');

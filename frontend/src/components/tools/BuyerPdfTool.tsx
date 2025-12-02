@@ -16,7 +16,7 @@ export default function BuyerPdfTool() {
   const [secondaryUrl, setSecondaryUrl] = useState('');
   const [mobileFile, setMobileFile] = useState<File | null>(null);
   const [mobileUrl, setMobileUrl] = useState('');
-  const [etsyUrl, setEtsyUrl] = useState('');
+  // Etsy URL state removed
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

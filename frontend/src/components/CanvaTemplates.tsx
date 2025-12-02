@@ -1,17 +1,15 @@
-import { Box, Typography, Paper, Grid, Button, Stack, Link as MuiLink, FormControl, InputLabel, Select, MenuItem, TextField, Input, Alert, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, Link as MuiLink, FormControl, InputLabel, Select, MenuItem, TextField, Input, Alert, CircularProgress } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { useEffect, useState, useRef } from 'react';
-import { generateBuyerPdf, listTemplates, uploadMockup } from '@/services/templates';
-import type { Template } from '@/services/templates';
-import { API_BASE_URL } from '@/services/axiosConfig';
+import { generateBuyerPdf, uploadMockup } from '@/services/templates';
 import { useAuth } from '../contexts/AuthContext';
 
 
 const CanvaTemplates = () => {
   const { isAdmin } = useAuth();
   // Admin view: show template management as before
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(false);
+  // const [templates, setTemplates] = useState<Template[]>([]);
+  // const [loading, setLoading] = useState(false);
   // PDF type selection for Buyer PDF
   const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'wedding-set'>('print-mobile');
   const handlePdfTypeChange = (event: SelectChangeEvent) => {
@@ -34,37 +32,37 @@ const CanvaTemplates = () => {
 
   useEffect(() => {
     if (isAdmin()) {
-      const fetchTemplates = async () => {
-        setLoading(true);
-        try {
-          const data = await listTemplates();
-          setTemplates(data);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchTemplates();
+      // const fetchTemplates = async () => {
+      //   setLoading(true);
+      //   try {
+      //     const data = await listTemplates();
+      //     setTemplates(data);
+      //   } finally {
+      //     setLoading(false);
+      //   }
+      // };
+      // fetchTemplates();
     }
   }, [isAdmin]);
 
   // Admin: generate PDF for template
-  const handleGeneratePdf = async (id: number) => {
-    setLoading(true);
-    try {
-      const pdfUrl = await generateBuyerPdf(id, pdfType);
-      const resolveUrl = (u?: string): string | undefined => {
-        if (!u) return undefined;
-        return u.startsWith('http') ? u : `${API_BASE_URL}${u}`;
-      };
-      const full = resolveUrl(pdfUrl);
-      if (full) {
-        const bust = full.includes('?') ? `${full}&v=${Date.now()}` : `${full}?v=${Date.now()}`;
-        window.open(bust, '_blank');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const handleGeneratePdf = async (id: number) => {
+  //   setLoading(true);
+  //   try {
+  //     const pdfUrl = await generateBuyerPdf(id, pdfType);
+  //     const resolveUrl = (u?: string): string | undefined => {
+  //       if (!u) return undefined;
+  //       return u.startsWith('http') ? u : `${API_BASE_URL}${u}`;
+  //     };
+  //     const full = resolveUrl(pdfUrl);
+  //     if (full) {
+  //       const bust = full.includes('?') ? `${full}&v=${Date.now()}` : `${full}?v=${Date.now()}`;
+  //       window.open(bust, '_blank');
+  //     }
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   // Public: handle form submit
   const handlePublicSubmit = async (e: React.FormEvent) => {

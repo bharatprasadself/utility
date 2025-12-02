@@ -2,7 +2,7 @@ import { AppBar, Toolbar, Typography, Button, Box, IconButton, useMediaQuery, Me
 import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 
 interface SubNavItem {
   label: string;
