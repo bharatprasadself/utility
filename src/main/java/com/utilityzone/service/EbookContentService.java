@@ -33,9 +33,12 @@ public class EbookContentService {
         } else {
             entity = repository.findAll().stream().findFirst().orElseGet(EbookContentEntity::new);
         }
-        dto.setUpdatedAt(Instant.now());
-        entity.setContentJson(toJson(dto));
-        entity.setUpdatedAt(dto.getUpdatedAt());
+            dto.setUpdatedAt(Instant.now());
+            entity.setContentJson(toJson(dto));
+            // Persist top-level status column alongside JSON
+            String status = dto.getStatus() != null ? dto.getStatus() : "draft";
+            entity.setStatus(status);
+            entity.setUpdatedAt(dto.getUpdatedAt());
         repository.save(entity);
         return dto;
     }
@@ -56,6 +59,10 @@ public class EbookContentService {
         try {
             EbookContentDto dto = objectMapper.readValue(entity.getContentJson(), EbookContentDto.class);
             dto.setId(entity.getId());
+            // Ensure top-level status reflects the column if missing in JSON
+            if (dto.getStatus() == null) {
+                dto.setStatus(entity.getStatus());
+            }
             return dto;
         } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize ebook content", e);

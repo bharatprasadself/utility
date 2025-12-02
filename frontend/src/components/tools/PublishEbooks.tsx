@@ -21,7 +21,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
-import { Box, Typography, Button, Stack, Alert, Paper, TextField } from '@mui/material';
+import { Box, Typography, Button, Stack, Alert, Paper, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
 import Advertisement from '../Advertisement';
 import type { EbookContent, EbookItem, EbookStatus } from '@/types/Ebooks';
@@ -63,19 +63,22 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
     }
   };
 
-  // Handler to publish a single book
-  const publishBook = async (index: number) => {
+  // Handler to update a single book (including status)
+  const updateBook = async (_index: number) => {
     setSaving(true);
     setError(null);
     try {
-      // Set status to 'published' for the selected book, keep others unchanged
-      const nextBooks: EbookItem[] = booksSafe.map((b, i) => (i === index ? { ...b, status: 'published' as EbookStatus } : b));
-      const contentToPublish = { ...value, books: nextBooks };
-      await EbookService.upsertContent(contentToPublish);
+      // Persist current local values for all books
+      const nextBooks: EbookItem[] = booksSafe.map((b) => ({ ...b }));
+      // Compute top-level status: published if any book is published, else draft
+      const anyPublished = nextBooks.some((b) => (b.status as string) === 'published');
+      const aggregatedStatus = (anyPublished ? 'published' : 'draft') as EbookStatus;
+      const contentToSave = { ...value, books: nextBooks, status: aggregatedStatus };
+      await EbookService.upsertContent(contentToSave);
       // Reflect change in local state
-      onChange(contentToPublish);
+      onChange(contentToSave);
     } catch (e: any) {
-      setError(e?.message || 'Failed to publish');
+      setError(e?.message || 'Failed to update');
     } finally {
       setSaving(false);
     }
@@ -173,18 +176,29 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={() => publishBook(i)}
+                  onClick={() => updateBook(i)}
                   disabled={saving}
                   sx={{ flex: 1, fontWeight: 600 }}
                 >
-                  {saving ? 'Publishing...' : 'Publish'}
+                  {saving ? 'Updating...' : 'Update'}
                 </Button>
               </Box>
             </Box>
             {/* Book details */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <TextField label="Title" value={b.title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleBookChange(i, { title: e.target.value })} sx={{ mb: 2 }} fullWidth />
-              <TextField label="Status" value={b.status || ''} InputProps={{ readOnly: true }} sx={{ mb: 2 }} fullWidth />
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id={`status-label-${i}`}>Status</InputLabel>
+                <Select
+                  labelId={`status-label-${i}`}
+                  label="Status"
+                  value={(b.status as string) || 'draft'}
+                  onChange={(e) => handleBookChange(i, { status: e.target.value as EbookStatus })}
+                >
+                  <MenuItem value="published">published</MenuItem>
+                  <MenuItem value="draft">draft</MenuItem>
+                </Select>
+              </FormControl>
               {/* Cover URL field removed as per request */}
               <TextField label="Buy Link" value={b.buyLink} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleBookChange(i, { buyLink: e.target.value })} sx={{ mb: 2 }} fullWidth />
               <TextField
@@ -214,19 +228,14 @@ export default function PublishEbooks() {
   useEffect(() => {
     const load = async () => {
       try {
-        const all = await EbookService.listAll();
+        // Load only the current/active ebooks content
         const data = await EbookService.getContent();
-        let books: EbookItem[] = [];
-        (all as any[]).forEach((content: any) => {
-          if (Array.isArray(content.books)) {
-            content.books.forEach((book: any) => {
-              const status = (book && book.status) ? book.status : 'draft';
-              books.push({ ...book, status, rowId: content.id });
-            });
-          }
-        });
-        // Ensure all books have an id
-        books = ensureBookIds(books);
+        // Build books from the active content only to avoid pulling in older draft rows
+        let books: EbookItem[] = ensureBookIds(data?.books ?? []).map((book: any) => ({
+          ...book,
+          status: (book && book.status) ? book.status : 'draft',
+          rowId: (data as any)?.id,
+        }));
         setContent({
           ...defaultEbookContent,
           ...data,
