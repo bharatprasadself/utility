@@ -23,8 +23,6 @@ public class AuthorData {
     @Column(name = "contact_email")
     private String contactEmail;
 
-    @Column(name = "social_links")
-    private String socialLinks; // JSON or comma-separated
 
     @Column(name = "profile_image_url")
     private String profileImageUrl;
@@ -79,8 +77,6 @@ public class AuthorData {
     public void setBio(String bio) { this.bio = bio; }
     public String getContactEmail() { return contactEmail; }
     public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
-    public String getSocialLinks() { return socialLinks; }
-    public void setSocialLinks(String socialLinks) { this.socialLinks = socialLinks; }
     public String getProfileImageUrl() { return profileImageUrl; }
     public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
     public LocalDateTime getCreatedAt() { return createdAt; }
