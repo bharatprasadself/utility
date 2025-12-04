@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, TextField, Button, Stack, Alert, Divider, Avatar } from '@mui/material';
+import { Box, Typography, TextField, Button, Stack, Alert, Divider, Avatar, Chip } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ContactLink } from '@/types/Ebooks';
 import { AuthorService } from '@/services/author';
@@ -59,6 +59,30 @@ export default function AuthorPage() {
     }
   };
 
+  // Email chips helpers
+  const normalizeEmail = (email: string) => email.trim().toLowerCase();
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const emailContacts = (content.contacts || []).filter(c => c.label?.toLowerCase() === 'email');
+  const nonEmailContacts = (content.contacts || []).filter(c => c.label?.toLowerCase() !== 'email');
+  const addEmailChip = (email: string) => {
+    const e = normalizeEmail(email);
+    if (!isValidEmail(e)) return;
+    const mailto = `mailto:${e}`;
+    // de-dupe
+    if (emailContacts.some(c => (c.url || '').toLowerCase() === mailto)) return;
+    setContent(prev => ({
+      ...prev,
+      contacts: [...nonEmailContacts, ...emailContacts, { label: 'Email', url: mailto }]
+    }));
+  };
+  const removeEmailChip = (mailtoUrl: string) => {
+    setContent(prev => ({
+      ...prev,
+      contacts: prev.contacts.filter(c => !(c.label?.toLowerCase() === 'email' && (c.url || '') === mailtoUrl))
+    }));
+  };
+  const [newEmail, setNewEmail] = useState('');
+
   if (!admin) {
     return (
       <Box sx={{ p: 3 }}>
@@ -94,34 +118,9 @@ export default function AuthorPage() {
             sx={{ mb: 2 }}
           />
 
-          <TextField
-            fullWidth
-            type="email"
-            label="Contact Email"
-            value={content.contactEmail || ''}
-            onChange={(e) => setContent({ ...content, contactEmail: e.target.value })}
-            sx={{ mb: 2 }}
-          />
+          {/* Contact Email field removed per request */}
 
-          <TextField
-            fullWidth
-            label="Profile Picture URL"
-            value={content.profileImageUrl || ''}
-            onChange={(e) => setContent({ ...content, profileImageUrl: e.target.value })}
-            helperText="Paste a public image URL. Preview shown below."
-            sx={{ mb: 1 }}
-          />
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-            <Avatar
-              src={content.profileImageUrl || undefined}
-              alt={content.name || 'Author'}
-              sx={{ width: 96, height: 96 }}
-            >
-              {(content.name || 'A').charAt(0)}
-            </Avatar>
-            <Typography color="text.secondary">Profile picture preview</Typography>
-          </Stack>
-
+          
           <Divider sx={{ my: 2 }} />
           <TextField
             fullWidth
@@ -133,6 +132,33 @@ export default function AuthorPage() {
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
             Contact / Links
           </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Emails
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap' }}>
+            {emailContacts.map((c, i) => (
+              <Chip key={`${c.url}-${i}`} label={(c.url || '').replace('mailto:', '')} onDelete={() => removeEmailChip(c.url || '')} />
+            ))}
+          </Stack>
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <TextField
+              label="Add email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              error={Boolean(newEmail) && !isValidEmail(newEmail)}
+              helperText={Boolean(newEmail) && !isValidEmail(newEmail) ? 'Invalid email format' : 'Press Add to insert'}
+              sx={{ maxWidth: 360 }}
+            />
+            <Button
+              variant="outlined"
+              onClick={() => { addEmailChip(newEmail); setNewEmail(''); }}
+              disabled={!isValidEmail(newEmail)}
+              sx={{ height: '56px' }}
+            >
+              Add
+            </Button>
+          </Stack>
+
           <Stack spacing={2}>
             {content.contacts.map((c, i) => (
               <Box key={i} sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 1 }}>
