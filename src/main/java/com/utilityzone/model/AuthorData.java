@@ -13,20 +13,32 @@ public class AuthorData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "bio")
     private String bio;
+
+    @Column(name = "contact_email")
     private String contactEmail;
+
+    @Column(name = "social_links")
     private String socialLinks; // JSON or comma-separated
+
+    @Column(name = "profile_image_url")
     private String profileImageUrl;
 
     @Lob
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "contacts_json", columnDefinition = "TEXT")
     private String contactsJson; // stores contacts as JSON
 
     @Transient
     private List<ContactLink> contacts;
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     // Getters and setters
