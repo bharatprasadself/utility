@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, TextField, Button, Stack, Alert, Divider, Avatar, Chip } from '@mui/material';
+import { Box, Typography, TextField, Button, Stack, Alert, Divider, Chip } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ContactLink } from '@/types/Ebooks';
 import { AuthorService } from '@/services/author';

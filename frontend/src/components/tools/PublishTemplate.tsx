@@ -3,6 +3,7 @@ import type { SelectChangeEvent } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Alert, CircularProgress, Grid, Stack, TextField, FormLabel, AlertTitle } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/services/axiosConfig';
 import { listTemplates, publishTemplate, generateBuyerPdf } from '../../services/templates';
 import type { Template } from '../../services/templates';
 
@@ -268,6 +269,11 @@ export default function PublishTemplate() {
     return <Alert severity="error">You do not have permission to publish templates.</Alert>;
   }
 
+  const resolveUrl = (u?: string): string | undefined => {
+    if (!u) return undefined;
+    return u.startsWith('http') ? u : `${API_BASE_URL}${u}`;
+  };
+
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto', mt: 4 }}>
       <Typography variant="h4" gutterBottom>Publish Templates</Typography>
@@ -499,7 +505,7 @@ export default function PublishTemplate() {
               {templates.map((t: Template) => (
                 <TableRow key={t.id}>
                   <TableCell>{t.title}</TableCell>
-                  <TableCell>{t.mockupUrl ? <a href={t.mockupUrl} target="_blank" rel="noopener noreferrer">View</a> : '-'}</TableCell>
+                  <TableCell>{t.mockupUrl ? <a href={resolveUrl(t.mockupUrl)} target="_blank" rel="noopener noreferrer">View</a> : '-'}</TableCell>
                   <TableCell>{t.status === 'published' ? 'Published' : 'Draft'}</TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={1}>
