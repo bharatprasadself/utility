@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, TextField, Button, Stack, Alert, Divider } from '@mui/material';
+import { Box, Typography, TextField, Button, Stack, Alert, Divider, Avatar } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ContactLink } from '@/types/Ebooks';
 import { AuthorService } from '@/services/author';
@@ -105,12 +105,22 @@ export default function AuthorPage() {
 
           <TextField
             fullWidth
-            label="Profile Image URL"
+            label="Profile Picture URL"
             value={content.profileImageUrl || ''}
             onChange={(e) => setContent({ ...content, profileImageUrl: e.target.value })}
-            helperText="Publicly accessible image URL shown with author bio"
-            sx={{ mb: 2 }}
+            helperText="Paste a public image URL. Preview shown below."
+            sx={{ mb: 1 }}
           />
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+            <Avatar
+              src={content.profileImageUrl || undefined}
+              alt={content.name || 'Author'}
+              sx={{ width: 96, height: 96 }}
+            >
+              {(content.name || 'A').charAt(0)}
+            </Avatar>
+            <Typography color="text.secondary">Profile picture preview</Typography>
+          </Stack>
 
           <Divider sx={{ my: 2 }} />
           <TextField
