@@ -6,7 +6,6 @@ export interface AuthorData {
   name: string;
   bio: string;
   contactEmail?: string;
-  socialLinks?: string; // JSON or comma-separated
   profileImageUrl?: string;
   contacts?: ContactLink[];
   createdAt?: string;

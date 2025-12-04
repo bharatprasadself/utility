@@ -13,7 +13,7 @@ export default function AuthorPage() {
     const [sendStatus, setSendStatus] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const admin = isAdmin();
-  const [content, setContent] = useState<AuthorData & { contacts: ContactLink[] }>({ name: '', bio: '', contactEmail: '', socialLinks: '', profileImageUrl: '', contacts: [] });
+  const [content, setContent] = useState<AuthorData & { contacts: ContactLink[] }>({ name: '', bio: '', contactEmail: '', profileImageUrl: '', contacts: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
