@@ -94,6 +94,24 @@ export default function AuthorPage() {
             sx={{ mb: 2 }}
           />
 
+          <TextField
+            fullWidth
+            type="email"
+            label="Contact Email"
+            value={content.contactEmail || ''}
+            onChange={(e) => setContent({ ...content, contactEmail: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            fullWidth
+            label="Profile Image URL"
+            value={content.profileImageUrl || ''}
+            onChange={(e) => setContent({ ...content, profileImageUrl: e.target.value })}
+            helperText="Publicly accessible image URL shown with author bio"
+            sx={{ mb: 2 }}
+          />
+
           <Divider sx={{ my: 2 }} />
           <TextField
             fullWidth
