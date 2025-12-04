@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axiosInstance from '@/services/axiosConfig';
 
 import type { ContactLink } from '@/types/Ebooks';
 export interface AuthorData {
@@ -18,14 +18,14 @@ const API_BASE = '/api/author';
 export const AuthorService = {
   async get(): Promise<AuthorData | null> {
     try {
-      const res = await axios.get<AuthorData>(API_BASE);
+      const res = await axiosInstance.get<AuthorData>(API_BASE);
       return res.data;
     } catch {
       return null;
     }
   },
   async save(author: AuthorData): Promise<AuthorData> {
-    const res = await axios.post<AuthorData>(API_BASE, author);
+    const res = await axiosInstance.post<AuthorData>(API_BASE, author);
     return res.data;
   },
 };
