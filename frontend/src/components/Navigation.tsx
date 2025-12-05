@@ -79,11 +79,9 @@ const Navigation = () => {
   const admin = isAdmin();
     // Permission filtering: hide admin-only submenus for non-admin users
     const adminOnlyPaths = new Set([
-      '/tools/ebook-writer',
       '/tools/author-page',
       '/tools/publish-ebooks',
-      '/tools/publish-template',
-      '/admin/canva-templates'
+      '/tools/publish-template'
     ]);
 
     const filterSubItems = (items?: SubNavItem[]) => {
