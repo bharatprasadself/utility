@@ -75,7 +75,23 @@ const navItems: NavItem[] = [
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, deleteAccount } = useAuth();
+  const { user, logout, deleteAccount, isAdmin } = useAuth();
+  const admin = isAdmin();
+    // Permission filtering: hide admin-only submenus for non-admin users
+    const adminOnlyPaths = new Set([
+      '/tools/ebook-writer',
+      '/tools/author-page',
+      '/tools/publish-ebooks',
+      '/tools/publish-template',
+      '/admin/canva-templates'
+    ]);
+
+    const filterSubItems = (items?: SubNavItem[]) => {
+      if (!items) return [];
+      // Keep headers; filter actionable items by admin permission
+      return items.filter(si => si.isHeader || admin || !adminOnlyPaths.has(si.path));
+    };
+
   const isMobile = useMediaQuery('(max-width:600px)');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [subMenuAnchorEl, setSubMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -175,21 +191,21 @@ const Navigation = () => {
           <Box key={item.path}>
             <Button
               color="inherit"
-              onClick={item.subItems ? (e) => handleOpenSubMenu(e, item.label) : () => navigate(item.path)}
+              onClick={filterSubItems(item.subItems).length > 0 ? (e) => handleOpenSubMenu(e, item.label) : () => navigate(item.path)}
               aria-current={location.pathname === item.path ? 'page' : undefined}
               aria-label={`Navigate to ${item.label}`}
-              aria-controls={item.subItems ? `${item.label}-menu` : undefined}
-              aria-haspopup={item.subItems ? 'true' : undefined}
+              aria-controls={filterSubItems(item.subItems).length > 0 ? `${item.label}-menu` : undefined}
+              aria-haspopup={filterSubItems(item.subItems).length > 0 ? 'true' : undefined}
               sx={{
                 px: 3,
                 py: 1,
                 borderRadius: 1,
-                bgcolor: (location.pathname.startsWith(item.path) || (item.subItems && item.subItems.some(si => location.pathname.startsWith(si.path)))) ? 'rgba(255,255,255,0.1)' : 'transparent',
+                bgcolor: (location.pathname.startsWith(item.path) || (filterSubItems(item.subItems).some(si => location.pathname.startsWith(si.path)))) ? 'rgba(255,255,255,0.1)' : 'transparent',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
               }}
             >
               {item.label}
-              {item.subItems && ' ▾'}
+              {filterSubItems(item.subItems).length > 0 && ' ▾'}
             </Button>
             {/* sub-menu opens below (single Menu rendered outside the map) */}
           </Box>
@@ -213,7 +229,7 @@ const Navigation = () => {
         {activeSubMenu === 'Tools'
           ? (() => {
               const tools = navItems.find(i => i.label === 'Tools');
-              const sub = tools?.subItems || [];
+              const sub = filterSubItems(tools?.subItems);
               const groups: Record<string, SubNavItem[]> = {};
               let current: string | null = null;
               sub.forEach(si => {
@@ -225,7 +241,9 @@ const Navigation = () => {
                 }
               });
               const groupLabels = Object.keys(groups);
-              return groupLabels.map(gl => (
+              return groupLabels
+                .filter(gl => (groups[gl] || []).length > 0)
+                .map(gl => (
                 <MenuItem
                   key={`tools-group-${gl}`}
                   aria-haspopup="true"
@@ -241,7 +259,7 @@ const Navigation = () => {
                 </MenuItem>
               ));
             })()
-          : navItems.find(i => i.label === activeSubMenu)?.subItems?.map((subItem) => {
+          : filterSubItems(navItems.find(i => i.label === activeSubMenu)?.subItems).map((subItem) => {
               const isArticles = activeSubMenu === 'Articles';
               const isShop = activeSubMenu === 'Shop';
               let emoji = '';
@@ -307,7 +325,7 @@ const Navigation = () => {
       >
         {(() => {
           const tools = navItems.find(i => i.label === 'Tools');
-          const sub = tools?.subItems || [];
+          const sub = filterSubItems(tools?.subItems);
           const groups: Record<string, SubNavItem[]> = {};
           let current: string | null = null;
           sub.forEach(si => {
@@ -459,7 +477,7 @@ const Navigation = () => {
               >
                 {item.label}
               </MenuItem>
-              {item.subItems.map((sub) => {
+              {filterSubItems(item.subItems).map((sub) => {
                 const isShop = item.label === 'Shop';
                 let emoji = '';
                 if (isShop) emoji = shopExtraEmoji[sub.label];
