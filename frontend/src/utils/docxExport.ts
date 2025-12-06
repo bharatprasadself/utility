@@ -82,6 +82,15 @@ export async function exportProjectToDocx(project: EbookProject): Promise<Blob> 
       ],
     });
   }
+  // Chapter Ideas (Initial Brain Dump)
+  if (project.chapterIdeas) {
+    sections.push({
+      children: [
+        new Paragraph({ text: 'Chapter Ideas (Initial Brain Dump)', heading: HeadingLevel.HEADING_1 }),
+        ...textToParagraphs(project.chapterIdeas),
+      ]
+    });
+  }
 
   // TOC (simple list)
   if (project.toc?.length) {

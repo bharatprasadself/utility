@@ -19,6 +19,7 @@ export interface EbookProject {
   cover: EbookCover;
   preface: string;
   disclaimer: string;
+  chapterIdeas?: string; // optional: initial brain dump of chapter ideas
   toc: string[]; // list of chapter titles or headings
   chapters: Chapter[];
   lastUpdated: string; // ISO timestamp
@@ -31,6 +32,7 @@ export const emptyProject = (): EbookProject => ({
   cover: { title: '', subtitle: '', imageDataUrl: undefined, content: '' },
   preface: '',
   disclaimer: '',
+  chapterIdeas: '',
   toc: [],
   chapters: [],
   lastUpdated: new Date().toISOString()

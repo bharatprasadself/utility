@@ -97,6 +97,7 @@ const EbookWriter = () => {
   // Removed unused coverTextInputRef
   const prefaceInputRef = useRef<HTMLInputElement>(null);
   const disclaimerInputRef = useRef<HTMLInputElement>(null);
+  const chapterIdeasRef = useRef<HTMLInputElement>(null);
   const tocInputRef = useRef<HTMLInputElement>(null);
   const chaptersInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,6 +123,13 @@ const EbookWriter = () => {
     const content = await readTextFile(file);
     touch({ disclaimer: content });
     if (disclaimerInputRef.current) disclaimerInputRef.current.value = '';
+  };
+
+  const handleImportChapterIdeas = async (file?: File) => {
+    if (!file) return;
+    const content = await readTextFile(file);
+    touch({ chapterIdeas: content });
+    if (chapterIdeasRef.current) chapterIdeasRef.current.value = '';
   };
 
   const handleImportTOC = async (file?: File) => {
@@ -308,6 +316,23 @@ const EbookWriter = () => {
                   minRows={2}
                   value={project.disclaimer || ''}
                   onChange={e => touch({ disclaimer: e.target.value })}
+                />
+              </Box>
+              <Box>
+                <Typography variant="h6">Chapter Ideas (Initial Brain Dump)</Typography>
+                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => chapterIdeasRef.current?.click()}>Import Chapter Ideas</Button>
+                  <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ chapterIdeas: '' })}>Clear</Button>
+                </Stack>
+                <input ref={chapterIdeasRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportChapterIdeas(e.target.files?.[0])} />
+                <TextField
+                  label="Chapter Ideas"
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  placeholder="Dump raw ideas, bullets, and notes – we’ll shape them into chapters later."
+                  value={project.chapterIdeas || ''}
+                  onChange={e => touch({ chapterIdeas: e.target.value })}
                 />
               </Box>
             </Stack>
