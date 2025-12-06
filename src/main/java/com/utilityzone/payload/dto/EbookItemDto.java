@@ -9,4 +9,5 @@ public class EbookItemDto {
     private String coverUrl;
     private String buyLink;
     private String description;
+    private String status; // 'published' or 'draft'
 }

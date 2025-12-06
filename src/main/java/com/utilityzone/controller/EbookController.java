@@ -140,6 +140,12 @@ public class EbookController {
         return ResponseEntity.ok(service.upsert(dto));
     }
 
+    @PutMapping("/api/admin/ebooks")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<EbookContentDto> upsertPut(@RequestBody EbookContentDto dto) {
+        return ResponseEntity.ok(service.upsert(dto));
+    }
+
     @PostMapping(value = "/api/admin/ebooks/upload-cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, String>> uploadCover(@RequestParam("file") MultipartFile file) throws IOException {
@@ -189,16 +195,60 @@ public class EbookController {
     @PostMapping("/api/admin/ebooks/newsletter/send")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> sendNewsletter(@RequestBody NewsletterSendRequest req) {
-        if (req == null || !StringUtils.hasText(req.getSubject()) || !StringUtils.hasText(req.getHtmlBody())) {
+        if (req == null || !org.springframework.util.StringUtils.hasText(req.getSubject()) || !org.springframework.util.StringUtils.hasText(req.getHtmlBody())) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Subject and htmlBody are required"));
         }
         var activeSubs = subscriberRepository.findAllByActiveTrue();
-        var emails = activeSubs.stream().map(NewsletterSubscriber::getEmail).toList();
+            java.util.List<String> emails = activeSubs != null ? activeSubs.stream().map(NewsletterSubscriber::getEmail).toList() : java.util.Collections.emptyList();
         // Build base URI from current request context to generate unsubscribe links
         String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
         // fire-and-forget async send to avoid long request times
-        emailService.sendToAllAsync(emails, req.getSubject().trim(), req.getHtmlBody(), baseUri);
+            emailService.sendToAllAsync(
+                emails,
+            req.getSubject() != null ? req.getSubject().trim() : "",
+            req.getHtmlBody() != null ? req.getHtmlBody() : "",
+            baseUri != null ? baseUri : ""
+        );
         return ResponseEntity.accepted().body(Map.of("success", true, "recipients", emails.size()));
+    }
+
+    @PostMapping("/api/admin/ebooks/create")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<EbookContentDto> create(@RequestBody EbookContentDto dto) {
+        // Always insert a new record
+        com.utilityzone.model.EbookContentEntity entity = new com.utilityzone.model.EbookContentEntity();
+        dto.setUpdatedAt(java.time.Instant.now());
+        entity.setContentJson(service.toJson(dto));
+        entity.setUpdatedAt(dto.getUpdatedAt());
+        com.utilityzone.repository.EbookContentRepository repo = service.getRepository();
+        if (repo != null && entity != null) {
+            repo.save(entity);
+        }
+        return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/api/admin/ebooks/all")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<java.util.List<EbookContentDto>> listAll() {
+        java.util.List<EbookContentDto> all = service.getRepository().findAll().stream()
+            .map(entity -> service.fromEntity(entity))
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(all);
+    }
+
+
+    @DeleteMapping("/api/admin/ebooks/{bookId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Void> deleteBook(@PathVariable("bookId") Long bookId) {
+        com.utilityzone.repository.EbookContentRepository repo = service.getRepository();
+        if (!repo.existsById(bookId)) {
+            return ResponseEntity.notFound().build();
+        }
+        repo.deleteById(bookId);
+        // Evict cache so next getContent returns fresh data
+        org.springframework.cache.Cache cache = cacheManager.getCache("ebooks");
+        if (cache != null) cache.evict("content");
+        return ResponseEntity.noContent().build();
     }
 
     private EbookContentDto defaultContent() {

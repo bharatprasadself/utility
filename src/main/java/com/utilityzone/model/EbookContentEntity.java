@@ -15,9 +15,13 @@ public class EbookContentEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
     @Lob
     @Column(name = "content_json", nullable = false, columnDefinition = "TEXT")
     private String contentJson;
+
+    @Column(name = "status", length = 20)
+    private String status = "draft";
 
     @Column(name = "updated_at")
     private Instant updatedAt;
