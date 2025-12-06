@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Card, CardMedia, CardActions, CardContent, Button, Skeleton, Paper, Container } from '@mui/material';
-import { listPublicTemplates, type PublicCanvaTemplate } from '@/services/canvaTemplates';
+import { Box, Typography, Grid, Card, CardMedia, CardActions, CardContent, Button, Skeleton, Container } from '@mui/material';
+import { listTemplates, type Template } from '@/services/templates';
 import { API_BASE_URL } from '@/services/axiosConfig';
-import CanvaTemplatesAdmin from './CanvaTemplates';
 import Advertisement from './Advertisement';
-import { useAuth } from '@/contexts/AuthContext';
 
 const CanvaTemplatesPublic = () => {
-  const [items, setItems] = useState<PublicCanvaTemplate[]>([]);
+  const [items, setItems] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const { isAdmin } = useAuth();
 
   const refresh = async () => {
     try {
       setLoading(true);
-      const data = await listPublicTemplates();
-      setItems(data);
+      const data = await listTemplates();
+      setItems(data.filter(t => t.status === 'published'));
     } catch (e: any) {
       setErr(e.message || 'Failed to load templates');
     } finally {
@@ -51,13 +48,7 @@ const CanvaTemplatesPublic = () => {
           </Typography>
         </Box>
 
-        {isAdmin && isAdmin() && (
-          <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Admin tools</Typography>
-            {/* Reuse full admin component inline */}
-            <CanvaTemplatesAdmin />
-          </Paper>
-        )}
+        {/* Admin tools are intentionally not shown on Shop route */}
 
         {err && <Typography color="error" sx={{ mb: 2 }}>{err}</Typography>}
 

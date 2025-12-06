@@ -33,10 +33,12 @@ public class SchemaMigrationRunner {
     public void onReady() {
         try (Connection conn = dataSource.getConnection()) {
             ensureCanvaTemplatesTable(conn);
+            ensureCanvaTemplatesStatusColumn(conn);
             ensureBlogsStatusColumn(conn);
             ensureArticlesStatusAndPublishDate(conn);
             ensureUsersEmailColumn(conn);
             ensurePasswordResetTokenTable(conn);
+            ensureTemplatesTable(conn);
         } catch (SQLException e) {
             log.warn("Schema migration runner encountered an error: {}", e.getMessage());
         }
@@ -67,6 +69,21 @@ public class SchemaMigrationRunner {
             }
         } catch (SQLException e) {
             log.warn("Failed to ensure CANVA_TEMPLATES table: {}", e.getMessage());
+        }
+    }
+
+    private void ensureCanvaTemplatesStatusColumn(Connection conn) {
+        try {
+            if (!columnExists(conn, null, null, "CANVA_TEMPLATES", "STATUS")) {
+                log.info("Adding CANVA_TEMPLATES.STATUS column and initializing values...");
+                try (Statement st = conn.createStatement()) {
+                    st.executeUpdate("ALTER TABLE canva_templates ADD COLUMN status VARCHAR(20) DEFAULT 'draft'");
+                    st.executeUpdate("UPDATE canva_templates SET status = 'draft' WHERE status IS NULL");
+                }
+                log.info("CANVA_TEMPLATES.STATUS column added and initialized.");
+            }
+        } catch (SQLException e) {
+            log.warn("Failed to ensure CANVA_TEMPLATES.STATUS column: {}", e.getMessage());
         }
     }
 
@@ -175,6 +192,27 @@ public class SchemaMigrationRunner {
             }
         } catch (SQLException e) {
             log.warn("Failed to ensure PASSWORD_RESET_TOKENS table: {}", e.getMessage());
+        }
+    }
+
+    private void ensureTemplatesTable(Connection conn) {
+        try {
+            if (!tableExists(conn, "TEMPLATES")) {
+                log.info("Creating TEMPLATES table...");
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate(
+                        "CREATE TABLE IF NOT EXISTS templates (" +
+                        "id BIGSERIAL PRIMARY KEY, " +
+                        "title VARCHAR(255), " +
+                        "description TEXT, " +
+                        "created_at TIMESTAMP, " +
+                        "updated_at TIMESTAMP)"
+                    );
+                }
+                log.info("TEMPLATES table created.");
+            }
+        } catch (SQLException e) {
+            log.warn("Failed to ensure TEMPLATES table: {}", e.getMessage());
         }
     }
 }

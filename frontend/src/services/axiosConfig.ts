@@ -5,7 +5,10 @@ import axios from 'axios';
 export const API_BASE_URL = ((): string => {
     const fromEnv = import.meta.env.VITE_API_URL as string | undefined;
     if (fromEnv && fromEnv.trim().length > 0) return fromEnv.trim();
-    return import.meta.env.MODE === 'production' ? 'https://api.utilityzone.in' : '';
+    // For local development, use backend server directly
+    return import.meta.env.MODE === 'production'
+        ? 'https://api.utilityzone.in'
+        : 'http://localhost:8080';
 })();
 
 // Create axios instance with default config

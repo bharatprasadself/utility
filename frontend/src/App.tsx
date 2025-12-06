@@ -1,3 +1,4 @@
+// import React from 'react';
 import { ThemeProvider, CssBaseline, Box, Container } from '@mui/material';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -10,7 +11,7 @@ import Navigation from './components/Navigation';
 import { AuthProvider } from './contexts/AuthContext';
 import ReactArticles from './components/articles/ReactArticles';
 import SpringBootArticles from './components/articles/SpringBootArticles';
-import PostgreSQLArticles from './components/articles/PostgreSQLArticles';
+// import PostgreSQLArticles from './components/articles/PostgreSQLArticles';
 import DockerArticles from './components/articles/DockerArticles';
 import JavaArticles from './components/articles/JavaArticles';
 import MicroservicesArticles from './components/articles/MicroservicesArticles';
@@ -18,7 +19,8 @@ import FallingBall from './components/FallingBall';
 import DinoRunner from './components/DinoRunner';
 import Ebooks from '@/components/Ebooks';
 import theme from './theme';
-import CanvaTemplates from './components/CanvaTemplates';
+// import CanvaTemplates from './components/CanvaTemplates';
+import BuyerPdfTool from './components/tools/BuyerPdfTool';
 import CanvaTemplatesPublic from './components/CanvaTemplatesPublic';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
@@ -29,6 +31,10 @@ import SipCalculator from './components/finance/SipCalculator';
 import RoiCalculator from './components/finance/RoiCalculator';
 import DividendTracker from './components/finance/DividendTracker';
 import CompoundingCalculator from './components/finance/CompoundingCalculator';
+import EbookWriter from './components/tools/EbookWriter';
+import PublishEbooks from './components/tools/PublishEbooks';
+import AuthorPage from './components/tools/AuthorPage';
+import PublishTemplate from './components/tools/PublishTemplate';
 
 function App() {
   return (
@@ -43,8 +49,8 @@ function App() {
                 <Container maxWidth="lg">
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
-                    {/** Public blogs listing (paginated) */}
-                    {/**<Route path="/blogs" element={<BlogList />} />*/}
+                    {/* Public blogs listing (paginated) */}
+                    {/*<Route path="/blogs" element={<BlogList />} />*/}
                     <Route path="/blogs" element={<Blogs />} />
                     <Route path="/ebooks" element={<Ebooks />} />
                     <Route path="/login" element={<Login />} />
@@ -54,7 +60,6 @@ function App() {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/articles/spring-boot/*" element={<SpringBootArticles />} />
                     <Route path="/articles/react/*" element={<ReactArticles />} />
-                    <Route path="/articles/postgresql/*" element={<PostgreSQLArticles />} />
                     <Route path="/articles/docker/*" element={<DockerArticles />} />
                     <Route path="/articles/microservices/*" element={<MicroservicesArticles />} />
                     <Route path="/articles/java/*" element={<JavaArticles />} />
@@ -66,8 +71,12 @@ function App() {
                     <Route path="/finance/roi" element={<RoiCalculator />} />
                     <Route path="/finance/dividends" element={<DividendTracker />} />
                     <Route path="/finance/compounding" element={<CompoundingCalculator />} />
+                    <Route path="/tools/ebook-writer" element={<EbookWriter />} />
+                    <Route path="/tools/publish-ebooks" element={<PublishEbooks />} />
+                    <Route path="/tools/author-page" element={<AuthorPage />} />
                     <Route path="/shop/canva-templates" element={<CanvaTemplatesPublic />} />
-                    <Route path="/admin/canva-templates" element={<CanvaTemplates />} />
+                    <Route path="/admin/canva-templates" element={<BuyerPdfTool />} />
+                    <Route path="/tools/publish-template" element={<PublishTemplate />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>
@@ -80,4 +89,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
