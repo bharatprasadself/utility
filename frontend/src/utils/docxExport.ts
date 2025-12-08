@@ -92,6 +92,46 @@ export async function exportProjectToDocx(project: EbookProject): Promise<Blob> 
     });
   }
 
+  // Research Notes (from Perplexity)
+  if (project.researchNotes) {
+    sections.push({
+      children: [
+        new Paragraph({ text: 'Research Notes (from Perplexity)', heading: HeadingLevel.HEADING_1 }),
+        ...textToParagraphs(project.researchNotes),
+      ]
+    });
+  }
+
+  // Data, Stats, and Examples
+  if (project.dataStatsExamples) {
+    sections.push({
+      children: [
+        new Paragraph({ text: 'Data, Stats, and Examples', heading: HeadingLevel.HEADING_1 }),
+        ...textToParagraphs(project.dataStatsExamples),
+      ]
+    });
+  }
+
+  // Personal Thoughts (Your Vision/Experience)
+  if (project.personalThoughts) {
+    sections.push({
+      children: [
+        new Paragraph({ text: 'Personal Thoughts (Your Vision/Experience)', heading: HeadingLevel.HEADING_1 }),
+        ...textToParagraphs(project.personalThoughts),
+      ]
+    });
+  }
+
+  // Questions for NotebookLM
+  if (project.questionsForNotebookLm && project.questionsForNotebookLm.length) {
+    sections.push({
+      children: [
+        new Paragraph({ text: 'Questions for NotebookLM', heading: HeadingLevel.HEADING_1 }),
+        ...project.questionsForNotebookLm.map((q, i) => new Paragraph({ text: `${i + 1}. ${q}` }))
+      ]
+    });
+  }
+
   // TOC (simple list)
   if (project.toc?.length) {
     sections.push({
