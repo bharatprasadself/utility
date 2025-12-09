@@ -218,16 +218,6 @@ const EbookWriter = () => {
     touch({ toc: merged });
   };
 
-  // Help panel common steps (shown to everyone). Admins get an extra first step for Drafts.
-  const commonWorkflowSteps: string[] = [
-    'Title & Cover: Enter the ebook title and upload a cover image.',
-    'Preface: Import or write the preface to introduce the book.',
-    'Research & Ideation: Import ideas, research notes, data/stats/examples, and personal thoughts.',
-    'Questions for NotebookLM: Add/import prompts to generate outlines or content.',
-    "Chapters: Import multiple .txt files or edit each chapter's title and content.",
-    'Table of Contents: Generate from chapters or sync with chapter titles; lock when finalized.',
-  ];
-
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
       <Box sx={{ p: 3, flexGrow: 1 }} ref={editorRef}>
@@ -306,34 +296,43 @@ const EbookWriter = () => {
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
               <Typography variant="h6">End‑to‑end Workflow</Typography>
-              <Button variant="text" size="small" onClick={() => setShowHelp(v => !v)}>
+              <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => setShowHelp(v => !v)}>
                 {showHelp ? 'Hide' : 'Show'}
-              </Button>
+              </Button>               
             </Stack>
+            <Divider sx={{ my: 1 }} />
             <Collapse in={showHelp}>
               <Stack spacing={1}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Flow Overview</Typography>
-                <List dense>
-                  <ListItem><ListItemText primary="1) Research with AI (Perplexity): Gather summaries, citations, links, data points, and insights." /></ListItem>
-                  <ListItem><ListItemText primary="2) Add Personal Thoughts: Write your perspective and lived experience to shape the narrative." /></ListItem>
-                  <ListItem><ListItemText primary="3) Craft NotebookLM Prompts: Use ‘Add Generic Questions’ or ‘Use Template’, then tailor tone, audience, and constraints." /></ListItem>
-                  <ListItem><ListItemText primary="4) Generate Content in NotebookLM: Produce outline, preface, disclaimer, and chapters based on your sources." /></ListItem>
-                  <ListItem><ListItemText primary="5) Import Outputs: Preface/Disclaimer via .txt files; Chapters as multiple .txt files (one per chapter)." /></ListItem>
-                  <ListItem><ListItemText primary="6) Build TOC: Generate from chapters or sync with titles; lock when finalized." /></ListItem>
-                  <ListItem><ListItemText primary="7) Save & Export: Admins save as draft to DB; export DOCX anytime for sharing." /></ListItem>
+                <List dense sx={{
+                  '& .MuiListItem-root': { py: 0.25 },
+                  '& .MuiListItemText-primary': { lineHeight: 1.2 }
+                }}>
+                  <ListItem disableGutters><ListItemText primary="1) Research with AI (Perplexity): Gather summaries, citations, links, data points, and insights." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="2) Add Personal Thoughts: Write your perspective and lived experience to shape the narrative." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="3) Craft NotebookLM Prompts: Use ‘Add Generic Questions’ or ‘Use Template’, then tailor tone, audience, and constraints." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="4) Generate Content in NotebookLM: Produce outline, preface, disclaimer, and chapters based on your sources." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="5) Import Outputs: Preface/Disclaimer via .txt files; Chapters as multiple .txt files (one per chapter)." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="6) Build TOC: Generate from chapters or sync with titles; lock when finalized." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="7) Save & Export: Admins save as draft to DB; export DOCX anytime for sharing." /></ListItem>
                 </List>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mt: 1 }}>Prompt Tips</Typography>
-                <List dense>
-                  <ListItem><ListItemText primary="• Reference your research notes for context; specify audience and tone (beginner-friendly, teaching style)." /></ListItem>
-                  <ListItem><ListItemText primary="• Ask for concrete artifacts: 10–12 chapter outline, sample chapter, 30-day plan, and key takeaways." /></ListItem>
-                  <ListItem><ListItemText primary="• Use ‘Copy All’ and ‘Export .txt’ to move prompts into NotebookLM easily." /></ListItem>
+                <List dense sx={{
+                  '& .MuiListItem-root': { py: 0.25 },
+                  '& .MuiListItemText-primary': { lineHeight: 1.2 }
+                }}>
+                  <ListItem disableGutters><ListItemText primary="• Reference your research notes for context; specify audience and tone (beginner-friendly, teaching style)." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="• Ask for concrete artifacts: 10–12 chapter outline, sample chapter, 30-day plan, and key takeaways." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="• Use ‘Copy All’ and ‘Export .txt’ to move prompts into NotebookLM easily." /></ListItem>
                 </List>
                 {isAdmin() && (
-                  <>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Admin Notes</Typography>
-                    <List dense>
-                      <ListItem><ListItemText primary="• Use Save as Draft to persist content and the cover image." /></ListItem>
-                      <ListItem><ListItemText primary="• Finalize and lock the TOC before publishing; DOCX export is available anytime." /></ListItem>
+                  <><Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Admin Notes</Typography>
+                  <List dense sx={{
+                  '& .MuiListItem-root': { py: 0.25 },
+                  '& .MuiListItemText-primary': { lineHeight: 1.2 }
+                  }}>
+                      <ListItem disableGutters><ListItemText primary="• Use Save as Draft to persist content and the cover image." /></ListItem>
+                      <ListItem disableGutters><ListItemText primary="• Finalize and lock the TOC before publishing; DOCX export is available anytime." /></ListItem>
                     </List>
                   </>
                 )}
