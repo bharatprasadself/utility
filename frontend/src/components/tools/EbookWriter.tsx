@@ -9,6 +9,20 @@ import { exportProjectToDocx } from '@/utils/docxExport';
 import { EbookService } from '@/services/ebooks';
 import type { EbookItem } from '@/types/Ebooks';
 
+// Prefilled generic questions for NotebookLM that users can edit
+const GENERIC_NOTEBOOKLM_QUESTIONS: string[] = [
+  'Generate a 10–12 chapter outline based on the research and notes.',
+  'Draft an engaging introduction that summarizes the core theme and goal.',
+  'Write a sample chapter in a friendly teaching tone for beginners.',
+  'Create a practical 30-day action plan with daily prompts and tasks.',
+  'List key takeaways at the end of each chapter (3–5 bullets).',
+  'Suggest relevant case studies and examples to illustrate major concepts.',
+  'Recommend visuals or diagrams that would support the explanations.',
+  'Refine chapter titles for clarity and consistency with the TOC.',
+  'Improve transitions between chapters to ensure smooth narrative flow.',
+  'Summarize research citations and sources into an appendix-ready format.'
+];
+
 const EbookWriter = () => {
   const { isAdmin } = useAuth();
   const [savingDraft, setSavingDraft] = useState(false);
@@ -31,6 +45,7 @@ const EbookWriter = () => {
   const [newQuestion, setNewQuestion] = useState<string>('');
   const [showResearchIdeation, setShowResearchIdeation] = useState<boolean>(true);
   const [showTocAdvanced, setShowTocAdvanced] = useState<boolean>(false);
+  const [showHelp, setShowHelp] = useState<boolean>(true);
 
   // Draft ebooks state
   const [drafts, setDrafts] = useState<EbookItem[]>([]);
@@ -120,6 +135,12 @@ const EbookWriter = () => {
     touch({ questionsForNotebookLm: [...current, q] });
     setNewQuestion('');
   };
+  const addGenericQuestions = () => {
+    const current = project.questionsForNotebookLm || [];
+    // Avoid duplicates by using a Set
+    const merged = Array.from(new Set([...current, ...GENERIC_NOTEBOOKLM_QUESTIONS]));
+    touch({ questionsForNotebookLm: merged });
+  };
   const removeQuestion = (idx: number) => {
     const current = [...(project.questionsForNotebookLm || [])];
     current.splice(idx, 1);
@@ -191,6 +212,16 @@ const EbookWriter = () => {
     const merged = existing.concat(missing);
     touch({ toc: merged });
   };
+
+  // Help panel common steps (shown to everyone). Admins get an extra first step for Drafts.
+  const commonWorkflowSteps: string[] = [
+    'Title & Cover: Enter the ebook title and upload a cover image.',
+    'Preface: Import or write the preface to introduce the book.',
+    'Research & Ideation: Import ideas, research notes, data/stats/examples, and personal thoughts.',
+    'Questions for NotebookLM: Add/import prompts to generate outlines or content.',
+    "Chapters: Import multiple .txt files or edit each chapter's title and content.",
+    'Table of Contents: Generate from chapters or sync with chapter titles; lock when finalized.',
+  ];
 
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
@@ -270,22 +301,52 @@ const EbookWriter = () => {
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
               <Typography variant="h6">How to Use</Typography>
-              <Button variant="text" size="small" onClick={() => setShowTocAdvanced(v => !v)}>
-                {/* reuse a simple toggle state; alternately add a dedicated one */}
-                {showTocAdvanced ? 'Hide' : 'Show'}
+              <Button variant="text" size="small" onClick={() => setShowHelp(v => !v)}>
+                {showHelp ? 'Hide' : 'Show'}
               </Button>
             </Stack>
-            <Collapse in={showTocAdvanced}>
-              <List dense>
-                <ListItem><ListItemText primary="1) Review Drafts: Load an existing draft from the top list if available." /></ListItem>
-                <ListItem><ListItemText primary="2) Set Title & Cover: Enter the ebook title and upload a cover image." /></ListItem>
-                <ListItem><ListItemText primary="3) Preface: Import or write the preface to introduce the book." /></ListItem>
-                <ListItem><ListItemText primary="4) Research & Ideation: Import notes, ideas, data, and personal thoughts to guide writing." /></ListItem>
-                <ListItem><ListItemText primary="5) Questions for NotebookLM: Add or import prompts to generate outlines or drafts." /></ListItem>
-                <ListItem><ListItemText primary="6) Table of Contents: Generate from chapters or sync with chapter titles; lock when finalized." /></ListItem>
-                <ListItem><ListItemText primary="7) Chapters: Import multiple .txt files or edit titles and content directly." /></ListItem>
-                <ListItem><ListItemText primary="8) Save/Export: Admins can Save as Draft to the database; export DOCX to download the final ebook." /></ListItem>
-              </List>
+            <Collapse in={showHelp}>
+              <Stack spacing={1}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Quick Workflow</Typography>
+                <List dense>
+                  {(
+                    isAdmin()
+                      ? ['Review Drafts: Open an existing draft from the list if needed.', ...commonWorkflowSteps]
+                      : commonWorkflowSteps
+                  ).map((text, idx) => (
+                    <ListItem key={idx}><ListItemText primary={`${idx + 1}) ${text}`} /></ListItem>
+                  ))}
+                </List>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mt: 1 }}>Example Flow</Typography>
+                <List dense>
+                  <ListItem><ListItemText primary="• Import a .txt draft for Preface, then paste Research Notes from your AI tool." /></ListItem>
+                  <ListItem><ListItemText primary="• Add 3–4 Questions for NotebookLM to generate a chapter outline and a sample chapter." /></ListItem>
+                  <ListItem><ListItemText primary="   – Questions are short, directive prompts you can type, import (.txt), copy all, or export (.txt) to use in NotebookLM." /></ListItem>
+                  <ListItem><ListItemText primary="   – Be specific (tone, audience, constraints) and reference your research notes for better outputs." /></ListItem>
+                  <ListItem><ListItemText primary="• Import multiple .txt files as Chapters (one file per chapter) and tweak content as needed." /></ListItem>
+                  <ListItem><ListItemText primary="• Click Generate TOC from Chapters, then edit titles inline to finalize structure." /></ListItem>
+                </List>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mt: 1 }}>Generic Questions & Templates</Typography>
+                <List dense>
+                  <ListItem><ListItemText primary="• Purpose: Guide NotebookLM to produce useful artifacts (outlines, sample chapters, action plans, key takeaways) aligned with your research and audience." /></ListItem>
+                  <ListItem><ListItemText primary="• Generic Questions: Use the ‘Add Generic Questions’ button to insert a curated, editable set of prompts as a starting point." /></ListItem>
+                  <ListItem><ListItemText primary="• Templates: Use ‘Use Template’ for a minimal prompt set focused on outline, rewrite, intro, and plan." /></ListItem>
+                  <ListItem><ListItemText primary="• Edit & Adapt: Refine prompts with your tone, audience, constraints (e.g., beginner-friendly, bullet lists, examples), and reference Research Notes for context." /></ListItem>
+                  <ListItem><ListItemText primary="• Workflow Tip: Start with generic/templates → customize → run in NotebookLM → paste results back into Chapters/Preface as needed." /></ListItem>
+                </List>
+                {isAdmin() && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>For Admin Users</Typography>
+                    <List dense>
+                      <ListItem><ListItemText primary="• Use Save as Draft to persist content to the database for later editing." /></ListItem>
+                      <ListItem><ListItemText primary="• The uploaded cover image is saved on Save as Draft and used in previews." /></ListItem>
+                      <ListItem><ListItemText primary="• You can still export DOCX at any time for local review or sharing." /></ListItem>
+                      <ListItem><ListItemText primary="• Best practice: finalize and lock the TOC before exporting/publishing." /></ListItem>
+                      <ListItem><ListItemText primary="• Example: Save as Draft after importing chapters; return later to refine and publish." /></ListItem>
+                    </List>
+                  </>
+                )}
+              </Stack>
             </Collapse>
           </Paper>
           <TextField
@@ -315,22 +376,7 @@ const EbookWriter = () => {
 
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack spacing={3}>
-              <Box>
-                <Typography variant="h6">Preface</Typography>
-                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => prefaceInputRef.current?.click()}>Import Preface</Button>
-                  <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ preface: '' })}>Clear</Button>
-                </Stack>
-                <input ref={prefaceInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportPreface(e.target.files?.[0])} />
-                <TextField
-                  label="Preface"
-                  fullWidth
-                  multiline
-                  minRows={4}
-                  value={project.preface || ''}
-                  onChange={e => touch({ preface: e.target.value })}
-                />
-              </Box>
+              
 
               <Box>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
@@ -427,12 +473,19 @@ const EbookWriter = () => {
                   <Button variant="contained" onClick={addQuestion}>Add</Button>
                 </Stack>
                 <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap' }}>
-                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => questionsImportRef.current?.click()}>Import .txt</Button>
+                  
                   <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={useQuestionsTemplate}>Use Template</Button>
+                  <Tooltip title="Insert a curated set of editable generic prompts for NotebookLM">
+                    <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={addGenericQuestions}>Add Generic Questions</Button>
+                  </Tooltip>
                   <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ questionsForNotebookLm: [] })}>Clear</Button>
                   <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={copyAllQuestions}>Copy All</Button>
+                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => questionsImportRef.current?.click()}>Import .txt</Button>
                   <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={exportQuestionsTxt}>Export .txt</Button>
                 </Stack>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                  These prompts are for NotebookLM to generate outlines, sample chapters, plans, and takeaways. Start with generic/templates, then tailor tone, audience, and constraints.
+                </Typography>
                 <input ref={questionsImportRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportQuestions(e.target.files?.[0])} />
                 <List dense>
                   {(project.questionsForNotebookLm || []).map((q, idx) => (
@@ -445,33 +498,45 @@ const EbookWriter = () => {
             </Stack>
           </Paper>
 
-          {/* Table of Contents */}
+          {/* Preface placed above Chapters */}
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Typography variant="h6">Table of Contents</Typography>
-              <FormControlLabel
-                control={<Switch checked={tocLocked} onChange={e => setTocLocked(e.target.checked)} />}
-                label="Lock TOC"
-              />
-              <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ toc: [] })}>Clear</Button>
-              <input ref={tocInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportTOC(e.target.files?.[0])} />
-              <Tooltip title="Generate TOC from chapters"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={generateTocFromChapters}>Generate from Chapters</Button></Tooltip>
-              <Tooltip title="Sync TOC with chapters"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={syncTocWithChapters}>Sync with Chapters</Button></Tooltip>
-              <Button variant="text" size="small" onClick={() => setShowTocAdvanced(v => !v)}>{showTocAdvanced ? 'Hide Advanced' : 'Show Advanced'}</Button>
-            </Stack>
-            <Collapse in={showTocAdvanced}>
-              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                <Tooltip title="Import TOC from .txt file (one chapter per line)"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => tocInputRef.current?.click()}>Import TOC</Button></Tooltip>
+            <Box>
+              <Typography variant="h6">Preface</Typography>
+              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => prefaceInputRef.current?.click()}>Import Preface</Button>
+                <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ preface: '' })}>Clear</Button>
               </Stack>
-            </Collapse>
-            <Divider sx={{ my: 1 }} />
-            <List dense>
-              {project.toc.map((item, idx) => (
-                <ListItem key={idx}>
-                  <ListItemText primary={item} />
-                </ListItem>
-              ))}
-            </List>
+              <input ref={prefaceInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportPreface(e.target.files?.[0])} />
+              <TextField
+                label="Preface"
+                fullWidth
+                multiline
+                minRows={4}
+                value={project.preface || ''}
+                onChange={e => touch({ preface: e.target.value })}
+              />
+            </Box>
+          </Paper>
+
+          {/* Copyright & Disclaimer */}
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Box>
+              <Typography variant="h6">Copyright & Disclaimer</Typography>
+              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => disclaimerInputRef.current?.click()}>Import Disclaimer</Button>
+                <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ disclaimer: '' })}>Clear</Button>
+              </Stack>
+              <input ref={disclaimerInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportDisclaimer(e.target.files?.[0])} />
+              <TextField
+                label="Copyright & Disclaimer"
+                fullWidth
+                multiline
+                minRows={4}
+                placeholder="Add copyright notice, liability disclaimer, and usage terms."
+                value={project.disclaimer || ''}
+                onChange={e => touch({ disclaimer: e.target.value })}
+              />
+            </Box>
           </Paper>
 
           {/* Chapters */}
@@ -518,6 +583,35 @@ const EbookWriter = () => {
             </List>
           </Paper>
 
+          {/* Table of Contents */}
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Typography variant="h6">Table of Contents</Typography>
+              <FormControlLabel
+                control={<Switch checked={tocLocked} onChange={e => setTocLocked(e.target.checked)} />}
+                label="Lock TOC"
+              />
+              <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ toc: [] })}>Clear</Button>
+              <input ref={tocInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportTOC(e.target.files?.[0])} />
+              <Tooltip title="Generate TOC from chapters"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={generateTocFromChapters}>Generate from Chapters</Button></Tooltip>
+              <Tooltip title="Sync TOC with chapters"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={syncTocWithChapters}>Sync with Chapters</Button></Tooltip>
+              <Button variant="text" size="small" onClick={() => setShowTocAdvanced(v => !v)}>{showTocAdvanced ? 'Hide Advanced' : 'Show Advanced'}</Button>
+            </Stack>
+            <Collapse in={showTocAdvanced}>
+              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                <Tooltip title="Import TOC from .txt file (one chapter per line)"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => tocInputRef.current?.click()}>Import TOC</Button></Tooltip>
+              </Stack>
+            </Collapse>
+            <Divider sx={{ my: 1 }} />
+            <List dense>
+              {project.toc.map((item, idx) => (
+                <ListItem key={idx}>
+                  <ListItemText primary={item} />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+
           {/* Actions */}
           <Stack direction="row" spacing={2} justifyContent="flex-end">
             {isAdmin() && (
@@ -545,7 +639,13 @@ const EbookWriter = () => {
                       contacts: [],
                       preface: project.preface || '',
                       disclaimer: project.disclaimer || '',
+                      // Research & Ideation fields
+                      chapterIdeas: project.chapterIdeas || '',
+                      researchNotes: project.researchNotes || '',
+                      dataStatsExamples: project.dataStatsExamples || '',
+                      personalThoughts: project.personalThoughts || '',
                       chapters: project.chapters || [],
+                      questionsForNotebookLm: project.questionsForNotebookLm || [],
                     };
                     if (project.id) {
                       await EbookService.upsertContent(ebookContent);
