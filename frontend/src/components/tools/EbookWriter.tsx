@@ -97,6 +97,7 @@ const EbookWriter = () => {
     touch({ disclaimer: content });
     if (disclaimerInputRef.current) disclaimerInputRef.current.value = '';
   };
+  // Import helpers for Research & Ideation
   const handleImportChapterIdeas = async (file?: File) => {
     if (!file) return;
     const content = await readTextFile(file);
@@ -121,39 +122,43 @@ const EbookWriter = () => {
     touch({ personalThoughts: content });
     if (personalThoughtsRef.current) personalThoughtsRef.current.value = '';
   };
+  // Questions for NotebookLM helpers
+  const addQuestion = () => {
+    const q = newQuestion.trim();
+    if (!q) return;
+    const existing = project.questionsForNotebookLm || [];
+    touch({ questionsForNotebookLm: [...existing, q] });
+    setNewQuestion('');
+  };
+  const removeQuestion = (idx: number) => {
+    const arr = [...(project.questionsForNotebookLm || [])];
+    arr.splice(idx, 1);
+    touch({ questionsForNotebookLm: arr });
+  };
   const handleImportQuestions = async (file?: File) => {
     if (!file) return;
     const content = await readTextFile(file);
     const lines = content.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-    touch({ questionsForNotebookLm: lines });
+    const existing = project.questionsForNotebookLm || [];
+    touch({ questionsForNotebookLm: [...existing, ...lines] });
     if (questionsImportRef.current) questionsImportRef.current.value = '';
-  };
-  const addQuestion = () => {
-    const q = newQuestion.trim();
-    if (!q) return;
-    const current = project.questionsForNotebookLm || [];
-    touch({ questionsForNotebookLm: [...current, q] });
-    setNewQuestion('');
-  };
-  const addGenericQuestions = () => {
-    const current = project.questionsForNotebookLm || [];
-    // Avoid duplicates by using a Set
-    const merged = Array.from(new Set([...current, ...GENERIC_NOTEBOOKLM_QUESTIONS]));
-    touch({ questionsForNotebookLm: merged });
-  };
-  const removeQuestion = (idx: number) => {
-    const current = [...(project.questionsForNotebookLm || [])];
-    current.splice(idx, 1);
-    touch({ questionsForNotebookLm: current });
   };
   const useQuestionsTemplate = () => {
     const template = [
-      'Create a 10-chapter outline using the research above.',
-      'Rewrite the digital product chapter in a friendly teaching tone.',
-      'Summarize all research into a clean introduction.',
-      'Draft a 30-day action plan chapter.'
+      'Propose a 10–12 chapter outline based on the research and notes.',
+      'Rewrite one chapter for a beginner audience in a friendly teaching tone.',
+      'Draft a concise, engaging introduction that sets up the reader’s journey.',
+      'Create a 30-day action plan with daily tasks and reflection prompts.'
     ];
     touch({ questionsForNotebookLm: template });
+  };
+  const addGenericQuestions = () => {
+    const existing = project.questionsForNotebookLm || [];
+    const merged = [...existing];
+    GENERIC_NOTEBOOKLM_QUESTIONS.forEach(q => {
+      if (!merged.includes(q)) merged.push(q);
+    });
+    touch({ questionsForNotebookLm: merged });
   };
   const copyAllQuestions = async () => {
     const txt = (project.questionsForNotebookLm || []).join('\n');
@@ -297,52 +302,38 @@ const EbookWriter = () => {
         </Typography>
 
         <Stack spacing={3}>
-          {/* How to Use (Workflow) */}
+          {/* End-to-end Workflow */}
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-              <Typography variant="h6">How to Use</Typography>
+              <Typography variant="h6">End‑to‑end Workflow</Typography>
               <Button variant="text" size="small" onClick={() => setShowHelp(v => !v)}>
                 {showHelp ? 'Hide' : 'Show'}
               </Button>
             </Stack>
             <Collapse in={showHelp}>
               <Stack spacing={1}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Quick Workflow</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Flow Overview</Typography>
                 <List dense>
-                  {(
-                    isAdmin()
-                      ? ['Review Drafts: Open an existing draft from the list if needed.', ...commonWorkflowSteps]
-                      : commonWorkflowSteps
-                  ).map((text, idx) => (
-                    <ListItem key={idx}><ListItemText primary={`${idx + 1}) ${text}`} /></ListItem>
-                  ))}
+                  <ListItem><ListItemText primary="1) Research with AI (Perplexity): Gather summaries, citations, links, data points, and insights." /></ListItem>
+                  <ListItem><ListItemText primary="2) Add Personal Thoughts: Write your perspective and lived experience to shape the narrative." /></ListItem>
+                  <ListItem><ListItemText primary="3) Craft NotebookLM Prompts: Use ‘Add Generic Questions’ or ‘Use Template’, then tailor tone, audience, and constraints." /></ListItem>
+                  <ListItem><ListItemText primary="4) Generate Content in NotebookLM: Produce outline, preface, disclaimer, and chapters based on your sources." /></ListItem>
+                  <ListItem><ListItemText primary="5) Import Outputs: Preface/Disclaimer via .txt files; Chapters as multiple .txt files (one per chapter)." /></ListItem>
+                  <ListItem><ListItemText primary="6) Build TOC: Generate from chapters or sync with titles; lock when finalized." /></ListItem>
+                  <ListItem><ListItemText primary="7) Save & Export: Admins save as draft to DB; export DOCX anytime for sharing." /></ListItem>
                 </List>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mt: 1 }}>Example Flow</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mt: 1 }}>Prompt Tips</Typography>
                 <List dense>
-                  <ListItem><ListItemText primary="• Import a .txt draft for Preface, then paste Research Notes from your AI tool." /></ListItem>
-                  <ListItem><ListItemText primary="• Add 3–4 Questions for NotebookLM to generate a chapter outline and a sample chapter." /></ListItem>
-                  <ListItem><ListItemText primary="   – Questions are short, directive prompts you can type, import (.txt), copy all, or export (.txt) to use in NotebookLM." /></ListItem>
-                  <ListItem><ListItemText primary="   – Be specific (tone, audience, constraints) and reference your research notes for better outputs." /></ListItem>
-                  <ListItem><ListItemText primary="• Import multiple .txt files as Chapters (one file per chapter) and tweak content as needed." /></ListItem>
-                  <ListItem><ListItemText primary="• Click Generate TOC from Chapters, then edit titles inline to finalize structure." /></ListItem>
-                </List>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mt: 1 }}>Generic Questions & Templates</Typography>
-                <List dense>
-                  <ListItem><ListItemText primary="• Purpose: Guide NotebookLM to produce useful artifacts (outlines, sample chapters, action plans, key takeaways) aligned with your research and audience." /></ListItem>
-                  <ListItem><ListItemText primary="• Generic Questions: Use the ‘Add Generic Questions’ button to insert a curated, editable set of prompts as a starting point." /></ListItem>
-                  <ListItem><ListItemText primary="• Templates: Use ‘Use Template’ for a minimal prompt set focused on outline, rewrite, intro, and plan." /></ListItem>
-                  <ListItem><ListItemText primary="• Edit & Adapt: Refine prompts with your tone, audience, constraints (e.g., beginner-friendly, bullet lists, examples), and reference Research Notes for context." /></ListItem>
-                  <ListItem><ListItemText primary="• Workflow Tip: Start with generic/templates → customize → run in NotebookLM → paste results back into Chapters/Preface as needed." /></ListItem>
+                  <ListItem><ListItemText primary="• Reference your research notes for context; specify audience and tone (beginner-friendly, teaching style)." /></ListItem>
+                  <ListItem><ListItemText primary="• Ask for concrete artifacts: 10–12 chapter outline, sample chapter, 30-day plan, and key takeaways." /></ListItem>
+                  <ListItem><ListItemText primary="• Use ‘Copy All’ and ‘Export .txt’ to move prompts into NotebookLM easily." /></ListItem>
                 </List>
                 {isAdmin() && (
                   <>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>For Admin Users</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Admin Notes</Typography>
                     <List dense>
-                      <ListItem><ListItemText primary="• Use Save as Draft to persist content to the database for later editing." /></ListItem>
-                      <ListItem><ListItemText primary="• The uploaded cover image is saved on Save as Draft and used in previews." /></ListItem>
-                      <ListItem><ListItemText primary="• You can still export DOCX at any time for local review or sharing." /></ListItem>
-                      <ListItem><ListItemText primary="• Best practice: finalize and lock the TOC before exporting/publishing." /></ListItem>
-                      <ListItem><ListItemText primary="• Example: Save as Draft after importing chapters; return later to refine and publish." /></ListItem>
+                      <ListItem><ListItemText primary="• Use Save as Draft to persist content and the cover image." /></ListItem>
+                      <ListItem><ListItemText primary="• Finalize and lock the TOC before publishing; DOCX export is available anytime." /></ListItem>
                     </List>
                   </>
                 )}
