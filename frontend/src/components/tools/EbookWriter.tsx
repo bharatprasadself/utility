@@ -1,6 +1,6 @@
 import { Box, Typography, Paper, Button, Stack, TextField, Divider, List, ListItem, ListItemText, Switch, FormControlLabel, Tooltip, Collapse } from '@mui/material';
 import Advertisement from '../Advertisement';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { EbookProject, Chapter } from '@/types/ebook-writer';
 import { emptyProject } from '@/types/ebook-writer';
@@ -52,29 +52,39 @@ const EbookWriter = () => {
   const [draftContents, setDraftContents] = useState<any[]>([]);
   const [bookIdToParent, setBookIdToParent] = useState<Record<string, any>>({});
 
-  useEffect(() => {
-    const fetchDrafts = async () => {
-      try {
-        const all = await EbookService.listAll();
-        setDraftContents(all);
-        const bookIdToParentLocal: Record<string, any> = {};
-        const items: EbookItem[] = [];
-        (all as any[]).forEach((content: any) => {
-          if (Array.isArray(content.books)) {
-            content.books.forEach((book: any) => {
-              items.push({ ...book, status: content.status || 'draft' });
-              if (book.id) bookIdToParentLocal[book.id] = content;
-            });
-          }
-        });
-        setDrafts(items.filter((b) => (b.status || 'draft') === 'draft'));
-        setBookIdToParent(bookIdToParentLocal);
-      } catch {
-        // ignore errors from drafts fetch
-      }
-    };
-    fetchDrafts();
+  const fetchDrafts = useCallback(async () => {
+    try {
+      const all = await EbookService.listAll();
+      setDraftContents(all);
+      const bookIdToParentLocal: Record<string, any> = {};
+      const items: EbookItem[] = [];
+      (all as any[]).forEach((content: any) => {
+        if (Array.isArray(content.books)) {
+          content.books.forEach((book: any) => {
+            const derivedStatus = (book?.status ?? content?.status ?? 'published') as string;
+            items.push({ ...book, status: derivedStatus });
+            if (book.id) bookIdToParentLocal[book.id] = content;
+          });
+        }
+      });
+      // Deduplicate by book.id when present, else by title+coverUrl
+      const seen = new Set<string>();
+      const deduped: EbookItem[] = [];
+      items.forEach((b) => {
+        const key = (b.id ? `id:${b.id}` : `tc:${(b.title || '').trim().toLowerCase()}|${b.coverUrl || ''}`);
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push(b);
+        }
+      });
+      setDrafts(deduped.filter((b) => b.status === 'draft'));
+      setBookIdToParent(bookIdToParentLocal);
+    } catch {
+      // ignore errors from drafts fetch
+    }
   }, []);
+
+  useEffect(() => { fetchDrafts(); }, [fetchDrafts]);
 
   const updateCover = (patch: Partial<EbookProject['cover']>) => {
     setProject(p => ({
@@ -234,7 +244,10 @@ const EbookWriter = () => {
       <Box sx={{ p: 3, flexGrow: 1 }} ref={editorRef}>
         {isAdmin() && drafts.length > 0 && (
           <Paper elevation={2} sx={{ mb: 4, p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Draft Ebooks</Typography>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+              <Typography variant="h6">Draft Ebooks</Typography>
+              <Button variant="outlined" size="small" onClick={fetchDrafts}>Refresh</Button>
+            </Stack>
             <Stack spacing={2}>
               {drafts.map((ebook, idx) => {
                 let parentContent = (ebook.id && bookIdToParent[ebook.id]) || null;
@@ -636,21 +649,37 @@ const EbookWriter = () => {
                   setSavingDraft(true);
                   setSaveDraftMsg(null);
                   try {
+                    // Load current active content so we can merge the books array instead of replacing it
+                    let baseContent: any = null;
+                    try { baseContent = await EbookService.getContent(); } catch {}
+                    const existingBooks: any[] = Array.isArray(baseContent?.books) ? baseContent.books : [];
+                    // Prefer ID match when available; fallback to title match
+                    let idx = -1;
+                    if (project.bookId) {
+                      idx = existingBooks.findIndex((b: any) => (b.id || '').toString() === (project.bookId as any).toString());
+                    }
+                    if (idx < 0) {
+                      idx = existingBooks.findIndex((b: any) => (b.title || '').trim().toLowerCase() === (project.title || '').trim().toLowerCase());
+                    }
+                    const currentBook = {
+                      id: project.bookId || (idx >= 0 ? existingBooks[idx]?.id : undefined),
+                      title: project.title || '',
+                      coverUrl: project.cover?.imageDataUrl || (idx >= 0 ? existingBooks[idx]?.coverUrl : ''),
+                      description: project.cover?.content || (idx >= 0 ? existingBooks[idx]?.description : ''),
+                      buyLink: idx >= 0 ? (existingBooks[idx]?.buyLink || '') : '',
+                      status: idx >= 0 ? (existingBooks[idx]?.status || 'draft') : 'draft',
+                    };
+                    const mergedBooks = [...existingBooks];
+                    if (idx >= 0) mergedBooks[idx] = { ...existingBooks[idx], ...currentBook };
+                    else mergedBooks.push(currentBook);
+
                     const ebookContent: any = {
-                      id: project.id,
-                      headerTitle: project.title || '',
-                      books: [
-                        {
-                          id: project.bookId,
-                          title: project.title || '',
-                          coverUrl: project.cover?.imageDataUrl || '',
-                          description: project.cover?.content || '',
-                          buyLink: '',
-                        }
-                      ],
-                      about: project.preface || '',
-                      newsletterEnabled: false,
-                      contacts: [],
+                      id: baseContent?.id || project.id,
+                      headerTitle: baseContent?.headerTitle || project.title || '',
+                      books: mergedBooks,
+                      about: (baseContent?.about ?? (project.preface || '')),
+                      newsletterEnabled: baseContent?.newsletterEnabled ?? false,
+                      contacts: baseContent?.contacts ?? [],
                       preface: project.preface || '',
                       disclaimer: project.disclaimer || '',
                       // Research & Ideation fields
@@ -663,14 +692,25 @@ const EbookWriter = () => {
                     };
                     const saved = await EbookService.upsertContent(ebookContent);
                     setSaveDraftMsg('Draft saved successfully!');
-                    if (saved?.id) touch({ id: saved.id as any });
+                    const savedAny: any = saved as any;
+                    const savedId = savedAny?.id;
+                    if (savedId) touch({ id: savedId as any });
+                    const savedBooks = savedAny?.books as any[] | undefined;
+                    if (!project.bookId && Array.isArray(savedBooks)) {
+                      const match = savedBooks.find(b => (b.title || '').trim().toLowerCase() === (project.title || '').trim().toLowerCase());
+                      if (match?.id) touch({ bookId: match.id as any });
+                    }
                   } catch {
                     setSaveDraftMsg('Failed to save draft.');
                   } finally {
                     setSavingDraft(false);
                   }
                 }}
-                disabled={savingDraft}
+                disabled={
+                  savingDraft || (
+                    !((project.title || '').trim()) && !(project.bookId || project.id)
+                  )
+                }
               >
                 {savingDraft ? 'Saving...' : 'Save as Draft'}
               </Button>
