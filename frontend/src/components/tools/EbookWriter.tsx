@@ -197,24 +197,15 @@ const EbookWriter = () => {
   const handleImportCoverImage = async (file?: File) => {
     if (!file) return;
     try {
-      const form = new FormData();
-      form.append('file', file);
-      const res = await fetch('/api/admin/ebooks/upload-cover', {
-        method: 'POST',
-        body: form,
-      });
-      if (res.ok) {
-        const json = await res.json();
-        const url = json?.url as string | undefined;
-        if (url) {
-          updateCover({ imageDataUrl: url });
-          return;
-        }
+      // Use authenticated service to avoid 401
+      const url = await EbookService.uploadCover(file);
+      if (url) {
+        updateCover({ imageDataUrl: url });
+        return;
       }
-      // Fallback: show local preview but still set data URL
       const dataUrl = await readImageAsDataUrl(file);
       updateCover({ imageDataUrl: dataUrl });
-    } catch {
+    } catch (e) {
       const dataUrl = await readImageAsDataUrl(file);
       updateCover({ imageDataUrl: dataUrl });
     }
@@ -375,8 +366,21 @@ const EbookWriter = () => {
               <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => coverImageInputRef.current?.click()}>
                 Upload Cover Image
               </Button>
+              <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => updateCover({ imageDataUrl: '', content: '' })}>
+                Clear Cover
+              </Button>
               <input ref={coverImageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleImportCoverImage(e.target.files?.[0])} />
             </Stack>
+            {/* Cover upload status indicator */}
+            {project.cover?.imageDataUrl && (
+              <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                {project.cover.imageDataUrl.startsWith('/api/ebooks/covers/')
+                  ? 'Cover upload status: stored in database (ebooks_covers)'
+                  : project.cover.imageDataUrl.startsWith('data:')
+                  ? 'Cover upload status: local preview only (upload failed)'
+                  : 'Cover upload status: external URL reference'}
+              </Typography>
+            )}
             {project.cover?.imageDataUrl && (
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                 Cover image will be {isAdmin() ? 'saved to the database on Save as Draft' : 'included in the exported DOCX only'}.
@@ -632,16 +636,8 @@ const EbookWriter = () => {
                   setSavingDraft(true);
                   setSaveDraftMsg(null);
                   try {
-                    // Determine target row by id or matching title
-                    let targetId: any = project.id;
-                    if (!targetId && project.title) {
-                      const parent = draftContents.find((content: any) =>
-                        Array.isArray(content.books) && content.books.some((b: any) => b.title === project.title)
-                      );
-                      if (parent && parent.id) targetId = parent.id;
-                    }
                     const ebookContent: any = {
-                      id: targetId,
+                      id: project.id,
                       headerTitle: project.title || '',
                       books: [
                         {
@@ -665,16 +661,9 @@ const EbookWriter = () => {
                       chapters: project.chapters || [],
                       questionsForNotebookLm: project.questionsForNotebookLm || [],
                     };
-                    if (targetId) {
-                      const saved = await EbookService.upsertContent(ebookContent);
-                      setSaveDraftMsg('Draft updated successfully!');
-                      // ensure local state has id
-                      if (saved?.id) touch({ id: saved.id as any });
-                    } else {
-                      const created = await EbookService.createContent(ebookContent);
-                      setSaveDraftMsg('Draft saved successfully!');
-                      if (created?.id) touch({ id: created.id as any });
-                    }
+                    const saved = await EbookService.upsertContent(ebookContent);
+                    setSaveDraftMsg('Draft saved successfully!');
+                    if (saved?.id) touch({ id: saved.id as any });
                   } catch {
                     setSaveDraftMsg('Failed to save draft.');
                   } finally {

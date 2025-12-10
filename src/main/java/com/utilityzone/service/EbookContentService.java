@@ -39,7 +39,12 @@ public class EbookContentService {
             String status = dto.getStatus() != null ? dto.getStatus() : "draft";
             entity.setStatus(status);
             entity.setUpdatedAt(dto.getUpdatedAt());
-        repository.save(entity);
+        EbookContentEntity saved = repository.save(entity);
+        // reflect generated id and status back to DTO
+        dto.setId(saved.getId());
+        if (dto.getStatus() == null) {
+            dto.setStatus(saved.getStatus());
+        }
         return dto;
     }
 
