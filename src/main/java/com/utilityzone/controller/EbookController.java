@@ -221,8 +221,13 @@ public class EbookController {
         entity.setContentJson(service.toJson(dto));
         entity.setUpdatedAt(dto.getUpdatedAt());
         com.utilityzone.repository.EbookContentRepository repo = service.getRepository();
-        if (repo != null && entity != null) {
-            repo.save(entity);
+        if (repo != null) {
+            var saved = repo.save(entity);
+            // reflect generated id and status back to DTO so client can upsert next time
+            dto.setId(saved.getId());
+            if (dto.getStatus() == null) {
+                dto.setStatus(saved.getStatus());
+            }
         }
         return ResponseEntity.ok(dto);
     }

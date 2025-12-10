@@ -196,8 +196,28 @@ const EbookWriter = () => {
   };
   const handleImportCoverImage = async (file?: File) => {
     if (!file) return;
-    const dataUrl = await readImageAsDataUrl(file);
-    updateCover({ imageDataUrl: dataUrl });
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/admin/ebooks/upload-cover', {
+        method: 'POST',
+        body: form,
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const url = json?.url as string | undefined;
+        if (url) {
+          updateCover({ imageDataUrl: url });
+          return;
+        }
+      }
+      // Fallback: show local preview but still set data URL
+      const dataUrl = await readImageAsDataUrl(file);
+      updateCover({ imageDataUrl: dataUrl });
+    } catch {
+      const dataUrl = await readImageAsDataUrl(file);
+      updateCover({ imageDataUrl: dataUrl });
+    }
   };
   const generateTocFromChapters = () => {
     if (tocLocked) { alert('TOC is locked. Unlock to regenerate.'); return; }
@@ -221,7 +241,7 @@ const EbookWriter = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
       <Box sx={{ p: 3, flexGrow: 1 }} ref={editorRef}>
-        {drafts.length > 0 && (
+        {isAdmin() && drafts.length > 0 && (
           <Paper elevation={2} sx={{ mb: 4, p: 2 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>Draft Ebooks</Typography>
             <Stack spacing={2}>
@@ -612,8 +632,16 @@ const EbookWriter = () => {
                   setSavingDraft(true);
                   setSaveDraftMsg(null);
                   try {
+                    // Determine target row by id or matching title
+                    let targetId: any = project.id;
+                    if (!targetId && project.title) {
+                      const parent = draftContents.find((content: any) =>
+                        Array.isArray(content.books) && content.books.some((b: any) => b.title === project.title)
+                      );
+                      if (parent && parent.id) targetId = parent.id;
+                    }
                     const ebookContent: any = {
-                      id: project.id,
+                      id: targetId,
                       headerTitle: project.title || '',
                       books: [
                         {
@@ -637,12 +665,15 @@ const EbookWriter = () => {
                       chapters: project.chapters || [],
                       questionsForNotebookLm: project.questionsForNotebookLm || [],
                     };
-                    if (project.id) {
-                      await EbookService.upsertContent(ebookContent);
+                    if (targetId) {
+                      const saved = await EbookService.upsertContent(ebookContent);
                       setSaveDraftMsg('Draft updated successfully!');
+                      // ensure local state has id
+                      if (saved?.id) touch({ id: saved.id as any });
                     } else {
-                      await EbookService.createContent(ebookContent);
+                      const created = await EbookService.createContent(ebookContent);
                       setSaveDraftMsg('Draft saved successfully!');
+                      if (created?.id) touch({ id: created.id as any });
                     }
                   } catch {
                     setSaveDraftMsg('Failed to save draft.');
