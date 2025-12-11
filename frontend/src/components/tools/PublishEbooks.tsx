@@ -248,7 +248,30 @@ export default function PublishEbooks() {
         {loading ? (
           <Typography color="text.secondary">Loading…</Typography>
         ) : (
-          <AdminEditor value={content} onChange={setContent} />
+          <>
+            <AdminEditor value={content} onChange={setContent} />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={async () => {
+                  try {
+                    await EbookService.upsertContent({
+                      ...content,
+                      // Ensure only curated fields are saved; books list comes from content
+                      updatedAt: new Date().toISOString()
+                    } as any);
+                    alert('Catalog saved');
+                  } catch (e: any) {
+                    alert(e?.message || 'Failed to save catalog');
+                  }
+                }}
+                sx={{ fontWeight: 600 }}
+              >
+                Save Catalog
+              </Button>
+            </Box>
+          </>
         )}
       </Box>
       <Box

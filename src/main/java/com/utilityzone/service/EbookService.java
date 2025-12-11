@@ -39,7 +39,22 @@ public class EbookService {
         entity.setCoverUrl(book.getCoverUrl());
         entity.setStatus(book.getStatus() != null ? book.getStatus() : "draft");
         entity.setUpdatedAt(Instant.now());
-        entity.setBookJson(toJson(book));
+        // Avoid storing curated storefront fields in per-ebook JSON
+        EbookItemDto authoring = new EbookItemDto();
+        authoring.setId(book.getId());
+        authoring.setTitle(book.getTitle());
+        authoring.setCoverUrl(book.getCoverUrl());
+        authoring.setStatus(book.getStatus());
+        authoring.setPreface(book.getPreface());
+        authoring.setDisclaimer(book.getDisclaimer());
+        authoring.setChapters(book.getChapters());
+        authoring.setChapterIdeas(book.getChapterIdeas());
+        authoring.setResearchNotes(book.getResearchNotes());
+        authoring.setDataStatsExamples(book.getDataStatsExamples());
+        authoring.setPersonalThoughts(book.getPersonalThoughts());
+        authoring.setQuestionsForNotebookLm(book.getQuestionsForNotebookLm());
+        // Intentionally do NOT include buyLink/description in book_json
+        entity.setBookJson(toJson(authoring));
         EbookEntity saved = repository.save(entity);
         syncAggregatedCatalog();
         return saved;
@@ -52,7 +67,21 @@ public class EbookService {
         entity.setCoverUrl(book.getCoverUrl());
         entity.setStatus(book.getStatus() != null ? book.getStatus() : entity.getStatus());
         entity.setUpdatedAt(Instant.now());
-        entity.setBookJson(toJson(book));
+        // Avoid storing curated storefront fields in per-ebook JSON
+        EbookItemDto authoring = new EbookItemDto();
+        authoring.setId(book.getId());
+        authoring.setTitle(book.getTitle());
+        authoring.setCoverUrl(book.getCoverUrl());
+        authoring.setStatus(book.getStatus());
+        authoring.setPreface(book.getPreface());
+        authoring.setDisclaimer(book.getDisclaimer());
+        authoring.setChapters(book.getChapters());
+        authoring.setChapterIdeas(book.getChapterIdeas());
+        authoring.setResearchNotes(book.getResearchNotes());
+        authoring.setDataStatsExamples(book.getDataStatsExamples());
+        authoring.setPersonalThoughts(book.getPersonalThoughts());
+        authoring.setQuestionsForNotebookLm(book.getQuestionsForNotebookLm());
+        entity.setBookJson(toJson(authoring));
         EbookEntity saved = repository.save(entity);
         syncAggregatedCatalog();
         return saved;
