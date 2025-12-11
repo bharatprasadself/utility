@@ -1,21 +1,6 @@
 // AdminEditor: Handles editing and publishing of ebooks
 import React, { useEffect, useState } from 'react';
-// Utility to generate a UUID (RFC4122 v4)
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0,
-      v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-// Ensure every book has a unique id
-function ensureBookIds(books: EbookItem[]): EbookItem[] {
-  return (books || []).map((book) => ({
-    ...book,
-    id: book.id || generateUUID(),
-  }));
-}
+// Per-ebook rows use numeric IDs from the backend; do not generate UUIDs
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -44,14 +29,14 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
     onChange(next);
   };
 
-  // Remove book using backend delete endpoint and refresh content
+  // Remove book using per-ebook delete endpoint
   const removeBook = async (index: number) => {
     setSaving(true);
     setError(null);
     try {
       const book = booksSafe[index];
-      if (!book.rowId) throw new Error('Row ID is required for delete');
-      await EbookService.deleteBook(book.rowId);
+      if (!book.id) throw new Error('Book id is required for delete');
+      await EbookService.deleteItem(Number(book.id));
       // Remove from UI immediately
       const nextBooks = booksSafe.filter((_, i) => i !== index);
       onChange({ ...value, books: nextBooks });
@@ -63,20 +48,24 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
     }
   };
 
-  // Handler to update a single book (including status)
-  const updateBook = async (_index: number) => {
+  // Handler to update a single book (including status) using per-ebook endpoints
+  const updateBook = async (index: number) => {
     setSaving(true);
     setError(null);
     try {
-      // Persist current local values for all books
-      const nextBooks: EbookItem[] = booksSafe.map((b) => ({ ...b }));
-      // Compute top-level status: published if any book is published, else draft
-      const anyPublished = nextBooks.some((b) => (b.status as string) === 'published');
-      const aggregatedStatus = (anyPublished ? 'published' : 'draft') as EbookStatus;
-      const contentToSave = { ...value, books: nextBooks, status: aggregatedStatus };
-      await EbookService.upsertContent(contentToSave);
-      // Reflect change in local state
-      onChange(contentToSave);
+      const book = booksSafe[index];
+      const payload: EbookItem = { ...book };
+      const isNumericId = book.id && /^\d+$/.test(String(book.id));
+      if (isNumericId) {
+        const updated = await EbookService.updateItem(Number(book.id), payload);
+        const nextBooks = booksSafe.map((b, i) => (i === index ? { ...b, ...updated } : b));
+        onChange({ ...value, books: nextBooks });
+      } else {
+        // Create new per-ebook row if missing id
+        const created = await EbookService.createItem(payload);
+        const nextBooks = booksSafe.map((b, i) => (i === index ? { ...b, ...created } : b));
+        onChange({ ...value, books: nextBooks });
+      }
     } catch (e: any) {
       setError(e?.message || 'Failed to update');
     } finally {
@@ -228,19 +217,12 @@ export default function PublishEbooks() {
   useEffect(() => {
     const load = async () => {
       try {
-        // Load only the current/active ebooks content
-        const data = await EbookService.getContent();
-        // Build books from the active content only to avoid pulling in older draft rows
-        let books: EbookItem[] = ensureBookIds(data?.books ?? []).map((book: any) => ({
-          ...book,
-          status: (book && book.status) ? book.status : 'draft',
-          rowId: (data as any)?.id,
-        }));
+        // Load per-ebook items for admin publishing view
+        const items = await EbookService.listItems();
+        const books: EbookItem[] = (items as any) || [];
         setContent({
           ...defaultEbookContent,
-          ...data,
           books,
-          contacts: data?.contacts ?? []
         });
       } finally {
         setLoading(false);

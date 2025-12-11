@@ -16,8 +16,4 @@ public class EbookContentDto {
     private List<ContactLinkDto> contacts;
     private Instant updatedAt;
 
-    // Added for full draft support
-    private String preface;
-    private String disclaimer;
-    private List<ChapterDto> chapters;
 }

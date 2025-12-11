@@ -5,6 +5,7 @@ import publicApi from './publicApi';
 
 const PUBLIC_BASE = '/api/ebooks';
 const ADMIN_BASE = '/api/admin/ebooks';
+const ITEMS_BASE = '/api/ebooks/items';
 
 // Fallback local storage key for demo/offline
 const LS_KEY = 'ebook_content_cache_v1';
@@ -38,6 +39,30 @@ function ensureBookIds(content: EbookContent): EbookContent {
 }
 
 export const EbookService = {
+  // Per-ebook items (admin)
+  async listItems(): Promise<EbookItem[]> {
+    const res = await axiosInstance.get<EbookItem[]>(ITEMS_BASE);
+    return res.data as any;
+  },
+  async listPublishedItems(): Promise<EbookItem[]> {
+    const res = await publicApi.get<EbookItem[]>(`${ITEMS_BASE}/published`);
+    return res.data as any;
+  },
+  async getItem(id: number): Promise<EbookItem> {
+    const res = await axiosInstance.get<EbookItem>(`${ITEMS_BASE}/${id}`);
+    return res.data as any;
+  },
+  async createItem(book: EbookItem): Promise<EbookItem> {
+    const res = await axiosInstance.post<EbookItem>(ITEMS_BASE, book as any);
+    return res.data as any;
+  },
+  async updateItem(id: number, book: EbookItem): Promise<EbookItem> {
+    const res = await axiosInstance.put<EbookItem>(`${ITEMS_BASE}/${id}`, book as any);
+    return res.data as any;
+  },
+  async deleteItem(id: number): Promise<void> {
+    await axiosInstance.delete(`${ITEMS_BASE}/${id}`);
+  },
   // Admin: delete a book by DB row ID
   async deleteBook(rowId: number): Promise<void> {
     await axiosInstance.delete(`${ADMIN_BASE}/${rowId}`);
