@@ -58,12 +58,31 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
       const isNumericId = book.id && /^\d+$/.test(String(book.id));
       if (isNumericId) {
         const updated = await EbookService.updateItem(Number(book.id), payload);
-        const nextBooks = booksSafe.map((b, i) => (i === index ? { ...b, ...updated } : b));
+        // Preserve curated fields (buyLink, description) which are not returned by per-ebook endpoint
+        const nextBooks = booksSafe.map((b, i) => (
+          i === index
+            ? {
+                ...b,
+                ...updated,
+                buyLink: b.buyLink,
+                description: b.description,
+              }
+            : b
+        ));
         onChange({ ...value, books: nextBooks });
       } else {
         // Create new per-ebook row if missing id
         const created = await EbookService.createItem(payload);
-        const nextBooks = booksSafe.map((b, i) => (i === index ? { ...b, ...created } : b));
+        const nextBooks = booksSafe.map((b, i) => (
+          i === index
+            ? {
+                ...b,
+                ...created,
+                buyLink: b.buyLink,
+                description: b.description,
+              }
+            : b
+        ));
         onChange({ ...value, books: nextBooks });
       }
     } catch (e: any) {
