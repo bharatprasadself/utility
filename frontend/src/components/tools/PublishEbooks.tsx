@@ -6,7 +6,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
-import { Box, Typography, Button, Stack, Alert, Paper, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Typography, Button, Stack, Alert, Paper, TextField, FormControl, InputLabel, Select, MenuItem, Snackbar } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
 import Advertisement from '../Advertisement';
 import type { EbookContent, EbookItem, EbookStatus } from '@/types/Ebooks';
@@ -17,6 +17,7 @@ import EbookService from '@/services/ebooks';
 const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: EbookContent) => void; }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const MAX_COVER_BYTES = 2 * 1024 * 1024;
   const booksSafe: EbookItem[] = value.books ?? [];
@@ -70,6 +71,7 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
             : b
         ));
         onChange({ ...value, books: nextBooks });
+        setSuccessMsg('Book updated and catalog patched');
       } else {
         // Create new per-ebook row if missing id
         const created = await EbookService.createItem(payload);
@@ -84,6 +86,7 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
             : b
         ));
         onChange({ ...value, books: nextBooks });
+        setSuccessMsg('Book created');
       }
     } catch (e: any) {
       setError(e?.message || 'Failed to update');
@@ -97,6 +100,13 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
       )}
+      <Snackbar
+        open={Boolean(successMsg)}
+        autoHideDuration={3000}
+        onClose={() => setSuccessMsg(null)}
+        message={successMsg || ''}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      />
       <Stack spacing={4} sx={{ mb: 3 }}>
         {booksSafe.map((b, i) => (
           <Box key={i} sx={{
@@ -236,12 +246,28 @@ export default function PublishEbooks() {
   useEffect(() => {
     const load = async () => {
       try {
-        // Load per-ebook items for admin publishing view
-        const items = await EbookService.listItems();
-        const books: EbookItem[] = (items as any) || [];
+        // Load both curated catalog and per-ebook items, then merge curated fields
+        const [catalog, items] = await Promise.all([
+          EbookService.getContent().catch(() => defaultEbookContent),
+          EbookService.listItems()
+        ]);
+        const curatedById = ((catalog?.books || []) as EbookItem[])
+          .filter(b => b.id)
+          .reduce<Record<string, Pick<EbookItem,'buyLink'|'description'>>>(
+            (acc, b) => {
+              acc[String(b.id)] = { buyLink: b.buyLink, description: b.description };
+              return acc;
+            },
+            {}
+          );
+        const merged: EbookItem[] = ((items as any) || []).map((b: any) => ({
+          ...b,
+          buyLink: curatedById[String(b.id)]?.buyLink ?? b.buyLink ?? '',
+          description: curatedById[String(b.id)]?.description ?? b.description ?? ''
+        }));
         setContent({
-          ...defaultEbookContent,
-          books,
+          ...(catalog || defaultEbookContent),
+          books: merged,
         });
       } finally {
         setLoading(false);
