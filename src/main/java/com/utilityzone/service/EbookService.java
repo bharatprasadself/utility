@@ -88,6 +88,11 @@ public class EbookService {
         try {
             // Load existing global content to preserve header/about/newsletter/contacts
             EbookContentDto base = contentService.getContent().orElseGet(EbookContentDto::new);
+            java.util.Map<String, EbookItemDto> existingById = java.util.Optional.ofNullable(base.getBooks())
+                    .orElse(java.util.Collections.emptyList())
+                    .stream()
+                    .filter(b -> b.getId() != null && !b.getId().isEmpty())
+                    .collect(java.util.stream.Collectors.toMap(EbookItemDto::getId, b -> b, (a,b)->a));
             // Map all items (both draft and published) into lightweight list
             List<EbookItemDto> items = repository.findAll().stream()
                     .map(this::fromEntity)
@@ -97,6 +102,16 @@ public class EbookService {
                         lite.setTitle(b.getTitle());
                         lite.setCoverUrl(b.getCoverUrl());
                         lite.setStatus(b.getStatus());
+                        // carry over curated fields from existing aggregated catalog if present
+                        EbookItemDto prev = existingById.get(b.getId());
+                        if (prev != null) {
+                            lite.setBuyLink(prev.getBuyLink());
+                            lite.setDescription(prev.getDescription());
+                        } else {
+                            // fallback to values present in per-ebook JSON if any
+                            lite.setBuyLink(b.getBuyLink());
+                            lite.setDescription(b.getDescription());
+                        }
                         return lite;
                     })
                     .toList();

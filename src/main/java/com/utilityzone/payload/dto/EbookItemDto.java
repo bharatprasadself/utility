@@ -11,6 +11,9 @@ public class EbookItemDto {
     private String title;
     private String coverUrl;
     private String status; // 'published' or 'draft'
+    // Aggregated storefront metadata (used in ebooks_content)
+    private String buyLink;
+    private String description;
 
     // Full per-book content (stored in ebooks.book_json)
     private String preface;
