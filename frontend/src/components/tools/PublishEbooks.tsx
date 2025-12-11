@@ -284,6 +284,8 @@ export default function PublishEbooks() {
     );
   }
 
+  const [catalogSuccessMsg, setCatalogSuccessMsg] = useState<string | null>(null);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
       <Box sx={{ p: 3, flexGrow: 1 }}>
@@ -295,6 +297,13 @@ export default function PublishEbooks() {
         ) : (
           <>
             <AdminEditor value={content} onChange={setContent} />
+            <Snackbar
+              open={Boolean(catalogSuccessMsg)}
+              autoHideDuration={3000}
+              onClose={() => setCatalogSuccessMsg(null)}
+              message={catalogSuccessMsg || ''}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            />
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
               <Button
                 variant="contained"
@@ -306,7 +315,7 @@ export default function PublishEbooks() {
                       // Ensure only curated fields are saved; books list comes from content
                       updatedAt: new Date().toISOString()
                     } as any);
-                    alert('Catalog saved');
+                    setCatalogSuccessMsg('Catalogue Saved');
                   } catch (e: any) {
                     alert(e?.message || 'Failed to save catalog');
                   }

@@ -24,11 +24,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -206,8 +202,9 @@ public class EbookController {
                     .build();
         }
 
+        String mimeType = java.util.Objects.requireNonNull(entity.getMimeType() != null ? entity.getMimeType() : MediaType.APPLICATION_OCTET_STREAM_VALUE);
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(entity.getMimeType() != null ? entity.getMimeType() : MediaType.APPLICATION_OCTET_STREAM_VALUE))
+            .contentType(MediaType.parseMediaType(mimeType))
                 .header("Cache-Control", "public, max-age=86400, immutable")
                 .eTag(eTag)
                 .contentLength(length)
@@ -221,15 +218,18 @@ public class EbookController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Subject and htmlBody are required"));
         }
         var activeSubs = subscriberRepository.findAllByActiveTrue();
-            java.util.List<String> emails = activeSubs != null ? activeSubs.stream().map(NewsletterSubscriber::getEmail).toList() : java.util.Collections.emptyList();
+        java.util.List<String> emails = java.util.Objects.requireNonNull(activeSubs != null ? activeSubs.stream().map(NewsletterSubscriber::getEmail).toList() : java.util.Collections.emptyList());
         // Build base URI from current request context to generate unsubscribe links
         String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
         // fire-and-forget async send to avoid long request times
-            emailService.sendToAllAsync(
-                emails,
-            req.getSubject() != null ? req.getSubject().trim() : "",
-            req.getHtmlBody() != null ? req.getHtmlBody() : "",
-            baseUri != null ? baseUri : ""
+        String subject = java.util.Objects.requireNonNull(req.getSubject() != null ? req.getSubject().trim() : "");
+        String body = java.util.Objects.requireNonNull(req.getHtmlBody() != null ? req.getHtmlBody() : "");
+        String base = java.util.Objects.requireNonNull(baseUri != null ? baseUri : "");
+        emailService.sendToAllAsync(
+            emails,
+            subject,
+            body,
+            base
         );
         return ResponseEntity.accepted().body(Map.of("success", true, "recipients", emails.size()));
     }
@@ -237,21 +237,9 @@ public class EbookController {
     @PostMapping("/api/admin/ebooks/create")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<EbookContentDto> create(@RequestBody EbookContentDto dto) {
-        // Always insert a new record
-        com.utilityzone.model.EbookContentEntity entity = new com.utilityzone.model.EbookContentEntity();
-        dto.setUpdatedAt(java.time.Instant.now());
-        entity.setContentJson(service.toJson(dto));
-        entity.setUpdatedAt(dto.getUpdatedAt());
-        com.utilityzone.repository.EbookContentRepository repo = service.getRepository();
-        if (repo != null) {
-            var saved = repo.save(entity);
-            // reflect generated id and status back to DTO so client can upsert next time
-            dto.setId(saved.getId());
-            if (dto.getStatus() == null) {
-                dto.setStatus(saved.getStatus());
-            }
-        }
-        return ResponseEntity.ok(dto);
+        // Delegate to upsert to ensure catalog sanitation
+        dto.setId(null); // force create semantics
+        return ResponseEntity.ok(service.upsert(dto));
     }
 
     @GetMapping("/api/admin/ebooks/all")
@@ -268,10 +256,11 @@ public class EbookController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteBook(@PathVariable("bookId") Long bookId) {
         com.utilityzone.repository.EbookContentRepository repo = service.getRepository();
-        if (!repo.existsById(bookId)) {
+        Long idVal = java.util.Objects.requireNonNull(bookId);
+        if (!repo.existsById(idVal)) {
             return ResponseEntity.notFound().build();
         }
-        repo.deleteById(bookId);
+        repo.deleteById(idVal);
         // Evict cache so next getContent returns fresh data
         org.springframework.cache.Cache cache = cacheManager.getCache("ebooks");
         if (cache != null) cache.evict("content");

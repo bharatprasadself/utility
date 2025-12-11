@@ -1,4 +1,4 @@
-import { Box, Typography, Paper, Button, Stack, TextField, Divider, List, ListItem, ListItemText, Switch, FormControlLabel, Tooltip, Collapse } from '@mui/material';
+import { Box, Typography, Paper, Button, Stack, TextField, Divider, List, ListItem, ListItemText, Switch, FormControlLabel, Tooltip, Collapse, Snackbar } from '@mui/material';
 import Advertisement from '../Advertisement';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +27,7 @@ const EbookWriter = () => {
   const { isAdmin } = useAuth();
   const [savingDraft, setSavingDraft] = useState(false);
   const [saveDraftMsg, setSaveDraftMsg] = useState<string | null>(null);
+  const [snackbarMsg, setSnackbarMsg] = useState<string | null>(null);
   const [project, setProject] = useState<EbookProject>(emptyProject());
   const [tocLocked, setTocLocked] = useState<boolean>(false);
 
@@ -244,8 +245,13 @@ const EbookWriter = () => {
                     Array.isArray(content.books) && content.books.some((b: any) => b.title === ebook.title)
                   ) || {};
                 }
-                const preface = typeof parentContent.preface === 'string' ? parentContent.preface : '';
-                const disclaimer = typeof parentContent.disclaimer === 'string' ? parentContent.disclaimer : '';
+                const preface = typeof parentContent.preface === 'string' ? parentContent.preface : (ebook as any).preface || '';
+                const disclaimer = typeof parentContent.disclaimer === 'string' ? parentContent.disclaimer : (ebook as any).disclaimer || '';
+                const chapterIdeas = typeof parentContent.chapterIdeas === 'string' ? parentContent.chapterIdeas : (ebook as any).chapterIdeas || '';
+                const researchNotes = typeof parentContent.researchNotes === 'string' ? parentContent.researchNotes : (ebook as any).researchNotes || '';
+                const dataStatsExamples = typeof parentContent.dataStatsExamples === 'string' ? parentContent.dataStatsExamples : (ebook as any).dataStatsExamples || '';
+                const personalThoughts = typeof parentContent.personalThoughts === 'string' ? parentContent.personalThoughts : (ebook as any).personalThoughts || '';
+                const questionsForNotebookLm = Array.isArray(parentContent.questionsForNotebookLm) ? parentContent.questionsForNotebookLm : (ebook as any).questionsForNotebookLm || [];
                 return (
                   <Box key={ebook.id || ebook.title || idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, border: '1px solid #eee', borderRadius: 2, p: 2 }}>
                     <Box sx={{ width: 60, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', borderRadius: 1, border: '1px solid #ccc', mr: 2 }}>
@@ -275,7 +281,12 @@ const EbookWriter = () => {
                           },
                           preface,
                           disclaimer,
-                          chapters: Array.isArray(parentContent.chapters) ? parentContent.chapters : [],
+                          chapters: Array.isArray(parentContent.chapters) ? parentContent.chapters : ((ebook as any).chapters || []),
+                          chapterIdeas,
+                          researchNotes,
+                          dataStatsExamples,
+                          personalThoughts,
+                          questionsForNotebookLm,
                           status: ebook.status || 'draft',
                         }));
                         setTimeout(() => {
@@ -671,8 +682,10 @@ const EbookWriter = () => {
                     // reflect returned id for future edits
                     if (savedItem?.id) touch({ bookId: savedItem.id as any });
                     setSaveDraftMsg('Draft saved successfully!');
+                      setSnackbarMsg('Draft Saved');
                   } catch {
                     setSaveDraftMsg('Failed to save draft.');
+                      setSnackbarMsg('Failed to save draft');
                   } finally {
                     setSavingDraft(false);
                   }
@@ -706,6 +719,13 @@ const EbookWriter = () => {
               Export as DOCX
             </Button>
           </Stack>
+          <Snackbar
+            open={Boolean(snackbarMsg)}
+            autoHideDuration={3000}
+            onClose={() => setSnackbarMsg(null)}
+            message={snackbarMsg || ''}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          />
           {saveDraftMsg && (
             <Typography variant="body2" color={saveDraftMsg.includes('success') ? 'success.main' : 'error.main'} sx={{ mt: 1 }}>
               {saveDraftMsg}
