@@ -7,6 +7,16 @@ export interface EbookItem {
   buyLink: string;
   description?: string;
   status?: EbookStatus;
+  // Full per-book content (persisted in ebooks.book_json)
+  preface?: string;
+  disclaimer?: string;
+  chapters?: Chapter[];
+  // Research & ideation fields
+  chapterIdeas?: string;
+  researchNotes?: string;
+  dataStatsExamples?: string;
+  personalThoughts?: string;
+  questionsForNotebookLm?: string[];
 }
 
 export interface ContactLink {

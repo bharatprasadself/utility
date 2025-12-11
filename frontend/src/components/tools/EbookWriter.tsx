@@ -54,31 +54,12 @@ const EbookWriter = () => {
 
   const fetchDrafts = useCallback(async () => {
     try {
-      const all = await EbookService.listAll();
-      setDraftContents(all);
-      const bookIdToParentLocal: Record<string, any> = {};
-      const items: EbookItem[] = [];
-      (all as any[]).forEach((content: any) => {
-        if (Array.isArray(content.books)) {
-          content.books.forEach((book: any) => {
-            const derivedStatus = (book?.status ?? content?.status ?? 'published') as string;
-            items.push({ ...book, status: derivedStatus });
-            if (book.id) bookIdToParentLocal[book.id] = content;
-          });
-        }
-      });
-      // Deduplicate by book.id when present, else by title+coverUrl
-      const seen = new Set<string>();
-      const deduped: EbookItem[] = [];
-      items.forEach((b) => {
-        const key = (b.id ? `id:${b.id}` : `tc:${(b.title || '').trim().toLowerCase()}|${b.coverUrl || ''}`);
-        if (!seen.has(key)) {
-          seen.add(key);
-          deduped.push(b);
-        }
-      });
-      setDrafts(deduped.filter((b) => b.status === 'draft'));
-      setBookIdToParent(bookIdToParentLocal);
+      const items = await EbookService.listItems();
+      // items already represent per-ebook rows
+      const draftsOnly = (items || []).filter(b => (b.status || 'draft') === 'draft');
+      setDrafts(draftsOnly);
+      setDraftContents([]);
+      setBookIdToParent({});
     } catch {
       // ignore errors from drafts fetch
     }
@@ -661,45 +642,35 @@ const EbookWriter = () => {
                     if (idx < 0) {
                       idx = existingBooks.findIndex((b: any) => (b.title || '').trim().toLowerCase() === (project.title || '').trim().toLowerCase());
                     }
-                    const currentBook = {
+                    const bookPayload: any = {
                       id: project.bookId || (idx >= 0 ? existingBooks[idx]?.id : undefined),
                       title: project.title || '',
                       coverUrl: project.cover?.imageDataUrl || (idx >= 0 ? existingBooks[idx]?.coverUrl : ''),
                       description: project.cover?.content || (idx >= 0 ? existingBooks[idx]?.description : ''),
                       buyLink: idx >= 0 ? (existingBooks[idx]?.buyLink || '') : '',
                       status: idx >= 0 ? (existingBooks[idx]?.status || 'draft') : 'draft',
-                    };
-                    const mergedBooks = [...existingBooks];
-                    if (idx >= 0) mergedBooks[idx] = { ...existingBooks[idx], ...currentBook };
-                    else mergedBooks.push(currentBook);
-
-                    const ebookContent: any = {
-                      id: baseContent?.id || project.id,
-                      headerTitle: baseContent?.headerTitle || project.title || '',
-                      books: mergedBooks,
-                      about: (baseContent?.about ?? (project.preface || '')),
-                      newsletterEnabled: baseContent?.newsletterEnabled ?? false,
-                      contacts: baseContent?.contacts ?? [],
+                      // Include full per-book content
                       preface: project.preface || '',
                       disclaimer: project.disclaimer || '',
-                      // Research & Ideation fields
+                      chapters: project.chapters || [],
+                      // Research & ideation
                       chapterIdeas: project.chapterIdeas || '',
                       researchNotes: project.researchNotes || '',
                       dataStatsExamples: project.dataStatsExamples || '',
                       personalThoughts: project.personalThoughts || '',
-                      chapters: project.chapters || [],
                       questionsForNotebookLm: project.questionsForNotebookLm || [],
                     };
-                    const saved = await EbookService.upsertContent(ebookContent);
-                    setSaveDraftMsg('Draft saved successfully!');
-                    const savedAny: any = saved as any;
-                    const savedId = savedAny?.id;
-                    if (savedId) touch({ id: savedId as any });
-                    const savedBooks = savedAny?.books as any[] | undefined;
-                    if (!project.bookId && Array.isArray(savedBooks)) {
-                      const match = savedBooks.find(b => (b.title || '').trim().toLowerCase() === (project.title || '').trim().toLowerCase());
-                      if (match?.id) touch({ bookId: match.id as any });
+                    // Use per-ebook CRUD: create or update single book row
+                    let savedItem: any;
+                    const isNumericId = bookPayload.id && /^\d+$/.test(String(bookPayload.id));
+                    if (isNumericId) {
+                      savedItem = await EbookService.updateItem(Number(bookPayload.id), bookPayload);
+                    } else {
+                      savedItem = await EbookService.createItem(bookPayload);
                     }
+                    // reflect returned id for future edits
+                    if (savedItem?.id) touch({ bookId: savedItem.id as any });
+                    setSaveDraftMsg('Draft saved successfully!');
                   } catch {
                     setSaveDraftMsg('Failed to save draft.');
                   } finally {
