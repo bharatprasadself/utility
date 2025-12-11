@@ -91,6 +91,14 @@ public class EbookService {
         if (book.getQuestionsForNotebookLm() != null) existing.setQuestionsForNotebookLm(book.getQuestionsForNotebookLm());
         entity.setBookJson(toJson(existing));
         EbookEntity saved = repository.save(entity);
+        // If curated fields were provided, patch them into ebooks_content
+        if (book.getBuyLink() != null || book.getDescription() != null) {
+            try {
+                patchCuratedCatalogFields(String.valueOf(id), book.getBuyLink(), book.getDescription());
+            } catch (Exception ignored) {
+                // Non-fatal
+            }
+        }
         syncAggregatedCatalog();
         return saved;
     }
@@ -162,5 +170,31 @@ public class EbookService {
         } catch (Exception ignored) {
             // Non-fatal: storefront can still read directly from /items/published
         }
+    }
+
+    // Patch a single book's curated fields (buyLink/description) in ebooks_content
+    private void patchCuratedCatalogFields(String bookId, String buyLink, String description) {
+        EbookContentDto base = contentService.getContent().orElseGet(EbookContentDto::new);
+        java.util.List<EbookItemDto> list = java.util.Optional.ofNullable(base.getBooks())
+                .orElse(new java.util.ArrayList<>());
+        boolean found = false;
+        for (EbookItemDto b : list) {
+            if (b.getId() != null && b.getId().equals(bookId)) {
+                if (buyLink != null) b.setBuyLink(buyLink);
+                if (description != null) b.setDescription(description);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            EbookItemDto b = new EbookItemDto();
+            b.setId(bookId);
+            b.setBuyLink(buyLink);
+            b.setDescription(description);
+            list.add(b);
+        }
+        base.setBooks(list);
+        base.setUpdatedAt(Instant.now());
+        contentService.upsert(base);
     }
 }
