@@ -2,6 +2,7 @@ package com.utilityzone.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.utilityzone.model.EbookEntity;
+import com.utilityzone.payload.dto.EbookContentDto;
 import com.utilityzone.payload.dto.EbookItemDto;
 import com.utilityzone.repository.EbookRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.Optional;
 public class EbookService {
     private final EbookRepository repository;
     private final ObjectMapper objectMapper;
+    private final EbookContentService contentService;
 
     public List<EbookEntity> listAll() {
         return repository.findAll();
@@ -38,7 +40,9 @@ public class EbookService {
         entity.setStatus(book.getStatus() != null ? book.getStatus() : "draft");
         entity.setUpdatedAt(Instant.now());
         entity.setBookJson(toJson(book));
-        return repository.save(entity);
+        EbookEntity saved = repository.save(entity);
+        syncAggregatedCatalog();
+        return saved;
     }
 
     public EbookEntity update(Long id, EbookItemDto book) {
@@ -49,11 +53,14 @@ public class EbookService {
         entity.setStatus(book.getStatus() != null ? book.getStatus() : entity.getStatus());
         entity.setUpdatedAt(Instant.now());
         entity.setBookJson(toJson(book));
-        return repository.save(entity);
+        EbookEntity saved = repository.save(entity);
+        syncAggregatedCatalog();
+        return saved;
     }
 
     public void delete(Long id) {
         repository.deleteById(id);
+        syncAggregatedCatalog();
     }
 
     public String toJson(Object obj) {
@@ -73,6 +80,35 @@ public class EbookService {
             return book;
         } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize book", e);
+        }
+    }
+
+    // Keep ebooks_content in sync with per-ebook rows for storefront rendering
+    private void syncAggregatedCatalog() {
+        try {
+            // Load existing global content to preserve header/about/newsletter/contacts
+            EbookContentDto base = contentService.getContent().orElseGet(EbookContentDto::new);
+            // Map all items (both draft and published) into lightweight list
+            List<EbookItemDto> items = repository.findAll().stream()
+                    .map(this::fromEntity)
+                    .map(b -> {
+                        EbookItemDto lite = new EbookItemDto();
+                        lite.setId(b.getId());
+                        lite.setTitle(b.getTitle());
+                        lite.setCoverUrl(b.getCoverUrl());
+                        lite.setStatus(b.getStatus());
+                        return lite;
+                    })
+                    .toList();
+
+            base.setBooks(items);
+            // Top-level status reflects whether any book is published
+            boolean anyPublished = items.stream().anyMatch(i -> "published".equalsIgnoreCase(i.getStatus()));
+            base.setStatus(anyPublished ? "published" : "draft");
+            base.setUpdatedAt(Instant.now());
+            contentService.upsert(base);
+        } catch (Exception ignored) {
+            // Non-fatal: storefront can still read directly from /items/published
         }
     }
 }
