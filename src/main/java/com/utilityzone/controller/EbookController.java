@@ -155,12 +155,34 @@ public class EbookController {
         String orig = file.getOriginalFilename();
         String original = StringUtils.cleanPath(orig != null ? orig : "cover");
         String mime = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+        byte[] bytes = file.getBytes();
+        // Compute SHA-256 to deduplicate covers
+        String hash;
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(bytes);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) sb.append(String.format("%02x", b));
+            hash = sb.toString();
+        } catch (Exception ex) {
+            hash = null; // fallback if digest fails
+        }
 
-    // Store in DB
-    com.utilityzone.model.EbookCoverEntity entity = new com.utilityzone.model.EbookCoverEntity();
+        // Attempt to reuse existing cover by hash
+        if (hash != null) {
+            var existing = coverService.findByHash(hash);
+            if (existing.isPresent()) {
+                String publicUrl = "/api/ebooks/covers/" + existing.get().getId();
+                return ResponseEntity.ok(Map.of("url", publicUrl));
+            }
+        }
+
+        // Store new cover in DB
+        com.utilityzone.model.EbookCoverEntity entity = new com.utilityzone.model.EbookCoverEntity();
         entity.setOriginalFilename(original);
         entity.setMimeType(mime);
-        entity.setData(file.getBytes());
+        entity.setData(bytes);
+        entity.setContentHash(hash);
         var saved = coverService.save(entity);
 
         String publicUrl = "/api/ebooks/covers/" + saved.getId();

@@ -84,8 +84,12 @@ CREATE TABLE IF NOT EXISTS ebooks_covers (
     original_filename VARCHAR(255),
     mime_type VARCHAR(100),
     data BYTEA NOT NULL,
+    content_hash VARCHAR(64),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Prevent duplicate cover storage: unique by SHA-256 hash
+CREATE UNIQUE INDEX IF NOT EXISTS ux_ebooks_covers_hash ON ebooks_covers(content_hash);
 
 -- Per-ebook table: Full content per item (many rows)
 -- Purpose:
