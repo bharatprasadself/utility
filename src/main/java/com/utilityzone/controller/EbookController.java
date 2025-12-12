@@ -168,7 +168,7 @@ public class EbookController {
         if (hash != null) {
             var existing = coverService.findByHash(hash);
             if (existing.isPresent()) {
-                String publicUrl = "/api/ebooks/covers/" + existing.get().getId();
+                String publicUrl = buildCoverUrl(existing.get().getId());
                 return ResponseEntity.ok(Map.of("url", publicUrl));
             }
         }
@@ -181,7 +181,7 @@ public class EbookController {
         entity.setContentHash(hash);
         var saved = coverService.save(entity);
 
-        String publicUrl = "/api/ebooks/covers/" + saved.getId();
+        String publicUrl = buildCoverUrl(saved.getId());
         return ResponseEntity.ok(Map.of("url", publicUrl));
     }
 
@@ -209,6 +209,16 @@ public class EbookController {
                 .eTag(eTag)
                 .contentLength(length)
                 .body(entity.getData());
+    }
+
+    // Build a context-aware public URL for covers, honoring servlet context path (e.g., /utility)
+    private String buildCoverUrl(Long id) {
+        String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+        // Ensure single slash when concatenating
+        if (baseUri.endsWith("/")) {
+            baseUri = baseUri.substring(0, baseUri.length() - 1);
+        }
+        return baseUri + "/api/ebooks/covers/" + id;
     }
 
     @PostMapping("/api/admin/ebooks/newsletter/send")
