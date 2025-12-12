@@ -61,8 +61,9 @@ public class EbookService {
     }
 
     public EbookEntity update(Long id, EbookItemDto book) {
-        EbookEntity entity = repository.findById(id).orElseGet(EbookEntity::new);
-        entity.setId(id);
+        java.util.Optional<EbookEntity> opt = repository.findById(id);
+        boolean exists = opt.isPresent();
+        EbookEntity entity = exists ? opt.get() : new EbookEntity();
         // Only update shallow storefront fields when provided
         if (book.getTitle() != null) entity.setTitle(book.getTitle());
         if (book.getCoverUrl() != null) entity.setCoverUrl(book.getCoverUrl());
@@ -94,7 +95,8 @@ public class EbookService {
         // If curated fields were provided, patch them into ebooks_content
         if (book.getBuyLink() != null || book.getDescription() != null) {
             try {
-                patchCuratedCatalogFields(String.valueOf(id), book.getBuyLink(), book.getDescription());
+                String targetId = String.valueOf(saved.getId());
+                patchCuratedCatalogFields(targetId, book.getBuyLink(), book.getDescription());
             } catch (Exception ignored) {
                 // Non-fatal
             }
