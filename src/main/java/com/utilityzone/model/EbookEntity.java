@@ -17,7 +17,6 @@ public class EbookEntity {
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Lob
     @Column(name = "book_json", nullable = false, columnDefinition = "TEXT")
     private String bookJson;
 
