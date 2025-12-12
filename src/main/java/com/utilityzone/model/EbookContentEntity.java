@@ -16,7 +16,6 @@ public class EbookContentEntity {
     private Long id;
 
 
-    @Lob
     @Column(name = "content_json", nullable = false, columnDefinition = "TEXT")
     private String contentJson;
 
