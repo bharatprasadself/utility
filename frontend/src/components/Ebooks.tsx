@@ -182,14 +182,12 @@ export default function Ebooks() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [publishedBooks, authorData] = await Promise.all([
-          EbookService.listPublishedItems(),
+        const [catalogContent, authorData] = await Promise.all([
+          EbookService.getContent(),
           AuthorService.get()
         ]);
-        setContent({
-          ...defaultEbookContent,
-          books: publishedBooks || [],
-        });
+        const onlyPublished = (catalogContent?.books || []).filter(b => (b.status || '').toLowerCase() === 'published');
+        setContent({ ...(catalogContent || defaultEbookContent), books: onlyPublished });
         setAuthor({
           name: authorData?.name || '',
           bio: authorData?.bio || '',
