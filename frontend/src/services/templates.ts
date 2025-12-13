@@ -51,7 +51,13 @@ export const generateBuyerPdf = async (templateId: number, pdfType?: 'print-mobi
       timeout: 60000
     }
   );
-  return res.data.buyerPdfUrl;
+  const url = res.data.buyerPdfUrl;
+  // Ensure absolute URL when backend returns a relative path (e.g., behind context path/proxy)
+  if (url && !/^https?:\/\//i.test(url)) {
+    const base = (await import('./axiosConfig')).API_BASE_URL as string;
+    return base ? `${base}${url}` : url;
+  }
+  return url;
 };
 
 export interface PublicTemplate {
