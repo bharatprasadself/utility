@@ -189,10 +189,10 @@ public class TemplateService {
 
     public Path getPdfPathFor(Template t) {
         try {
-            return getPdfDir().resolve("buyer-" + t.getId() + ".pdf");
+            return getPdfDir().resolve("buyer-template-" + t.getId() + ".pdf");
         } catch (IOException e) {
             // Fallback to current dir
-            return Paths.get("buyer-" + t.getId() + ".pdf");
+            return Paths.get("buyer-template-" + t.getId() + ".pdf");
         }
     }
 
