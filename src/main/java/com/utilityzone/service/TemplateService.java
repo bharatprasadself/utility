@@ -115,7 +115,7 @@ public class TemplateService {
 
         int scanMax = 0;
         try {
-            java.util.regex.Pattern p = java.util.regex.Pattern.compile(java.util.regex.Pattern.quote(prefix) + "(\\\\d+)$");
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(java.util.regex.Pattern.quote(prefix) + "(\\d+)$");
             for (Template t : repo.findAll()) {
                 String title = t.getTitle();
                 if (title == null) continue;
