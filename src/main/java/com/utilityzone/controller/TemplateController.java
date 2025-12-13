@@ -212,4 +212,27 @@ public class TemplateController {
     public Template publish(@PathVariable("id") Long id) {
         return service.publish(id);
     }
+
+    // Diagnostic endpoint to verify resolved PDF path and existence
+    @GetMapping("/api/admin/canva-templates/diagnose/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, Object>> diagnose(@PathVariable("id") Long id) throws IOException {
+        return service.findById(id)
+            .map(t -> {
+                try {
+                    Path pdfPath = service.getPdfPathFor(t);
+                    boolean exists = Files.exists(pdfPath);
+                    return ResponseEntity.ok(Map.of(
+                        "id", t.getId(),
+                        "title", t.getTitle(),
+                        "uploadBaseDir", (Object) null, // intentionally omitted to avoid leaking configuration
+                        "pdfPath", pdfPath.toAbsolutePath().toString(),
+                        "exists", exists
+                    ));
+                } catch (Exception e) {
+                    return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+                }
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 }

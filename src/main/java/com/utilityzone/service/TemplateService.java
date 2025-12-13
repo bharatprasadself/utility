@@ -19,6 +19,8 @@ import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -40,6 +42,7 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 @Service
 public class TemplateService {
     private final TemplateRepository repo;
+    private static final Logger log = LoggerFactory.getLogger(TemplateService.class);
 
     @Value("${file.upload.dir:./data/uploads}")
     private String uploadBaseDir;
@@ -145,18 +148,21 @@ public class TemplateService {
     public Path getBaseDir() throws IOException {
         Path p = Paths.get(uploadBaseDir == null || uploadBaseDir.isBlank() ? "./data/uploads" : uploadBaseDir);
         if (!Files.exists(p)) Files.createDirectories(p);
+        try { log.info("[Templates] uploadBaseDir={} resolvedAbsolute={}", uploadBaseDir, p.toAbsolutePath()); } catch (Exception ignored) {}
         return p;
     }
 
     public Path getMockupDir() throws IOException {
         Path p = getBaseDir().resolve("canva-templates").resolve("mockups");
         if (!Files.exists(p)) Files.createDirectories(p);
+        try { log.info("[Templates] mockupDir={}", p.toAbsolutePath()); } catch (Exception ignored) {}
         return p;
     }
 
     public Path getPdfDir() throws IOException {
         Path p = getBaseDir().resolve("canva-templates").resolve("pdfs");
         if (!Files.exists(p)) Files.createDirectories(p);
+        try { log.info("[Templates] pdfDir={}", p.toAbsolutePath()); } catch (Exception ignored) {}
         return p;
     }
 
