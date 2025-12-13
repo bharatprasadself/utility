@@ -108,11 +108,28 @@ public class TemplateService {
 
     public String getNextDefaultTitle() {
         final String prefix = "NextStepLabs_Digital_Template_";
-        int max = 0;
+        int dbMax = 0;
         try {
-            max = repo.findMaxNumericSuffixForPrefix(prefix);
+            dbMax = repo.findMaxNumericSuffixForPrefix(prefix);
         } catch (Exception ignored) {}
-        int next = Math.max(0, max) + 1;
+
+        int scanMax = 0;
+        try {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(java.util.regex.Pattern.quote(prefix) + "(\\\\d+)$");
+            for (Template t : repo.findAll()) {
+                String title = t.getTitle();
+                if (title == null) continue;
+                java.util.regex.Matcher m = p.matcher(title);
+                if (m.find()) {
+                    try {
+                        int n = Integer.parseInt(m.group(1));
+                        if (n > scanMax) scanMax = n;
+                    } catch (NumberFormatException ignored2) {}
+                }
+            }
+        } catch (Exception ignored) {}
+
+        int next = Math.max(Math.max(0, dbMax), scanMax) + 1;
         // Use 3-digit zero padding (e.g., 001, 002, 003)
         return String.format(prefix + "%03d", next);
     }
