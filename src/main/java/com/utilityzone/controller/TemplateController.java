@@ -213,26 +213,20 @@ public class TemplateController {
         return service.publish(id);
     }
 
-    // Diagnostic endpoint to verify resolved PDF path and existence
+    // Diagnostic endpoint: resolved buyer PDF path and existence
     @GetMapping("/api/admin/canva-templates/diagnose/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> diagnose(@PathVariable("id") Long id) throws IOException {
-        return service.findById(id)
-            .map(t -> {
-                try {
-                    Path pdfPath = service.getPdfPathFor(t);
-                    boolean exists = Files.exists(pdfPath);
-                    return ResponseEntity.ok(Map.of(
-                        "id", t.getId(),
-                        "title", t.getTitle(),
-                        "uploadBaseDir", (Object) null, // intentionally omitted to avoid leaking configuration
-                        "pdfPath", pdfPath.toAbsolutePath().toString(),
-                        "exists", exists
-                    ));
-                } catch (Exception e) {
-                    return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
-                }
-            })
-            .orElseGet(() -> ResponseEntity.notFound().build());
+        java.util.Optional<Template> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        Template t = opt.get();
+        Path pdfPath = service.getPdfPathFor(t);
+        boolean exists = Files.exists(pdfPath);
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("id", t.getId());
+        body.put("title", t.getTitle());
+        body.put("pdfPath", pdfPath.toAbsolutePath().toString());
+        body.put("exists", exists);
+        return ResponseEntity.ok(body);
     }
 }
