@@ -192,8 +192,8 @@ public class TemplateController {
                         }
                         byte[] bytes = Files.readAllBytes(path);
                         return ResponseEntity.ok()
-                                .contentType(MediaType.APPLICATION_PDF)
-                                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=buyer-" + id + ".pdf")
+                            .contentType(MediaType.APPLICATION_PDF)
+                            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=buyer-template-" + id + ".pdf")
                             .header("Cache-Control", "no-cache, must-revalidate")
                             .header("Pragma", "no-cache")
                             .header("Expires", "0")
