@@ -73,7 +73,7 @@ const CanvaTemplatesPublic = () => {
                 : undefined;
               return (
               <Grid key={t.id} item xs={12} sm={6} md={6}>
-                <Card sx={{ display: 'flex', flexDirection: 'column', transition: 'box-shadow .2s ease', '&:hover': { boxShadow: 6 } }}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: 'box-shadow .2s ease', '&:hover': { boxShadow: 6 } }}>
               {imgSrc ? (
                 <CardMedia
                   component="img"
@@ -85,7 +85,7 @@ const CanvaTemplatesPublic = () => {
               ) : (
                     <Box sx={{ height: { xs: 200, sm: 220, md: 260 }, bgcolor: 'grey.100' }} />
               )}
-              <CardContent sx={{ pb: 0 }}>
+              <CardContent sx={{ pb: 0, minHeight: 72 }}>
                 <Typography
                   variant="subtitle1"
                   fontWeight={600}
@@ -98,7 +98,7 @@ const CanvaTemplatesPublic = () => {
                   {t.title}
                 </Typography>
               </CardContent>
-              <CardActions>
+              <CardActions sx={{ mt: 'auto' }}>
                 <Button 
                   fullWidth
                   variant="contained" 
