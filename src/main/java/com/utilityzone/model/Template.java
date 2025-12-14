@@ -44,6 +44,10 @@ public class Template {
     @Column(name = "mobile_mockup_url", length = 1000)
     private String mobileMockupUrl;
 
+    // Optional custom wording for storefront and buyer PDF heading
+    @Column(name = "public_description", length = 1000)
+    private String publicDescription;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -97,6 +101,9 @@ public class Template {
 
     public String getMobileMockupUrl() { return mobileMockupUrl; }
     public void setMobileMockupUrl(String mobileMockupUrl) { this.mobileMockupUrl = mobileMockupUrl; }
+
+    public String getPublicDescription() { return publicDescription; }
+    public void setPublicDescription(String publicDescription) { this.publicDescription = publicDescription; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

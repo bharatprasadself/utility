@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Grid, Card, CardMedia, CardActions, CardContent, Button, Skeleton, Container } from '@mui/material';
-import { listTemplates, type Template } from '@/services/templates';
+import { listPublicTemplates, type PublicTemplate } from '@/services/templates';
 import { API_BASE_URL } from '@/services/axiosConfig';
 import Advertisement from './Advertisement';
 
 const CanvaTemplatesPublic = () => {
-  const [items, setItems] = useState<Template[]>([]);
+  const [items, setItems] = useState<PublicTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   const refresh = async () => {
     try {
       setLoading(true);
-      const data = await listTemplates();
-      setItems(data.filter(t => t.status === 'published'));
+      const data = await listPublicTemplates();
+      setItems(data);
     } catch (e: any) {
       setErr(e.message || 'Failed to load templates');
     } finally {
@@ -86,7 +86,15 @@ const CanvaTemplatesPublic = () => {
                     <Box sx={{ height: { xs: 200, sm: 220, md: 260 }, bgcolor: 'grey.100' }} />
               )}
               <CardContent sx={{ pb: 0 }}>
-                <Typography variant="subtitle1" fontWeight={600} noWrap title={t.title}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  title={t.title}
+                  sx={{
+                    display: 'block',
+                    overflowWrap: 'anywhere'
+                  }}
+                >
                   {t.title}
                 </Typography>
               </CardContent>

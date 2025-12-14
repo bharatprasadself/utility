@@ -84,6 +84,7 @@ public class TemplateService {
         if (changes.getEtsyListingUrl() != null) existing.setEtsyListingUrl(changes.getEtsyListingUrl());
         if (changes.getSecondaryMockupUrl() != null) existing.setSecondaryMockupUrl(changes.getSecondaryMockupUrl());
         if (changes.getMobileMockupUrl() != null) existing.setMobileMockupUrl(changes.getMobileMockupUrl());
+        if (changes.getPublicDescription() != null) existing.setPublicDescription(changes.getPublicDescription());
         // buyerPdfUrl is managed by generation endpoint; keep as-is unless explicitly provided
         if (changes.getBuyerPdfUrl() != null) existing.setBuyerPdfUrl(changes.getBuyerPdfUrl());
         existing.setStatus("draft"); // Always set to draft on update from this page
@@ -714,6 +715,10 @@ public class TemplateService {
 
     // Derive a human-friendly public description for templates (avoid technical IDs)
     public String getPublicDescription(Template t, com.utilityzone.model.PdfType type) {
+        // If custom wording is provided, prefer it everywhere (storefront + PDF)
+        if (t.getPublicDescription() != null && !t.getPublicDescription().isBlank()) {
+            return t.getPublicDescription().trim();
+        }
         String base = "NextStepsLab digital invite";
         boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
         boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");

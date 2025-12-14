@@ -44,8 +44,11 @@ public class TemplateController {
             .map(t -> {
                 java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
                 m.put("id", t.getId());
-                // Derive human-friendly description for storefront
-                String desc = service.getPublicDescription(t, com.utilityzone.model.PdfType.PRINT_MOBILE);
+                // Prefer custom public description; fallback to derived description
+                String custom = t.getPublicDescription();
+                String desc = (custom != null && !custom.isBlank())
+                        ? custom
+                        : service.getPublicDescription(t, com.utilityzone.model.PdfType.PRINT_MOBILE);
                 m.put("title", desc);
                 m.put("mockupUrl", t.getMockupUrl());
                 m.put("etsyListingUrl", t.getEtsyListingUrl());
@@ -64,6 +67,7 @@ public class TemplateController {
         ct.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
         ct.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
         ct.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
+        ct.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
         return service.create(ct);
     }
 
@@ -84,6 +88,7 @@ public class TemplateController {
         changes.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
         changes.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
         changes.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
+        changes.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
         // do not touch buyerPdfUrl unless provided explicitly
         if (req.getBuyerPdfUrl() != null) changes.setBuyerPdfUrl(StringUtils.trimWhitespace(req.getBuyerPdfUrl()));
         return service.update(id, changes);

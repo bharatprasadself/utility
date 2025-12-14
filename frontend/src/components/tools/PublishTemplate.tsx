@@ -32,6 +32,7 @@ export default function PublishTemplate() {
   const [pdfError, setPdfError] = useState<string | null>(null);
   // PDF type selection
   const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'wedding-set'>('print-mobile');
+  const [publicDescription, setPublicDescription] = useState<string>('');
   // Handler for PDF type dropdown
   const handlePdfTypeChange = (event: SelectChangeEvent) => {
     setPdfType(event.target.value as 'print-mobile' | 'print-only' | 'wedding-set');
@@ -106,6 +107,7 @@ export default function PublishTemplate() {
       const { createTemplate, getNextTemplateTitle } = await import('../../services/templates');
         const p = await createTemplate({
           title: title.trim(),
+          publicDescription: publicDescription.trim() || undefined,
           canvaUseCopyUrl: canvaUrl.trim(),
           mobileCanvaUseCopyUrl: mobileCanvaUrl.trim(),
           rsvpCanvaUseCopyUrl: rsvpCanvaUrl.trim() || undefined,
@@ -132,6 +134,7 @@ export default function PublishTemplate() {
       setSecondaryUrl('');
       setMobileFile(null);
       setMobileUrl('');
+      setPublicDescription('');
       setSuccess(`Template created (id=${p.id})`);
     } catch (e: any) {
       setError(e.message || 'Create failed');
@@ -151,6 +154,7 @@ export default function PublishTemplate() {
     setSecondaryUrl(t.secondaryMockupUrl || '');
     setMobileUrl(t.mobileMockupUrl || '');
     setEtsyUrl(t.etsyListingUrl || '');
+    setPublicDescription((t as any).publicDescription || '');
     setMockupFile(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -180,6 +184,7 @@ export default function PublishTemplate() {
       const { updateTemplate } = await import('../../services/templates');
         await updateTemplate(editId, {
           title: title.trim(),
+          publicDescription: publicDescription.trim() || undefined,
           canvaUseCopyUrl: canvaUrl.trim(),
           mobileCanvaUseCopyUrl: mobileCanvaUrl.trim() || undefined,
           rsvpCanvaUseCopyUrl: rsvpCanvaUrl.trim() || undefined,
@@ -201,6 +206,7 @@ export default function PublishTemplate() {
       setSecondaryUrl('');
       setMobileFile(null);
       setMobileUrl('');
+      setPublicDescription('');
       setSuccess('Template updated');
       await refresh();
     } catch (e: any) {
@@ -222,6 +228,7 @@ export default function PublishTemplate() {
     setMobileFile(null);
     setMobileUrl('');
     setEtsyUrl('');
+    setPublicDescription('');
   };
 
   // (Removed duplicate useEffect)
@@ -423,6 +430,17 @@ export default function PublishTemplate() {
                 onChange={e => setEtsyUrl(e.target.value)}
                 sx={{ minWidth: 320 }}
               />
+              <TextField
+                    label="Public Description (optional)"
+                    helperText="Shown on Shop and used in Buyer PDF heading. Leave blank to auto-derive."
+                    value={publicDescription}
+                    onChange={e => setPublicDescription(e.target.value)}
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    sx={{ minWidth: 320 }}
+                  />
+              
 
               {/* Removed duplicate PDF type selector and unclosed FormControl */}
               <Button
