@@ -44,7 +44,9 @@ public class TemplateController {
             .map(t -> {
                 java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
                 m.put("id", t.getId());
-                m.put("title", t.getTitle());
+                // Derive human-friendly description for storefront
+                String desc = service.getPublicDescription(t, com.utilityzone.model.PdfType.PRINT_MOBILE);
+                m.put("title", desc);
                 m.put("mockupUrl", t.getMockupUrl());
                 m.put("etsyListingUrl", t.getEtsyListingUrl());
                 return m;

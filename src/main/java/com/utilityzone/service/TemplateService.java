@@ -256,7 +256,7 @@ public class TemplateService {
                 float lineY1 = y - HEAD_LG - 6f;
                 drawDivider(cs, MARGIN, lineY1, pageW - MARGIN * 2);
                 y = lineY1 - GAP * 4;
-                String title = nonNull(t.getTitle());
+                String title = nonNull(getPublicDescription(t, type));
                 if (!title.isEmpty()) {
                     float titleX = (pageW - (PDType1Font.HELVETICA_BOLD.getStringWidth(title) / 1000f * HEAD_MD)) / 2f;
                     drawText(cs, title, titleX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
@@ -710,6 +710,33 @@ public class TemplateService {
         }
         t.setBuyerPdfUrl("/api/canva-templates/pdfs/" + t.getId() + ".pdf");
         return repo.save(t);
+    }
+
+    // Derive a human-friendly public description for templates (avoid technical IDs)
+    public String getPublicDescription(Template t, com.utilityzone.model.PdfType type) {
+        String base = "NextStepsLab digital invite";
+        boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
+        boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
+        boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
+        boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
+
+        // Prefer explicit pdf type when provided
+        if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
+            return base + " (Full Wedding Set)";
+        }
+        if (type == com.utilityzone.model.PdfType.PRINT_MOBILE) {
+            return base + " (Mobile + Print)";
+        }
+        if (type == com.utilityzone.model.PdfType.PRINT_ONLY) {
+            return base + " (Only Print)";
+        }
+
+        // Fallback heuristics based on available links
+        if (hasRsvp || hasDetail) return base + " (Full Wedding Set)";
+        if (hasPrint && hasMobile) return base + " (Mobile + Print)";
+        if (hasMobile && !hasPrint) return base + " (Only Mobile)";
+        if (hasPrint && !hasMobile) return base + " (Only Print)";
+        return base;
     }
     private BufferedImage createQrCodeImage(@NonNull String content, int size) {
         try {
