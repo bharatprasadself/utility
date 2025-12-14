@@ -255,14 +255,9 @@ export default function PublishTemplate() {
     try {
       const url = await generateBuyerPdf(id, pdfType);
       setSuccess('Buyer PDF generated successfully.');
-      // Auto-download the PDF
+      // Open the PDF in a new browser tab
       if (url) {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `buyer-template-${id}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => document.body.removeChild(link), 100);
+        window.open(url, '_blank');
       }
       await refresh();
     } catch (e: any) {

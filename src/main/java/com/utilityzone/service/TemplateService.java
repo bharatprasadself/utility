@@ -259,9 +259,12 @@ public class TemplateService {
                 y = lineY1 - GAP * 4;
                 String title = nonNull(getPublicDescription(t, type));
                 if (!title.isEmpty()) {
-                    float titleX = (pageW - (PDType1Font.HELVETICA_BOLD.getStringWidth(title) / 1000f * HEAD_MD)) / 2f;
-                    drawText(cs, title, titleX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
-                    y -= HEAD_MD + GAP * 2;
+                    // Wrap title to page width and center each line. Limit to 2 lines with ellipsis.
+                    float maxTitleWidth = pageW - MARGIN * 2;
+                    // Increase line height for better readability on wrapped title
+                    float titleLineHeight = HEAD_MD + 8f; // more gap between lines
+                    y = drawWrappedCentered(cs, title, pageW / 2f, y, maxTitleWidth, PDType1Font.HELVETICA_BOLD, HEAD_MD, titleLineHeight, 2);
+                    y -= GAP * 2;
                 }
                 float mockupW = Math.min(400f, pageW - MARGIN * 2);
                 float mockupH = 280f;
@@ -786,6 +789,76 @@ public class TemplateService {
         cs.newLineAtOffset(x, y);
         cs.showText(safe);
         cs.endText();
+    }
+
+    /**
+     * Wrap text within maxWidth and center each line. Returns the Y position after drawing (top of next line area).
+     * Can limit lines and append ellipsis if exceeded.
+     */
+    private float drawWrappedCentered(PDPageContentStream cs, String text, float centerX, float topY,
+                                      float maxWidth, PDType1Font font, float size, float lineHeight,
+                                      int maxLines) throws IOException {
+        // Sanitize like drawText
+        String safe = text
+                .replace("\u2192", "->")
+                .replace("\u2013", "-")
+                .replace("\u2014", "-")
+                .replace("\u2022", "*")
+                .replace("×", "x")
+                .replace("→", "->");
+        String[] words = safe.split(" ");
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String w : words) {
+            String candidate = current.length() == 0 ? w : current + " " + w;
+            float width = font.getStringWidth(candidate) / 1000f * size;
+            if (width <= maxWidth) {
+                current = new StringBuilder(candidate);
+            } else {
+                if (current.length() > 0) {
+                    lines.add(current.toString());
+                    current = new StringBuilder(w);
+                } else {
+                    // Single long word: hard cut
+                    int i = w.length();
+                    while (i > 0) {
+                        String chunk = w.substring(0, i);
+                        if (font.getStringWidth(chunk) / 1000f * size <= maxWidth) {
+                            lines.add(chunk);
+                            String rest = w.substring(i);
+                            current = new StringBuilder(rest);
+                            break;
+                        }
+                        i--;
+                    }
+                }
+            }
+        }
+        if (current.length() > 0) lines.add(current.toString());
+        // Truncate lines if exceeding maxLines and add ellipsis to last line
+        if (maxLines > 0 && lines.size() > maxLines) {
+            java.util.List<String> limited = lines.subList(0, maxLines);
+            String last = limited.get(limited.size() - 1);
+            String ellipsis = last + "...";
+            // Ensure ellipsis fits
+            while (font.getStringWidth(ellipsis) / 1000f * size > maxWidth && ellipsis.length() > 3) {
+                ellipsis = ellipsis.substring(0, ellipsis.length() - 4) + "...";
+            }
+            limited.set(limited.size() - 1, ellipsis);
+            lines = limited;
+        }
+        float y = topY;
+        for (String line : lines) {
+            float w = font.getStringWidth(line) / 1000f * size;
+            float x = centerX - w / 2f;
+            cs.beginText();
+            cs.setFont(font, size);
+            cs.newLineAtOffset(x, y);
+            cs.showText(line);
+            cs.endText();
+            y -= lineHeight;
+        }
+        return y;
     }
 
     private void drawPlaceholder(PDPageContentStream cs, float x, float y, float w, float h, String label) throws IOException {
