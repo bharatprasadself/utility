@@ -87,6 +87,8 @@ public class TemplateService {
         if (changes.getPublicDescription() != null) existing.setPublicDescription(changes.getPublicDescription());
         // buyerPdfUrl is managed by generation endpoint; keep as-is unless explicitly provided
         if (changes.getBuyerPdfUrl() != null) existing.setBuyerPdfUrl(changes.getBuyerPdfUrl());
+        // allow updating persisted preferred buyer PDF type
+        if (changes.getBuyerPdfType() != null) existing.setBuyerPdfType(changes.getBuyerPdfType());
         existing.setStatus("draft"); // Always set to draft on update from this page
         Template saved = repo.save(existing);
         return saved;
@@ -215,12 +217,15 @@ public class TemplateService {
         Path pdfPath = getPdfPathFor(t);
 
         // Parse pdfType string to enum (default to PRINT_MOBILE if null/invalid)
-        com.utilityzone.model.PdfType type = com.utilityzone.model.PdfType.PRINT_MOBILE;
-        if (pdfType != null) {
-            try {
-                type = com.utilityzone.model.PdfType.valueOf(pdfType.toUpperCase().replace('-', '_'));
-            } catch (Exception ignored) {}
+        com.utilityzone.model.PdfType type;
+        try {
+            type = com.utilityzone.model.PdfType.valueOf(pdfType.toUpperCase().replace('-', '_'));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid pdfType: " + pdfType);
         }
+        try { log.info("[BuyerPDF] Generating id={} type={}", id, type); } catch (Exception ignore) {}
+        // Persist the chosen type as the preferred buyer PDF type
+        t.setBuyerPdfType(type.name());
 
         try (PDDocument doc = new PDDocument()) {
             // Load logo if present

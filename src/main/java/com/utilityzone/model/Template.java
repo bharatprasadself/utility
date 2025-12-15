@@ -26,6 +26,10 @@ public class Template {
     @Column(name = "buyer_pdf_url", length = 1000)
     private String buyerPdfUrl;
 
+    // Persisted preferred buyer PDF type (e.g., PRINT_ONLY, PRINT_MOBILE, WEDDING_SET)
+    @Column(name = "buyer_pdf_type", length = 50)
+    private String buyerPdfType;
+
     @Column(name = "etsy_listing_url", length = 1000)
     private String etsyListingUrl;
 
@@ -86,6 +90,9 @@ public class Template {
 
     public String getBuyerPdfUrl() { return buyerPdfUrl; }
     public void setBuyerPdfUrl(String buyerPdfUrl) { this.buyerPdfUrl = buyerPdfUrl; }
+
+    public String getBuyerPdfType() { return buyerPdfType; }
+    public void setBuyerPdfType(String buyerPdfType) { this.buyerPdfType = buyerPdfType; }
 
     public String getEtsyListingUrl() { return etsyListingUrl; }
     public void setEtsyListingUrl(String etsyListingUrl) { this.etsyListingUrl = etsyListingUrl; }

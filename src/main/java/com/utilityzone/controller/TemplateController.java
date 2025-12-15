@@ -68,6 +68,10 @@ public class TemplateController {
         ct.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
         ct.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
         ct.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
+        // Persist preferred buyer PDF type if provided
+        if (req.getBuyerPdfType() != null) {
+            ct.setBuyerPdfType(StringUtils.trimWhitespace(req.getBuyerPdfType()));
+        }
         return service.create(ct);
     }
 
@@ -91,6 +95,8 @@ public class TemplateController {
         changes.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
         // do not touch buyerPdfUrl unless provided explicitly
         if (req.getBuyerPdfUrl() != null) changes.setBuyerPdfUrl(StringUtils.trimWhitespace(req.getBuyerPdfUrl()));
+        // allow updating persisted preferred buyer PDF type
+        if (req.getBuyerPdfType() != null) changes.setBuyerPdfType(StringUtils.trimWhitespace(req.getBuyerPdfType()));
         return service.update(id, changes);
     }
 
@@ -172,10 +178,11 @@ public class TemplateController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> generateBuyerPdf(
             @RequestParam("templateId") Long templateId,
-            @RequestParam(value = "pdfType", required = false) String pdfType
+            @RequestParam(value = "pdfType") String pdfType
     ) throws IOException {
         Template updated = service.generateBuyerPdf(templateId, pdfType);
-        return ResponseEntity.ok(Map.of("success", true, "buyerPdfUrl", updated.getBuyerPdfUrl()));
+        // Echo back canonical type value for client display
+        return ResponseEntity.ok(Map.of("success", true, "buyerPdfUrl", updated.getBuyerPdfUrl(), "pdfType", pdfType));
     }
 
     @GetMapping("/api/canva-templates/pdfs/{id}.pdf")

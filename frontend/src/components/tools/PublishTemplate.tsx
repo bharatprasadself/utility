@@ -1,4 +1,6 @@
-import { MenuItem, Select, InputLabel, FormControl } from '@mui/material';
+import { MenuItem, Select, InputLabel, FormControl, IconButton, Tooltip } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import type { SelectChangeEvent } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Alert, CircularProgress, Grid, Stack, TextField, FormLabel, AlertTitle } from '@mui/material';
@@ -30,12 +32,22 @@ export default function PublishTemplate() {
   const [publishingId, setPublishingId] = useState<number | null>(null);
   const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  // PDF type selection
-  const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'wedding-set'>('print-mobile');
+  // Per-template PDF type selection
+  const [pdfTypeById, setPdfTypeById] = useState<Record<number, 'print-mobile' | 'print-only' | 'wedding-set'>>({});
+  const getPdfTypeFor = (id: number): 'print-mobile' | 'print-only' | 'wedding-set' => pdfTypeById[id] || 'print-mobile';
   const [publicDescription, setPublicDescription] = useState<string>('');
-  // Handler for PDF type dropdown
-  const handlePdfTypeChange = (event: SelectChangeEvent) => {
-    setPdfType(event.target.value as 'print-mobile' | 'print-only' | 'wedding-set');
+  // Create-form specific PDF type selector (since global was removed)
+  const [createPdfType, setCreatePdfType] = useState<'print-mobile' | 'print-only' | 'wedding-set'>('print-mobile');
+  // Removed global handler; each row controls its own type
+
+  // Normalize server/DB values (e.g., PRINT_MOBILE) into UI values (print-mobile)
+  const normalizePdfType = (val?: string | null): 'print-mobile' | 'print-only' | 'wedding-set' => {
+    if (!val) return 'print-mobile';
+    const v = String(val).toUpperCase().replace(/\s+/g, '');
+    if (v === 'PRINT_ONLY' || v === 'PRINT-ONLY') return 'print-only';
+    if (v === 'WEDDING_SET' || v === 'WEDDING-SET') return 'wedding-set';
+    // default and also covers PRINT_MOBILE/PRINT-MOBILE
+    return 'print-mobile';
   };
 
   const refresh = async () => {
@@ -56,6 +68,13 @@ export default function PublishTemplate() {
     }
     // eslint-disable-next-line
   }, []);
+
+  // When editing a template, keep the selected Buyer PDF Type in sync with the row map
+  useEffect(() => {
+    if (editId != null) {
+      setPdfTypeById(prev => ({ ...prev, [editId]: createPdfType }));
+    }
+  }, [editId, createPdfType]);
 
   const handleUploadMockup = async () => {
     if (!mockupFile) return;
@@ -116,6 +135,7 @@ export default function PublishTemplate() {
           secondaryMockupUrl: secondaryUrl.trim() || undefined,
           mobileMockupUrl: mobileUrl.trim() || undefined,
           etsyListingUrl: etsyUrl.trim() || undefined,
+          buyerPdfType: createPdfType,
           status: 'draft'
         });
       await refresh(); // Ensure DB is up-to-date before getting next title
@@ -156,6 +176,10 @@ export default function PublishTemplate() {
     setEtsyUrl(t.etsyListingUrl || '');
     setPublicDescription((t as any).publicDescription || '');
     setMockupFile(null);
+      // Initialize Buyer PDF Type selector: prefer server value (normalized), else per-row map (also normalized)
+      const serverType = normalizePdfType((t as any).buyerPdfType as string | undefined);
+      const fallbackType = normalizePdfType(getPdfTypeFor(t.id));
+      setCreatePdfType(serverType || fallbackType);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -193,6 +217,7 @@ export default function PublishTemplate() {
           secondaryMockupUrl: secondaryUrl.trim() || undefined,
           mobileMockupUrl: mobileUrl.trim() || undefined,
           etsyListingUrl: etsyUrl.trim() || undefined,
+          buyerPdfType: createPdfType,
           status: 'draft'
         });
       setEditId(null);
@@ -253,7 +278,7 @@ export default function PublishTemplate() {
     setPdfError(null);
     setSuccess(null);
     try {
-      const url = await generateBuyerPdf(id, pdfType);
+      const url = await generateBuyerPdf(id, getPdfTypeFor(id));
       setSuccess('Buyer PDF generated successfully.');
       // Open the PDF in a new browser tab
       if (url) {
@@ -290,69 +315,71 @@ export default function PublishTemplate() {
                     value={title}
                     InputProps={{ readOnly: true }}
                     fullWidth
-                    sx={{ minWidth: 320 }}
+                    sx={{ minWidth: 320, mb: 1.25 }}
                   />
                 </Grid>
+                {/* Buyer PDF Type in its own grid row */}
                 <Grid item xs={12}>
-                  <FormControl fullWidth sx={{ minWidth: 320 }}>
-                    <InputLabel id="pdf-type-label">Buyer PDF Type</InputLabel>
+                  <FormControl fullWidth sx={{ minWidth: 320, mb: 1 }}>
+                    <InputLabel id="create-pdf-type">Buyer PDF Type</InputLabel>
                     <Select
-                      labelId="pdf-type-label"
-                      id="pdf-type-select"
-                      value={pdfType}
+                      labelId="create-pdf-type"
+                      id="create-pdf-type-select"
+                      value={createPdfType}
                       label="Buyer PDF Type"
-                      onChange={handlePdfTypeChange}
+                      onChange={(e: SelectChangeEvent) => setCreatePdfType(e.target.value as 'print-mobile' | 'print-only' | 'wedding-set')}
                     >
-                      <MenuItem value="print-mobile">Print + Mobile (default)</MenuItem>
-                      <MenuItem value="print-only">Print-only</MenuItem>
-                      <MenuItem value="wedding-set">Full Wedding Set (Invitation + RSVP + Details)</MenuItem>
+                      <MenuItem value="print-mobile">Print & Mobile</MenuItem>
+                      <MenuItem value="print-only">Print only</MenuItem>
+                      <MenuItem value="wedding-set">Full Wedding Set</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
+                {/* Canva URL in separate grid row */}
                 <Grid item xs={12}>
                   <TextField
                     label="Canva ‘Use a Copy’ URL (5 X 7 in)"
                     value={canvaUrl}
-                    onChange={e => setCanvaUrl(e.target.value)}
+                    onChange={(e) => setCanvaUrl(e.target.value)}
                     fullWidth
-                    sx={{ minWidth: 320 }}
+                    sx={{ minWidth: 320, mb: 1 }}
                   />
                 </Grid>
-                {(pdfType === 'print-mobile' || pdfType === 'wedding-set') && (
+                {(createPdfType === 'print-mobile' || createPdfType === 'wedding-set') && (
                   <Grid item xs={12}>
                     <TextField
                       label="Mobile Canva ‘Use a Copy’ URL (1080 X 1920 px)"
                       value={mobileCanvaUrl}
-                      onChange={e => setMobileCanvaUrl(e.target.value)}
+                      onChange={(e) => setMobileCanvaUrl(e.target.value)}
                       fullWidth
-                      sx={{ minWidth: 320 }}
+                      sx={{ minWidth: 320, mb: 1 }}
                     />
                   </Grid>
                 )}
-                {pdfType === 'wedding-set' && (
+                {createPdfType === 'wedding-set' && (
                   <>
                     <Grid item xs={12}>
                       <TextField
                         label="RSVP Canva ‘Use a Copy’ URL"
                         value={rsvpCanvaUrl}
-                        onChange={e => setRsvpCanvaUrl(e.target.value)}
+                        onChange={(e) => setRsvpCanvaUrl(e.target.value)}
                         fullWidth
-                        sx={{ minWidth: 320 }}
+                        sx={{ minWidth: 320, mb: 1 }}
                       />
                     </Grid>
                     <Grid item xs={12}>
                       <TextField
                         label="Detail Card Canva ‘Use a Copy’ URL"
                         value={detailCardCanvaUrl}
-                        onChange={e => setDetailCardCanvaUrl(e.target.value)}
+                        onChange={(e) => setDetailCardCanvaUrl(e.target.value)}
                         fullWidth
-                        sx={{ minWidth: 320 }}
+                        sx={{ minWidth: 320, mb: 1 }}
                       />
                     </Grid>
                   </>
                 )}
               </Grid>
-              <Grid container spacing={2} alignItems="center" sx={{ width: '100%' }}>
+              <Grid container alignItems="center" sx={{ width: '100%', mb: 1.25 }}>
                 <Grid item xs={12} sm={4} md={4} lg={3}>
                   <FormLabel>Primary mockup</FormLabel>
                 </Grid>
@@ -373,7 +400,7 @@ export default function PublishTemplate() {
                   )}
                 </Grid>
               </Grid>
-              <Grid container spacing={2} alignItems="center" sx={{ width: '100%' }}>
+              <Grid container alignItems="center" sx={{ width: '100%', mb: 1.25 }}>
                 <Grid item xs={12} sm={4} md={4} lg={3}>
                   <FormLabel>Secondary mockup (optional)</FormLabel>
                 </Grid>
@@ -394,8 +421,8 @@ export default function PublishTemplate() {
                   )}
                 </Grid>
               </Grid>
-              <Grid container spacing={2} alignItems="center" sx={{ width: '100%' }}>
-                {(pdfType !== 'print-only') && (
+              <Grid container alignItems="center" sx={{ width: '100%', mb: 1.25 }}>
+                {(createPdfType !== 'print-only') && (
                   <>
                     <Grid item xs={12} sm={4} md={4} lg={3}>
                       <FormLabel>Mobile mockup (optional)</FormLabel>
@@ -423,7 +450,7 @@ export default function PublishTemplate() {
                 label="Etsy listing URL"
                 value={etsyUrl}
                 onChange={e => setEtsyUrl(e.target.value)}
-                sx={{ minWidth: 320 }}
+                  sx={{ minWidth: 320, mb: 1 }}
               />
               <TextField
                     label="Public Description (optional)"
@@ -433,7 +460,7 @@ export default function PublishTemplate() {
                     fullWidth
                     multiline
                     minRows={2}
-                    sx={{ minWidth: 320 }}
+                    sx={{ minWidth: 320, mb: 1.25 }}
                   />
               
 
@@ -466,29 +493,29 @@ export default function PublishTemplate() {
           </Paper>
         </Grid>
         <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
-          <Alert severity="success" sx={{ height: '100%', width: '100%', alignItems: 'flex-start' }}>
+          <Alert severity="success" sx={{ height: '100%', width: '100%', alignItems: 'flex-start', p: 2 }}>
             <AlertTitle>End‑to‑end workflow</AlertTitle>
             <ol style={{ margin: 0, paddingLeft: '1.2rem' }}>
-              <li>
+              <li style={{ marginBottom: 8 }}>
                 <strong>Design in Canva</strong>: finish your design and make sure you can copy a <em>Template / Use this template</em> link
                 (Share → More/Template link → Copy).
               </li>
-              <li>
+              <li style={{ marginBottom: 8 }}>
                 <strong>Create the template entry here</strong>: enter a Title, paste the Canva link, and upload mockups.
                 Use <em>Upload Mockup</em> for the primary, plus optional <em>Upload Secondary</em> and <em>Upload Mobile</em>.
                 Optionally add your Etsy listing URL. Click <em>Save Template</em>.
               </li>
-              <li>
-                <strong>Generate the Buyer PDF (4 pages)</strong>: from the list below, click <em>Generate Buyer PDF</em>.
+              <li style={{ marginBottom: 8 }}>
+                <strong>Generate the Buyer PDF (4 pages)</strong>: from the list below, click <em>Buyer PDF</em>.
                 The PDF includes: Cover (primary mockup), Canva Access (button + QR, included items, secondary mockup),
                 How to Edit (step‑by‑step with mobile mockup), and License & Support. A shop logo is used when present
                 at <code>./data/uploads/branding/shop-logo.(png|jpg|jpeg)</code>.
               </li>
-              <li>
+              <li style={{ marginBottom: 8 }}>
                 <strong>Verify and publish</strong>: open the generated PDF to confirm links, QR, and images.
                 Share the PDF link in order confirmations or your storefront. The public catalog shows the Etsy link when set.
               </li>
-              <li>
+              <li style={{ marginBottom: 8 }}>
                 <strong>Maintain</strong>: use <em>Edit</em> to update fields (re‑generate the PDF after changes if needed) or <em>Delete</em>
                 to remove the template and its associated PDF and mockup files.
               </li>
@@ -511,6 +538,7 @@ export default function PublishTemplate() {
                 <TableCell>Title</TableCell>
                 <TableCell>Mockup</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>PDF Type</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -521,39 +549,57 @@ export default function PublishTemplate() {
                   <TableCell>{t.mockupUrl ? <a href={resolveUrl(t.mockupUrl)} target="_blank" rel="noopener noreferrer">View</a> : '-'}</TableCell>
                   <TableCell>{t.status === 'published' ? 'Published' : 'Draft'}</TableCell>
                   <TableCell>
-                    <Stack direction="row" spacing={1}>
-                      <Button
-                        variant="contained"
-                        color="secondary"
-                        disabled={!!generatingPdfId}
-                        onClick={() => handleGeneratePdf(t.id)}
-                      >
-                        {generatingPdfId === t.id ? <CircularProgress size={20} /> : 'Generate Buyer PDF'}
-                      </Button>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        disabled={!!publishingId}
-                        onClick={() => handlePublish(t.id)}
-                      >
-                        {publishingId === t.id ? <CircularProgress size={20} /> : 'Publish'}
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="info"
-                        onClick={() => startEdit(t)}
-                        disabled={loading}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        onClick={() => handleDelete(t.id)}
-                        disabled={loading}
-                      >
-                        Delete
-                      </Button>
+                    {(() => {
+                      const rowType = normalizePdfType((t as any).buyerPdfType as string | undefined) || normalizePdfType(getPdfTypeFor(t.id));
+                      return rowType === 'print-mobile' ? 'Print & Mobile' : rowType === 'print-only' ? 'Print only' : 'Full Wedding Set';
+                    })()}
+                  </TableCell>
+                  <TableCell sx={{ py: 2 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          disabled={!!generatingPdfId}
+                          onClick={() => handleGeneratePdf(t.id)}
+                        sx={{ borderRadius: 2, textTransform: 'none', px: 2 }}
+                        >
+                          {generatingPdfId === t.id ? <CircularProgress size={20} /> : 'Buyer PDF'}
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          disabled={!!publishingId}
+                          onClick={() => handlePublish(t.id)}
+                          sx={{ borderRadius: 2, textTransform: 'none', px: 2 }}
+                        >
+                          {publishingId === t.id ? <CircularProgress size={20} /> : 'Publish'}
+                        </Button>
+                        <Tooltip title="Edit">
+                          <span>
+                            <IconButton
+                              color="info"
+                              onClick={() => startEdit(t)}
+                              disabled={loading}
+                              size="medium"
+                              sx={{ borderRadius: 2 }}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <span>
+                            <IconButton
+                              color="error"
+                              onClick={() => handleDelete(t.id)}
+                              disabled={loading}
+                              size="medium"
+                              sx={{ borderRadius: 2 }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
                     </Stack>
                   </TableCell>
                 </TableRow>

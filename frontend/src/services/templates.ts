@@ -3,6 +3,7 @@ export const publishTemplate = async (id: number): Promise<void> => {
   await axiosInstance.post(`/api/admin/canva-templates/${id}/publish`);
 };
 import axiosInstance from './axiosConfig';
+export type BuyerPdfType = 'print-mobile' | 'print-only' | 'wedding-set';
 export interface Template {
   id: number;
   title: string;
@@ -19,6 +20,7 @@ export interface Template {
   createdAt?: string;
   updatedAt?: string;
   status?: string;
+  buyerPdfType?: BuyerPdfType;
 }
 
 export const listTemplates = async (): Promise<Template[]> => {
@@ -37,17 +39,17 @@ export const uploadMockup = async (file: File): Promise<string> => {
   return res.data.url;
 };
 
-export const createTemplate = async (payload: { title: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; status?: string }): Promise<Template> => {
+export const createTemplate = async (payload: { title: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }): Promise<Template> => {
   const res = await axiosInstance.post<Template>('/api/admin/canva-templates', payload);
   return res.data;
 };
 
-export const generateBuyerPdf = async (templateId: number, pdfType?: 'print-mobile' | 'print-only' | 'wedding-set'): Promise<string> => {
+export const generateBuyerPdf = async (templateId: number, pdfType: BuyerPdfType): Promise<string> => {
   const res = await axiosInstance.post<{ success: boolean; buyerPdfUrl: string }>(
     '/api/admin/canva-templates/generate-buyer-pdf',
     null,
     {
-      params: pdfType ? { templateId, pdfType } : { templateId },
+      params: { templateId, pdfType },
       // PDF generation can take longer with large images; extend timeout for this request
       timeout: 60000
     }
@@ -76,7 +78,7 @@ export const listPublicTemplates = async (): Promise<PublicTemplate[]> => {
 
 export const updateTemplate = async (
   id: number,
-  payload: { title?: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; buyerPdfUrl?: string; status?: string }
+  payload: { title?: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; buyerPdfUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }
 ): Promise<Template> => {
   const res = await axiosInstance.put<Template>(`/api/admin/canva-templates/${id}`, payload);
   return res.data;
