@@ -320,6 +320,8 @@ public class TemplateService {
             PDRectangle mb2 = p2.getMediaBox();
             try (PDPageContentStream cs = new PDPageContentStream(doc, p2)) {
                 float y = mb2.getHeight() - MARGIN - GAP;
+                // Track the Y position of the most recent 'Scan to open' label so tips can align horizontally
+                float lastQrLabelY = Float.NaN;
                 
                 // Main heading - centered for better visual impact
                 String mainHeading = "Access Your Templates";
@@ -400,6 +402,7 @@ public class TemplateService {
                     if (qrDrawn1) {
                         float qrLabelY = Math.min(qrLabelDefaultY1, (urlStartY - 12f) - 6f);
                         drawText(cs, "Scan to open", qrLabelX1, qrLabelY, PDType1Font.HELVETICA, 9f);
+                        lastQrLabelY = qrLabelY;
                     }
 
                     // Advance y below the wrapped URL for cleaner spacing
@@ -560,6 +563,7 @@ public class TemplateService {
                         if (qrDrawn2) {
                             float qrLabelY2 = Math.min(qrLabelDefaultY2, (urlStartY2 - 12f) - 6f);
                             drawText(cs, "Scan to open", qrLabelX2, qrLabelY2, PDType1Font.HELVETICA, 9f);
+                            lastQrLabelY = qrLabelY2;
                         }
 
                         // On page 2, only Wedding Set shows a mobile preview; Print+Mobile uses secondary mockup below instead.
@@ -573,20 +577,23 @@ public class TemplateService {
                                     drawImageOrPlaceholder(cs, mobileMockup, previewX, previewY, previewW, previewH, "Mobile Preview");
                                     y = previewY - GAP * 2;
                                 } else {
-                                    float tipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                                    float fallbackTipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                                    float tipY = Float.isNaN(lastQrLabelY) ? fallbackTipY : lastQrLabelY;
                                     String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
                                     drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
                                     y = tipY - GAP * 2;
                                 }
                             } else {
-                                float tipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                                float fallbackTipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                                float tipY = Float.isNaN(lastQrLabelY) ? fallbackTipY : lastQrLabelY;
                                 String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
                                 drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
                                 y = tipY - GAP * 2;
                             }
                         } else {
                             // PRINT_MOBILE: do not render mobile preview on page 2; leave space for secondary below
-                            float tipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                            float fallbackTipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                            float tipY = Float.isNaN(lastQrLabelY) ? fallbackTipY : lastQrLabelY;
                             String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
                             drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
                             y = tipY - GAP * 2;
@@ -595,6 +602,15 @@ public class TemplateService {
                         drawButton(cs, MARGIN, mBtnY, btnW, BUTTON_H, "Mobile template (link needed)");
                         y = mBtnY - GAP * 2; // fallback spacing when URL not shown
                     }
+                }
+                // Viewer compatibility tip for PRINT_ONLY at similar relative position
+                if (type == com.utilityzone.model.PdfType.PRINT_ONLY) {
+                    // Align tip horizontally with the last QR label if available
+                    float fallbackTipY = y - 16f;
+                    float tipY = Float.isNaN(lastQrLabelY) ? fallbackTipY : lastQrLabelY;
+                    String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
+                    drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
+                    y = tipY - GAP * 2;
                 }
                 // Secondary mockup preview: for Print & Mobile and Print Only on page 2
                 if ((type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.PRINT_ONLY) && secondaryMockup != null) {
