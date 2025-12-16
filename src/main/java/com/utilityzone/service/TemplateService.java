@@ -464,6 +464,20 @@ public class TemplateService {
                             drawButton(cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "RSVP template (link needed)");
                             y = rsvpBtnY - GAP * 2;
                         }
+                        // RSVP Instructions block (Invite Suite only)
+                        try {
+                            drawText(cs, "RSVP Instructions:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 13f);
+                            y -= 18f;
+                            String[] rsvpNotes = new String[]{
+                                    "This invitation includes an editable RSVP card.",
+                                    "After purchase, you can personalize the RSVP details using Canva and share it digitally via WhatsApp, email, or social media.",
+                                    "Guests can respond by calling, messaging, or emailing using the contact details you provide."
+                            };
+                            for (String note : rsvpNotes) {
+                                y = drawWrapped(cs, "• " + note, MARGIN + 10f, y, leftW, PDType1Font.HELVETICA, 11f, 14f);
+                            }
+                            y -= GAP; // small spacing before Detail Card heading
+                        } catch (Exception ignore) {}
 
                         // Detail Card
                         drawText(cs, "Detail Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
