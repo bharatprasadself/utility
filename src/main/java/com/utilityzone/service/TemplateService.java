@@ -339,11 +339,11 @@ public class TemplateService {
 
                 // Print version section - better aligned
                 drawText(cs, "Print Invitation (5 x 7 in)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
-                y -= 25f; // Increased spacing for better readability
+                y -= 18f; // tighter spacing to bring button closer
                 
                 String printLink = t.getCanvaUseCopyUrl();
                 float btnW = Math.min(280f, leftW);
-                float btnY = y - BUTTON_H - 8f; // More spacing above button
+                float btnY = y - BUTTON_H - 4f; // tighter spacing above button
                 
                 if (printLink != null && printLink.startsWith("http")) {
                     drawButtonWithLink(doc, p2, cs, MARGIN, btnY, btnW, BUTTON_H, "Edit Print Template", printLink);
@@ -428,9 +428,9 @@ public class TemplateService {
                         // RSVP
                         y -= 20f;
                         drawText(cs, "RSVP Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
-                        y -= 25f;
+                        y -= 18f; // tighter spacing before button
                         String rsvpLink = t.getRsvpCanvaUseCopyUrl();
-                        float rsvpBtnY = y - BUTTON_H - 8f;
+                        float rsvpBtnY = y - BUTTON_H - 4f;
                         if (rsvpLink != null && rsvpLink.startsWith("http")) {
                             drawButtonWithLink(doc, p2, cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "Edit RSVP Template", rsvpLink);
                             try {
@@ -481,9 +481,9 @@ public class TemplateService {
 
                         // Detail Card
                         drawText(cs, "Detail Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
-                        y -= 25f;
+                        y -= 18f; // tighter spacing before button
                         String detailLink = t.getDetailCardCanvaUseCopyUrl();
-                        float detailBtnY = y - BUTTON_H - 8f;
+                        float detailBtnY = y - BUTTON_H - 4f;
                         if (detailLink != null && detailLink.startsWith("http")) {
                             drawButtonWithLink(doc, p2, cs, MARGIN, detailBtnY, btnW, BUTTON_H, "Edit Detail Card Template", detailLink);
                             try {
@@ -524,9 +524,9 @@ public class TemplateService {
                 // Mobile version section (only for PRINT_MOBILE and WEDDING_SET)
                 if (type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.WEDDING_SET) {
                     drawText(cs, "Mobile Invitation (1080 x 1920 px)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
-                    y -= 20f;
+                    y -= 14f; // tighter spacing before button
                     String mobileLink = t.getMobileCanvaUseCopyUrl();
-                    float mBtnY = y - BUTTON_H - 6f;
+                    float mBtnY = y - BUTTON_H - 4f;
                     if (mobileLink != null && mobileLink.startsWith("http")) {
                         drawButtonWithLink(doc, p2, cs, MARGIN, mBtnY, btnW, BUTTON_H, "Edit Mobile Template", mobileLink);
                         // Add a QR for the mobile link as well
