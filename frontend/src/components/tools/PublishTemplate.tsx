@@ -278,7 +278,12 @@ export default function PublishTemplate() {
     setPdfError(null);
     setSuccess(null);
     try {
-      const url = await generateBuyerPdf(id, getPdfTypeFor(id));
+      // Prefer an explicit per-row selection if present, else use the server-saved type, else default
+      const row = templates.find(x => x.id === id);
+      const serverType = row ? normalizePdfType((row as any).buyerPdfType as string | undefined) : undefined;
+      const selected = pdfTypeById[id];
+      const effectiveType = (selected || serverType || 'print-mobile') as 'print-mobile' | 'print-only' | 'wedding-set';
+      const url = await generateBuyerPdf(id, effectiveType);
       setSuccess('Buyer PDF generated successfully.');
       // Open the PDF in a new browser tab
       if (url) {

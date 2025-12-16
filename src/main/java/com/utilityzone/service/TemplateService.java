@@ -239,6 +239,11 @@ public class TemplateService {
             PDImageXObject mockup = loadImageByUrl(doc, t.getMockupUrl());
             PDImageXObject secondaryMockup = loadImageByUrl(doc, t.getSecondaryMockupUrl());
             PDImageXObject mobileMockup = loadImageByUrl(doc, t.getMobileMockupUrl());
+            try { log.info("[BuyerPDF] images: main={}, secondary={}, mobile={}", t.getMockupUrl(), t.getSecondaryMockupUrl(), t.getMobileMockupUrl()); } catch (Exception ignore) {}
+            // Safety: only allow secondary mockup for Print & Mobile and Print Only
+            if (type != com.utilityzone.model.PdfType.PRINT_MOBILE && type != com.utilityzone.model.PdfType.PRINT_ONLY) {
+                secondaryMockup = null;
+            }
 
             // Page 1
             PDPage p1 = new PDPage();
@@ -408,94 +413,99 @@ public class TemplateService {
                     y = btnY - GAP * 3; // space between sections when URL not shown
                 }
 
-                // --- RSVP and Detail Card links for WEDDING_SET ---
-                if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
-                    // RSVP
-                    y -= 20f;
-                    drawText(cs, "RSVP Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
-                    y -= 25f;
-                    String rsvpLink = t.getRsvpCanvaUseCopyUrl();
-                    float rsvpBtnY = y - BUTTON_H - 8f;
-                    if (rsvpLink != null && rsvpLink.startsWith("http")) {
-                        drawButtonWithLink(doc, p2, cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "Edit RSVP Template", rsvpLink);
-                        // QR code for RSVP
-                        try {
-                            BufferedImage qr = createQrCodeImage(rsvpLink, 200);
-                            if (qr != null) {
-                                PDImageXObject qrImg = LosslessFactory.createFromImage(doc, qr);
-                                float qrSize = 100f;
-                                float qrX = rightX + (qrAreaW - qrSize) / 2f;
-                                float qrY = rsvpBtnY + (BUTTON_H - qrSize) / 2f + 15f;
-                                cs.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-                                PDAnnotationLink qrLink = new PDAnnotationLink();
-                                PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
-                                qrLink.setRectangle(qrRect);
-                                PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
-                                qrBorder.setWidth(0f);
-                                qrLink.setBorderStyle(qrBorder);
-                                qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
-                                qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
-                                PDActionURI qrAction = new PDActionURI();
-                                qrAction.setURI(rsvpLink);
-                                qrLink.setAction(qrAction);
-                                p2.getAnnotations().add(qrLink);
-                                // QR label
-                                String qrLabel = "Scan to open";
-                                float qrLabelX = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
-                                float qrLabelY = qrY - 15f;
-                                drawText(cs, qrLabel, qrLabelX, qrLabelY, PDType1Font.HELVETICA, 9f);
-                            }
-                        } catch (Exception ignore) {}
-                        y = rsvpBtnY - GAP * 2;
-                    } else {
-                        drawButton(cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "RSVP template (link needed)");
-                        y = rsvpBtnY - GAP * 2;
-                    }
+                // Type-specific sections after Print: keep flows isolated by type
+                switch (type) {
+                    case PRINT_ONLY:
+                        // No mobile; allow secondary preview if provided
+                        break;
+                    case PRINT_MOBILE:
+                        // Will render Mobile section below; no RSVP/Detail/Secondary
+                        break;
+                    case WEDDING_SET:
+                        // RSVP
+                        y -= 20f;
+                        drawText(cs, "RSVP Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
+                        y -= 25f;
+                        String rsvpLink = t.getRsvpCanvaUseCopyUrl();
+                        float rsvpBtnY = y - BUTTON_H - 8f;
+                        if (rsvpLink != null && rsvpLink.startsWith("http")) {
+                            drawButtonWithLink(doc, p2, cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "Edit RSVP Template", rsvpLink);
+                            try {
+                                BufferedImage qr = createQrCodeImage(rsvpLink, 200);
+                                if (qr != null) {
+                                    PDImageXObject qrImg = LosslessFactory.createFromImage(doc, qr);
+                                    float qrSize = 100f;
+                                    float qrX = rightX + (qrAreaW - qrSize) / 2f;
+                                    float qrY = rsvpBtnY + (BUTTON_H - qrSize) / 2f + 15f;
+                                    cs.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                                    PDAnnotationLink qrLink = new PDAnnotationLink();
+                                    PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
+                                    qrLink.setRectangle(qrRect);
+                                    PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
+                                    qrBorder.setWidth(0f);
+                                    qrLink.setBorderStyle(qrBorder);
+                                    qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                                    qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                                    PDActionURI qrAction = new PDActionURI();
+                                    qrAction.setURI(rsvpLink);
+                                    qrLink.setAction(qrAction);
+                                    p2.getAnnotations().add(qrLink);
+                                    String qrLabel = "Scan to open";
+                                    float qrLabelX = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
+                                    float qrLabelY = qrY - 15f;
+                                    drawText(cs, qrLabel, qrLabelX, qrLabelY, PDType1Font.HELVETICA, 9f);
+                                }
+                            } catch (Exception ignore) {}
+                            y = rsvpBtnY - GAP * 2;
+                        } else {
+                            drawButton(cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "RSVP template (link needed)");
+                            y = rsvpBtnY - GAP * 2;
+                        }
 
-                    // Detail Card
-                    drawText(cs, "Detail Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
-                    y -= 25f;
-                    String detailLink = t.getDetailCardCanvaUseCopyUrl();
-                    float detailBtnY = y - BUTTON_H - 8f;
-                    if (detailLink != null && detailLink.startsWith("http")) {
-                        drawButtonWithLink(doc, p2, cs, MARGIN, detailBtnY, btnW, BUTTON_H, "Edit Detail Card Template", detailLink);
-                        // QR code for Detail Card
-                        try {
-                            BufferedImage qr = createQrCodeImage(detailLink, 200);
-                            if (qr != null) {
-                                PDImageXObject qrImg = LosslessFactory.createFromImage(doc, qr);
-                                float qrSize = 100f;
-                                float qrX = rightX + (qrAreaW - qrSize) / 2f;
-                                float qrY = detailBtnY + (BUTTON_H - qrSize) / 2f + 15f;
-                                cs.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-                                PDAnnotationLink qrLink = new PDAnnotationLink();
-                                PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
-                                qrLink.setRectangle(qrRect);
-                                PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
-                                qrBorder.setWidth(0f);
-                                qrLink.setBorderStyle(qrBorder);
-                                qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
-                                qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
-                                PDActionURI qrAction = new PDActionURI();
-                                qrAction.setURI(detailLink);
-                                qrLink.setAction(qrAction);
-                                p2.getAnnotations().add(qrLink);
-                                // QR label
-                                String qrLabel = "Scan to open";
-                                float qrLabelX = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
-                                float qrLabelY = qrY - 15f;
-                                drawText(cs, qrLabel, qrLabelX, qrLabelY, PDType1Font.HELVETICA, 9f);
-                            }
-                        } catch (Exception ignore) {}
-                        y = detailBtnY - GAP * 2;
-                    } else {
-                        drawButton(cs, MARGIN, detailBtnY, btnW, BUTTON_H, "Detail card template (link needed)");
-                        y = detailBtnY - GAP * 2;
-                    }
+                        // Detail Card
+                        drawText(cs, "Detail Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
+                        y -= 25f;
+                        String detailLink = t.getDetailCardCanvaUseCopyUrl();
+                        float detailBtnY = y - BUTTON_H - 8f;
+                        if (detailLink != null && detailLink.startsWith("http")) {
+                            drawButtonWithLink(doc, p2, cs, MARGIN, detailBtnY, btnW, BUTTON_H, "Edit Detail Card Template", detailLink);
+                            try {
+                                BufferedImage qr = createQrCodeImage(detailLink, 200);
+                                if (qr != null) {
+                                    PDImageXObject qrImg = LosslessFactory.createFromImage(doc, qr);
+                                    float qrSize = 100f;
+                                    float qrX = rightX + (qrAreaW - qrSize) / 2f;
+                                    float qrY = detailBtnY + (BUTTON_H - qrSize) / 2f + 15f;
+                                    cs.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                                    PDAnnotationLink qrLink = new PDAnnotationLink();
+                                    PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
+                                    qrLink.setRectangle(qrRect);
+                                    PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
+                                    qrBorder.setWidth(0f);
+                                    qrLink.setBorderStyle(qrBorder);
+                                    qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                                    qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                                    PDActionURI qrAction = new PDActionURI();
+                                    qrAction.setURI(detailLink);
+                                    qrLink.setAction(qrAction);
+                                    p2.getAnnotations().add(qrLink);
+                                    String qrLabel = "Scan to open";
+                                    float qrLabelX = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
+                                    float qrLabelY = qrY - 15f;
+                                    drawText(cs, qrLabel, qrLabelX, qrLabelY, PDType1Font.HELVETICA, 9f);
+                                }
+                            } catch (Exception ignore) {}
+                            y = detailBtnY - GAP * 2;
+                        } else {
+                            drawButton(cs, MARGIN, detailBtnY, btnW, BUTTON_H, "Detail card template (link needed)");
+                            y = detailBtnY - GAP * 2;
+                        }
+                        // Fallthrough to render mobile section for Wedding Set below
+                        break;
                 }
 
-                // Mobile version section (skip for PRINT_ONLY)
-                if (type != com.utilityzone.model.PdfType.PRINT_ONLY) {
+                // Mobile version section (only for PRINT_MOBILE and WEDDING_SET)
+                if (type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.WEDDING_SET) {
                     drawText(cs, "Mobile Invitation (1080 x 1920 px)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
                     y -= 20f;
                     String mobileLink = t.getMobileCanvaUseCopyUrl();
@@ -552,23 +562,52 @@ public class TemplateService {
                             drawText(cs, "Scan to open", qrLabelX2, qrLabelY2, PDType1Font.HELVETICA, 9f);
                         }
 
-                        // Viewer compatibility tip below the mobile section
-                        float tipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
-                        String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
-                        drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
-                        // update y below tip for clean separation
-                        y = tipY - GAP * 2;
+                        // On page 2, only Wedding Set shows a mobile preview; Print+Mobile uses secondary mockup below instead.
+                        if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
+                            if (mobileMockup != null) {
+                                float previewW = Math.min(380f, mb2.getWidth() - MARGIN * 2);
+                                float previewH = 260f;
+                                float previewX = (mb2.getWidth() - previewW) / 2f;
+                                float previewY = Math.min((urlStartY2 - 16f), mBtnY) - previewH - 20f;
+                                if (previewY > MARGIN + 80f) {
+                                    drawImageOrPlaceholder(cs, mobileMockup, previewX, previewY, previewW, previewH, "Mobile Preview");
+                                    y = previewY - GAP * 2;
+                                } else {
+                                    float tipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                                    String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
+                                    drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
+                                    y = tipY - GAP * 2;
+                                }
+                            } else {
+                                float tipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                                String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
+                                drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
+                                y = tipY - GAP * 2;
+                            }
+                        } else {
+                            // PRINT_MOBILE: do not render mobile preview on page 2; leave space for secondary below
+                            float tipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                            String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
+                            drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
+                            y = tipY - GAP * 2;
+                        }
                     } else {
                         drawButton(cs, MARGIN, mBtnY, btnW, BUTTON_H, "Mobile template (link needed)");
                         y = mBtnY - GAP * 2; // fallback spacing when URL not shown
                     }
                 }
-                if (y > MARGIN + 300f) {
-                    float secW = Math.min(400f, pageW - MARGIN * 2); // Same width as primary
-                    float secH = 280f; // Same height as primary
-                    float secX = (mb2.getWidth() - secW) / 2f; // Center horizontally like primary
-                    float secY = y - secH - 15f;
-                    drawImageOrPlaceholder(cs, (secondaryMockup != null ? secondaryMockup : mockup), secX, secY, secW, secH, "Preview");
+                // Secondary mockup preview: for Print & Mobile and Print Only on page 2
+                if ((type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.PRINT_ONLY) && secondaryMockup != null) {
+                    // Place the secondary preview even when space is tighter; avoid overlap with footer
+                    float secW = Math.min(400f, pageW - MARGIN * 2);
+                    float secH = 280f;
+                    float secX = (mb2.getWidth() - secW) / 2f;
+                    float targetY = y - secH - 20f;
+                    // Ensure it doesn't dip into the footer area; lift if necessary
+                    float minY = MARGIN + 80f;
+                    float secY = Math.max(minY, targetY);
+                    drawImageOrPlaceholder(cs, secondaryMockup, secX, secY, secW, secH, "Secondary Preview");
+                    y = secY - GAP * 2;
                 }
                 // Footer: divider + centered text
                 drawFooterCentered(cs, mb2, "Digital template package");
