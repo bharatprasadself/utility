@@ -336,7 +336,7 @@ export default function PublishTemplate() {
                     >
                       <MenuItem value="print-mobile">Print & Mobile</MenuItem>
                       <MenuItem value="print-only">Print only</MenuItem>
-                      <MenuItem value="wedding-set">Full Wedding Set</MenuItem>
+                      <MenuItem value="wedding-set">Invite Suite</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -556,7 +556,7 @@ export default function PublishTemplate() {
                   <TableCell>
                     {(() => {
                       const rowType = normalizePdfType((t as any).buyerPdfType as string | undefined) || normalizePdfType(getPdfTypeFor(t.id));
-                      return rowType === 'print-mobile' ? 'Print & Mobile' : rowType === 'print-only' ? 'Print only' : 'Full Wedding Set';
+                      return rowType === 'print-mobile' ? 'Print & Mobile' : rowType === 'print-only' ? 'Print only' : 'Invite Suite';
                     })()}
                   </TableCell>
                   <TableCell sx={{ py: 2 }}>
