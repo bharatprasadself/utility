@@ -790,7 +790,7 @@ public class TemplateService {
 
         // Prefer explicit pdf type when provided
         if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
-            return base + " (Full Wedding Set)";
+            return base + " (Invite Suite)";
         }
         if (type == com.utilityzone.model.PdfType.PRINT_MOBILE) {
             return base + " (Mobile + Print)";
@@ -800,7 +800,7 @@ public class TemplateService {
         }
 
         // Fallback heuristics based on available links
-        if (hasRsvp || hasDetail) return base + " (Full Wedding Set)";
+        if (hasRsvp || hasDetail) return base + " (Invite Suite)";
         if (hasPrint && hasMobile) return base + " (Mobile + Print)";
         if (hasMobile && !hasPrint) return base + " (Only Mobile)";
         if (hasPrint && !hasMobile) return base + " (Only Print)";
