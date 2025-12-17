@@ -594,11 +594,13 @@ public class TemplateService {
                                     drawImageOrPlaceholder(cs, mobileMockup, previewX, previewY, previewW, previewH, "Mobile Preview");
                                     y = previewY - GAP * 2;
                                 } else {
-                                    float fallbackTipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
-                                    float tipY = Float.isNaN(lastQrLabelY) ? fallbackTipY : lastQrLabelY;
-                                    String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
-                                    drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
-                                    y = tipY - GAP * 2;
+                                    // Space is tight: draw a smaller preview lifted above the footer
+                                    float minY = MARGIN + 80f;
+                                    float smallH = 200f;
+                                    float smallW = Math.min(360f, mb2.getWidth() - MARGIN * 2);
+                                    float smallX = (mb2.getWidth() - smallW) / 2f;
+                                    drawImageOrPlaceholder(cs, mobileMockup, smallX, minY, smallW, smallH, "Mobile Preview");
+                                    y = minY - GAP * 2;
                                 }
                             } else {
                                 float fallbackTipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
@@ -713,23 +715,33 @@ public class TemplateService {
                     stepY -= GAP; // spacing before mobile preview
                 }
                 
-                // Mobile mockup - centered below steps with some spacing
-                // Only show mobile mockup if not PRINT_ONLY
+                // Mobile mockup - centered below sections with some spacing
+                // Show mobile mockup for all non-PRINT_ONLY types; if space is tight, draw smaller above footer
                 if (type != com.utilityzone.model.PdfType.PRINT_ONLY) {
                     stepY -= GAP;
                     float mobileW = Math.min(400f, contentW);
                     float mobileH = 280f;
                     float mobileX = (mb3.getWidth() - mobileW) / 2f; // Center horizontally
                     float mobileY = stepY - mobileH - 20f;
-                    // Only show mobile mockup if there's enough space
-                    if (mobileY > MARGIN + 50f) {
+                    if (mobileY > MARGIN + 60f) {
                         if (mobileMockup != null) {
                             drawImageOrPlaceholder(cs, mobileMockup, mobileX, mobileY, mobileW, mobileH, "");
                         } else {
                             drawPlaceholder(cs, mobileX, mobileY, mobileW, mobileH, "Mobile mockup");
                         }
-                        // Label for mobile mockup
                         drawText(cs, "Mobile Preview", mobileX, mobileY - 15f, PDType1Font.HELVETICA_OBLIQUE, 10f);
+                    } else {
+                        // Tight space: render a smaller preview lifted above the footer
+                        float smallH = 220f;
+                        float smallW = Math.min(360f, contentW);
+                        float smallX = (mb3.getWidth() - smallW) / 2f;
+                        float smallY = MARGIN + 70f;
+                        if (mobileMockup != null) {
+                            drawImageOrPlaceholder(cs, mobileMockup, smallX, smallY, smallW, smallH, "");
+                        } else {
+                            drawPlaceholder(cs, smallX, smallY, smallW, smallH, "Mobile mockup");
+                        }
+                        drawText(cs, "Mobile Preview", smallX, smallY - 15f, PDType1Font.HELVETICA_OBLIQUE, 10f);
                     }
                 }
                 // Footer: divider + centered text
