@@ -44,11 +44,35 @@ public class TemplateController {
             .map(t -> {
                 java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
                 m.put("id", t.getId());
-                // Prefer custom public description; fallback to derived description
-                String custom = t.getPublicDescription();
-                String desc = (custom != null && !custom.isBlank())
-                        ? custom
-                        : service.getPublicDescription(t, com.utilityzone.model.PdfType.PRINT_MOBILE);
+                // Build storefront title: use custom wording if present, always append friendly PDF type suffix
+                String baseTitle = (t.getPublicDescription() != null && !t.getPublicDescription().isBlank())
+                        ? t.getPublicDescription().trim()
+                        : "NextStepsLab digital invite";
+
+                // Derive type label from preferred buyerPdfType or heuristics
+                String typeRaw = t.getBuyerPdfType();
+                String typeLabel;
+                if (typeRaw != null) {
+                    String norm = typeRaw.trim().toUpperCase();
+                    switch (norm) {
+                        case "WEDDING_SET": typeLabel = "Invite Suite"; break;
+                        case "PRINT_MOBILE": typeLabel = "Mobile + Print"; break;
+                        case "PRINT_ONLY": typeLabel = "Only Print"; break;
+                        default: typeLabel = "Template"; break;
+                    }
+                } else {
+                    boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
+                    boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
+                    boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
+                    boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
+                    if (hasRsvp || hasDetail) typeLabel = "Invite Suite";
+                    else if (hasPrint && hasMobile) typeLabel = "Mobile + Print";
+                    else if (hasPrint && !hasMobile) typeLabel = "Only Print";
+                    else if (hasMobile && !hasPrint) typeLabel = "Only Mobile";
+                    else typeLabel = "Template";
+                }
+
+                String desc = baseTitle + " (" + typeLabel + ")";
                 m.put("title", desc);
                 m.put("mockupUrl", t.getMockupUrl());
                 m.put("etsyListingUrl", t.getEtsyListingUrl());
