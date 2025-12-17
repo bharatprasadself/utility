@@ -779,9 +779,13 @@ public class TemplateService {
                 drawText(cs, "License Terms:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
                 y -= 25f; // Increased spacing
                 y = drawWrapped(cs,
-                        "Personal Use License: You may use this template for your personal projects, events, and non-commercial purposes. " +
-                        "Resale, redistribution, or sharing of the template files is strictly prohibited.",
-                        MARGIN + 15f, y, mb4.getWidth() - MARGIN*2 - 15f, PDType1Font.HELVETICA, BODY, LINE_BODY);
+                    "Personal Use License: You may use this template for your personal projects, events, and non-commercial purposes. " +
+                    "Resale, redistribution, or sharing of the template files is strictly prohibited.",
+                    MARGIN + 15f, y, mb4.getWidth() - MARGIN*2 - 15f, PDType1Font.HELVETICA, BODY, LINE_BODY);
+                // Additional license note (commercial/resale)
+                y = drawWrapped(cs,
+                    "A commercial/resale license is available separately—please message me for details.",
+                    MARGIN + 15f, y, mb4.getWidth() - MARGIN*2 - 15f, PDType1Font.HELVETICA, BODY, LINE_BODY);
                 y -= GAP * 3; // More spacing between sections
                 
                 // Support section with better formatting
