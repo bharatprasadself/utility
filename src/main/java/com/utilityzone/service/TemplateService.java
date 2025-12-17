@@ -297,16 +297,40 @@ public class TemplateService {
                     float leftEdge = Math.max(MARGIN, mockupX);
                     drawText(cs, "What's Included:", leftEdge, includeStartY, PDType1Font.HELVETICA_BOLD, 15f);
                     float afterHeaderY = includeStartY - (GAP + 6f);
-                    String[] itemsPg1 = new String[]{
+
+                    // Dynamic template list based on available links and selected pdf type
+                    java.util.List<String> templateItems = new java.util.ArrayList<>();
+                    boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
+                    boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
+                    boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
+                    boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
+
+                    if (hasPrint) templateItems.add("Print Invitation");
+                    if (hasMobile && type != com.utilityzone.model.PdfType.PRINT_ONLY) templateItems.add("Mobile Invitation");
+                    if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
+                        if (hasRsvp) templateItems.add("RSVP Card");
+                        if (hasDetail) templateItems.add("Detail Card");
+                    }
+
+                    // Always show feature bullets after template names
+                    String[] featureItems = new String[]{
                             "Fully editable Canva templates",
                             "Customize text, colors, fonts & images",
                             "Download in multiple formats (PDF/PNG/JPG)",
                             "Step-by-step usage guide"
                     };
+
                     // Left-aligned bullets starting at the mockup's left edge
                     float cy = afterHeaderY;
-                    for (String it : itemsPg1) {
-                        drawText(cs, "* " + it, leftEdge, cy, PDType1Font.HELVETICA, BODY);
+                    for (String ti : templateItems) {
+                        drawText(cs, "* " + ti, leftEdge, cy, PDType1Font.HELVETICA, BODY);
+                        cy -= 18f;
+                    }
+                    if (!templateItems.isEmpty()) {
+                        cy -= 4f; // small extra separation before generic features
+                    }
+                    for (String fi : featureItems) {
+                        drawText(cs, "* " + fi, leftEdge, cy, PDType1Font.HELVETICA, BODY);
                         cy -= 18f; // slightly larger line height for readability
                     }
                 }
@@ -461,7 +485,7 @@ public class TemplateService {
                             } catch (Exception ignore) {}
                             y = rsvpBtnY - GAP * 2;
                         } else {
-                            drawButton(cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "RSVP template (link needed)");
+                            drawButton(cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "RSVP template");
                             y = rsvpBtnY - GAP * 2;
                         }
                         // (RSVP Instructions moved to page 3 for better readability)
@@ -501,7 +525,7 @@ public class TemplateService {
                             } catch (Exception ignore) {}
                             y = detailBtnY - GAP * 2;
                         } else {
-                            drawButton(cs, MARGIN, detailBtnY, btnW, BUTTON_H, "Detail card template (link needed)");
+                            drawButton(cs, MARGIN, detailBtnY, btnW, BUTTON_H, "Detail card template");
                             y = detailBtnY - GAP * 2;
                         }
                         // Fallthrough to render mobile section for Wedding Set below
