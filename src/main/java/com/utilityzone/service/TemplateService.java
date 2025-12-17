@@ -319,28 +319,28 @@ public class TemplateService {
                         switch (type) {
                         case WEDDING_SET:
                             itemsPg1 = new String[]{
-                                "🖨️ Print Invitation (5×7 in)",
-                                "📱 Mobile Invitation (1080×1920 px)",
-                                "✉️ RSVP Card",
-                                "ℹ️ Details Card",
-                                "🎨 Editable Canva Links",
-                                "📄 Buyer PDF Included"
+                                "Print Invitation (5×7 in)",
+                                "Mobile Invitation (1080×1920 px)",
+                                "RSVP Card",
+                                "Details Card",
+                                "Editable Canva Links",
+                                "Buyer PDF Included"
                             };
                             break;
                         case PRINT_MOBILE:
                             itemsPg1 = new String[]{
-                                "🖨️ Print Invitation (5×7 in)",
-                                "📱 Mobile Invitation (1080×1920 px)",
-                                "🎨 Editable Canva Links",
-                                "📄 Buyer PDF Included"
+                                "Print Invitation (5×7 in)",
+                                "Mobile Invitation (1080×1920 px)",
+                                "Editable Canva Links",
+                                "Buyer PDF Included"
                             };
                             break;
                         case PRINT_ONLY:
                         default:
                             itemsPg1 = new String[]{
-                                "🖨️ Print Invitation (5×7 in)",
-                                "🎨 Editable Canva Links",
-                                "📄 Buyer PDF Included"
+                                "Print Invitation (5×7 in)",
+                                "Editable Canva Links",
+                                "Buyer PDF Included"
                             };
                             break;
                         }
