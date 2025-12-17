@@ -314,13 +314,36 @@ public class TemplateService {
                     drawText(cs, "What's Included:", leftEdge, includeStartY, PDType1Font.HELVETICA_BOLD, 15f);
                     float afterHeaderY = includeStartY - (GAP + 6f);
 
-                    // Fixed bullets per request
-                    String[] itemsPg1 = new String[]{
-                            "Print Invitation Template",
-                            "Canva invitation template",
-                            "Download in PDF / PNG / JPG formats",
-                            "Step-by-step usage guide (Buyer PDF)"
-                    };
+                        // What's Included (type-specific)
+                        String[] itemsPg1;
+                        switch (type) {
+                        case WEDDING_SET:
+                            itemsPg1 = new String[]{
+                                "🖨️ Print Invitation (5×7 in)",
+                                "📱 Mobile Invitation (1080×1920 px)",
+                                "✉️ RSVP Card",
+                                "ℹ️ Details Card",
+                                "🎨 Editable Canva Links",
+                                "📄 Buyer PDF Included"
+                            };
+                            break;
+                        case PRINT_MOBILE:
+                            itemsPg1 = new String[]{
+                                "🖨️ Print Invitation (5×7 in)",
+                                "📱 Mobile Invitation (1080×1920 px)",
+                                "🎨 Editable Canva Links",
+                                "📄 Buyer PDF Included"
+                            };
+                            break;
+                        case PRINT_ONLY:
+                        default:
+                            itemsPg1 = new String[]{
+                                "🖨️ Print Invitation (5×7 in)",
+                                "🎨 Editable Canva Links",
+                                "📄 Buyer PDF Included"
+                            };
+                            break;
+                        }
                     // Left-aligned bullets starting at the mockup's left edge
                     float cy = afterHeaderY;
                     for (String it : itemsPg1) {
