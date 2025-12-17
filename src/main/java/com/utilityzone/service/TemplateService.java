@@ -80,6 +80,8 @@ public class TemplateService {
         if (changes.getTitle() != null) existing.setTitle(changes.getTitle());
         if (changes.getCanvaUseCopyUrl() != null) existing.setCanvaUseCopyUrl(changes.getCanvaUseCopyUrl());
         if (changes.getMobileCanvaUseCopyUrl() != null) existing.setMobileCanvaUseCopyUrl(changes.getMobileCanvaUseCopyUrl());
+        if (changes.getRsvpCanvaUseCopyUrl() != null) existing.setRsvpCanvaUseCopyUrl(changes.getRsvpCanvaUseCopyUrl());
+        if (changes.getDetailCardCanvaUseCopyUrl() != null) existing.setDetailCardCanvaUseCopyUrl(changes.getDetailCardCanvaUseCopyUrl());
         if (changes.getMockupUrl() != null) existing.setMockupUrl(changes.getMockupUrl());
         if (changes.getEtsyListingUrl() != null) existing.setEtsyListingUrl(changes.getEtsyListingUrl());
         if (changes.getSecondaryMockupUrl() != null) existing.setSecondaryMockupUrl(changes.getSecondaryMockupUrl());

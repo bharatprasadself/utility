@@ -90,6 +90,8 @@ public class TemplateController {
         ct.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
         ct.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
         ct.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
+        ct.setRsvpCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getRsvpCanvaUseCopyUrl()));
+        ct.setDetailCardCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getDetailCardCanvaUseCopyUrl()));
         ct.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
         // Persist preferred buyer PDF type if provided
         if (req.getBuyerPdfType() != null) {
@@ -115,6 +117,8 @@ public class TemplateController {
         changes.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
         changes.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
         changes.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
+        changes.setRsvpCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getRsvpCanvaUseCopyUrl()));
+        changes.setDetailCardCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getDetailCardCanvaUseCopyUrl()));
         changes.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
         // do not touch buyerPdfUrl unless provided explicitly
         if (req.getBuyerPdfUrl() != null) changes.setBuyerPdfUrl(StringUtils.trimWhitespace(req.getBuyerPdfUrl()));
