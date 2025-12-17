@@ -711,6 +711,18 @@ public class TemplateService {
                     // Advance to next line
                     stepY -= LINE_BODY + GAP;
                 }
+                // Editing Details - applies to all types
+                stepY -= GAP;
+                drawText(cs, "Editing Details", MARGIN, stepY, PDType1Font.HELVETICA_BOLD, 13f);
+                stepY -= 18f;
+                String[] editDetails = new String[]{
+                        "You can fully edit all text. Select design elements can be adjusted.",
+                        "Background and primary decorative elements are fixed to maintain the original design."
+                };
+                for (String note : editDetails) {
+                    stepY = drawWrapped(cs, "• " + note, MARGIN + 10f, stepY, contentW - 10f, PDType1Font.HELVETICA, 11f, 14f);
+                }
+                stepY -= GAP; // spacing before optional RSVP Instructions
                 // RSVP Instructions (Invite Suite) moved here for better readability
                 if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
                     stepY -= GAP;
