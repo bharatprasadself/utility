@@ -53,7 +53,8 @@ public class TemplateController {
                 String typeRaw = t.getBuyerPdfType();
                 String typeLabel;
                 if (typeRaw != null) {
-                    String norm = typeRaw.trim().toUpperCase();
+                    // Normalize common client values like 'wedding-set' -> 'WEDDING_SET'
+                    String norm = typeRaw.trim().toUpperCase().replace('-', '_');
                     switch (norm) {
                         case "WEDDING_SET": typeLabel = "Invite Suite"; break;
                         case "PRINT_MOBILE": typeLabel = "Mobile + Print"; break;
