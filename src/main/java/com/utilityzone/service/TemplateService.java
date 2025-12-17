@@ -274,7 +274,7 @@ public class TemplateService {
                 if (t.getPublicDescription() != null && !t.getPublicDescription().isBlank()) {
                     baseTitle = t.getPublicDescription().trim();
                 } else {
-                    baseTitle = "NextStepsLab digital invite";
+                    baseTitle = "NextStepLabs digital invite";
                 }
                 String typeLabel;
                 switch (type) {
@@ -852,7 +852,7 @@ public class TemplateService {
         if (t.getPublicDescription() != null && !t.getPublicDescription().isBlank()) {
             return t.getPublicDescription().trim();
         }
-        String base = "NextStepsLab digital invite";
+        String base = "NextStepLabs digital invite";
         boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
         boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
         boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");

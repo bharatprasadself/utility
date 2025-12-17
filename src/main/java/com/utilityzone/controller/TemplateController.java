@@ -46,8 +46,8 @@ public class TemplateController {
                 m.put("id", t.getId());
                 // Build storefront title: use custom wording if present, always append friendly PDF type suffix
                 String baseTitle = (t.getPublicDescription() != null && !t.getPublicDescription().isBlank())
-                        ? t.getPublicDescription().trim()
-                        : "NextStepsLab digital invite";
+                    ? t.getPublicDescription().trim()
+                    : "NextStepLabs digital invite";
 
                 // Derive type label from preferred buyerPdfType or heuristics
                 String typeRaw = t.getBuyerPdfType();
