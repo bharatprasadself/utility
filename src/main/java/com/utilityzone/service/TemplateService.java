@@ -660,60 +660,56 @@ public class TemplateService {
                 // Single column layout with mobile mockup after steps
                 float contentW = mb3.getWidth() - MARGIN * 2;
                 
-                String[] steps = new String[]{
-                        "Click the Canva link and select 'Use this template'",
-                        "Customize text, colors, and fonts to match your style",
-                        "Upload your own images via the Uploads section",
-                        "Download your design: Share -> Download -> choose format"
-                };
-                
-                // Inline numbered steps: number box and text share baseline
+                // Revised numbered steps with titles and descriptions
                 float stepY = y;
-                final float boxSize = 24f; // square box for number
-                for (int i = 0; i < steps.length; i++) {
-                    float baselineY = stepY; // text baseline
-                    float boxX = MARGIN;     // left edge for number box
-                    float boxY = baselineY - (boxSize * 0.75f); // shift so box vertically centers on text
-                    cs.setNonStrokingColor(new Color(25, 118, 210));
-                    cs.addRect(boxX, boxY, boxSize, boxSize);
-                    cs.fill();
-                    // Number inside box centered
-                    cs.setNonStrokingColor(Color.WHITE);
-                    float numOffsetX = 9f; // empirically center for Helvetica 12
-                    float numOffsetY = 6f; // baseline offset inside box
-                    drawText(cs, String.valueOf(i + 1), boxX + numOffsetX, baselineY - numOffsetY, PDType1Font.HELVETICA_BOLD, 12f);
-                    // Step text inline to the right
-                    cs.setNonStrokingColor(Color.BLACK);
-                    float textX = boxX + boxSize + 12f; // space after number box
-                    drawText(cs, steps[i], textX, baselineY, PDType1Font.HELVETICA, BODY);
-                    // Advance to next line
-                    stepY -= LINE_BODY + GAP;
+                String[] stepTitles = new String[]{
+                    "1. Open the Template",
+                    "2. Customize Your Details",
+                    "3. Add Your Images (Optional)",
+                    "4. Download Your Design"
+                };
+                String[] stepBodies = new String[]{
+                    "Click the Canva link and select \"Use this template\" to create your own copy.",
+                    "Edit names, dates, venue, and other text. Adjust fonts and colors within editable elements.",
+                    "Upload your own photos using the Uploads tab in Canva.",
+                    "Go to Share -> Download, then choose your preferred format (PDF / PNG / JPG)."
+                };
+                for (int i = 0; i < stepTitles.length; i++) {
+                    drawText(cs, stepTitles[i], MARGIN, stepY, PDType1Font.HELVETICA_BOLD, 12f);
+                    stepY -= 18f;
+                    stepY = drawWrapped(cs, stepBodies[i], MARGIN, stepY, contentW, PDType1Font.HELVETICA, 11f, 14f);
+                    stepY -= GAP;
                 }
+                // Divider between sections
+                drawDivider(cs, MARGIN, stepY - 6f, mb3.getWidth() - MARGIN * 2);
+                stepY -= GAP * 2;
                 // Editing Details - applies to all types
-                stepY -= GAP;
                 drawText(cs, "Editing Details", MARGIN, stepY, PDType1Font.HELVETICA_BOLD, 13f);
                 stepY -= 18f;
                 String[] editDetails = new String[]{
-                        "You can fully edit all text. Select design elements can be adjusted.",
-                        "Background and primary decorative elements are fixed to maintain the original design."
+                    "All text is fully editable",
+                    "Select design elements can be adjusted",
+                    "Background and primary decorative elements are fixed to maintain the original design"
                 };
                 for (String note : editDetails) {
                     stepY = drawWrapped(cs, "• " + note, MARGIN + 10f, stepY, contentW - 10f, PDType1Font.HELVETICA, 11f, 14f);
                 }
-                stepY -= GAP; // spacing before optional RSVP Instructions
+                stepY -= GAP;
+                drawDivider(cs, MARGIN, stepY - 6f, mb3.getWidth() - MARGIN * 2);
+                stepY -= GAP * 2; // spacing before optional RSVP Instructions
                 // RSVP Instructions (Invite Suite) moved here for better readability
                 if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
-                    stepY -= GAP;
-                    drawText(cs, "RSVP Instructions:", MARGIN, stepY, PDType1Font.HELVETICA_BOLD, 13f);
+                    drawText(cs, "RSVP Instructions", MARGIN, stepY, PDType1Font.HELVETICA_BOLD, 13f);
                     stepY -= 18f;
                     String[] rsvpNotes = new String[]{
-                            "This invitation includes an editable RSVP card.",
-                            "After purchase, you can personalize the RSVP details using Canva and share it digitally via WhatsApp, email, or social media.",
-                            "Guests can respond by calling, messaging, or emailing using the contact details you provide."
+                            "This invitation includes an editable RSVP card",
+                            "Customize RSVP details in Canva and share digitally (WhatsApp, email, or social media)",
+                            "Guests respond directly using the contact details you provide"
                     };
                     for (String note : rsvpNotes) {
                         stepY = drawWrapped(cs, "• " + note, MARGIN + 10f, stepY, contentW - 10f, PDType1Font.HELVETICA, 11f, 14f);
                     }
+                    stepY = drawWrapped(cs, "(Responses are not collected automatically)", MARGIN + 10f, stepY, contentW - 10f, PDType1Font.HELVETICA_OBLIQUE, 11f, 14f);
                     stepY -= GAP; // spacing before mobile preview
                 }
                 
