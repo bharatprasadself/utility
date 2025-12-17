@@ -58,7 +58,7 @@ public class TemplateController {
                         case "WEDDING_SET": typeLabel = "Invite Suite"; break;
                         case "PRINT_MOBILE": typeLabel = "Mobile + Print"; break;
                         case "PRINT_ONLY": typeLabel = "Only Print"; break;
-                        default: typeLabel = "Template"; break;
+                        default: typeLabel = "Mobile + Print"; break; // default aligns with Buyer PDF common type
                     }
                 } else {
                     boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
@@ -68,8 +68,7 @@ public class TemplateController {
                     if (hasRsvp || hasDetail) typeLabel = "Invite Suite";
                     else if (hasPrint && hasMobile) typeLabel = "Mobile + Print";
                     else if (hasPrint && !hasMobile) typeLabel = "Only Print";
-                    else if (hasMobile && !hasPrint) typeLabel = "Only Mobile";
-                    else typeLabel = "Template";
+                    else typeLabel = "Mobile + Print"; // fallback
                 }
 
                 String desc = baseTitle + " (" + typeLabel + ")";
