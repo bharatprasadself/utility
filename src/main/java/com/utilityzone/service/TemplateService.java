@@ -267,7 +267,21 @@ public class TemplateService {
                 float lineY1 = y - HEAD_LG - 6f;
                 drawDivider(cs, MARGIN, lineY1, pageW - MARGIN * 2);
                 y = lineY1 - GAP * 4;
-                String title = nonNull(getPublicDescription(t, type));
+                // Build title to always include PDF type suffix in brackets
+                String baseTitle;
+                if (t.getPublicDescription() != null && !t.getPublicDescription().isBlank()) {
+                    baseTitle = t.getPublicDescription().trim();
+                } else {
+                    baseTitle = "NextStepsLab digital invite";
+                }
+                String typeLabel;
+                switch (type) {
+                    case WEDDING_SET: typeLabel = "Invite Suite"; break;
+                    case PRINT_MOBILE: typeLabel = "Mobile + Print"; break;
+                    case PRINT_ONLY: typeLabel = "Only Print"; break;
+                    default: typeLabel = "PDF"; // safe fallback
+                }
+                String title = baseTitle + " (" + typeLabel + ")";
                 if (!title.isEmpty()) {
                     // Wrap title to page width and center each line. Limit to 2 lines with ellipsis.
                     float maxTitleWidth = pageW - MARGIN * 2;
