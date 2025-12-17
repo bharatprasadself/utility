@@ -464,20 +464,7 @@ public class TemplateService {
                             drawButton(cs, MARGIN, rsvpBtnY, btnW, BUTTON_H, "RSVP template (link needed)");
                             y = rsvpBtnY - GAP * 2;
                         }
-                        // RSVP Instructions block (Invite Suite only)
-                        try {
-                            drawText(cs, "RSVP Instructions:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 13f);
-                            y -= 18f;
-                            String[] rsvpNotes = new String[]{
-                                    "This invitation includes an editable RSVP card.",
-                                    "After purchase, you can personalize the RSVP details using Canva and share it digitally via WhatsApp, email, or social media.",
-                                    "Guests can respond by calling, messaging, or emailing using the contact details you provide."
-                            };
-                            for (String note : rsvpNotes) {
-                                y = drawWrapped(cs, "• " + note, MARGIN + 10f, y, leftW, PDType1Font.HELVETICA, 11f, 14f);
-                            }
-                            y -= GAP; // small spacing before Detail Card heading
-                        } catch (Exception ignore) {}
+                        // (RSVP Instructions moved to page 3 for better readability)
 
                         // Detail Card
                         drawText(cs, "Detail Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
@@ -685,6 +672,21 @@ public class TemplateService {
                     drawText(cs, steps[i], textX, baselineY, PDType1Font.HELVETICA, BODY);
                     // Advance to next line
                     stepY -= LINE_BODY + GAP;
+                }
+                // RSVP Instructions (Invite Suite) moved here for better readability
+                if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
+                    stepY -= GAP;
+                    drawText(cs, "RSVP Instructions:", MARGIN, stepY, PDType1Font.HELVETICA_BOLD, 13f);
+                    stepY -= 18f;
+                    String[] rsvpNotes = new String[]{
+                            "This invitation includes an editable RSVP card.",
+                            "After purchase, you can personalize the RSVP details using Canva and share it digitally via WhatsApp, email, or social media.",
+                            "Guests can respond by calling, messaging, or emailing using the contact details you provide."
+                    };
+                    for (String note : rsvpNotes) {
+                        stepY = drawWrapped(cs, "• " + note, MARGIN + 10f, stepY, contentW - 10f, PDType1Font.HELVETICA, 11f, 14f);
+                    }
+                    stepY -= GAP; // spacing before mobile preview
                 }
                 
                 // Mobile mockup - centered below steps with some spacing
