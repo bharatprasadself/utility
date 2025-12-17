@@ -588,18 +588,31 @@ public class TemplateService {
                             if (mobileMockup != null) {
                                 float previewW = Math.min(380f, mb2.getWidth() - MARGIN * 2);
                                 float previewH = 260f;
-                                float previewX = (mb2.getWidth() - previewW) / 2f;
                                 float previewY = Math.min((urlStartY2 - 16f), mBtnY) - previewH - 20f;
                                 if (previewY > MARGIN + 80f) {
-                                    drawImageOrPlaceholder(cs, mobileMockup, previewX, previewY, previewW, previewH, "Mobile Preview");
+                                    // Left-aligned mobile preview
+                                    float iw = mobileMockup.getWidth();
+                                    float ih = mobileMockup.getHeight();
+                                    float scale = Math.min(previewW / iw, previewH / ih);
+                                    float dw = iw * scale;
+                                    float dh = ih * scale;
+                                    float dx = MARGIN;
+                                    float dy = previewY; // align to top of area
+                                    cs.drawImage(mobileMockup, dx, dy, dw, dh);
                                     y = previewY - GAP * 2;
                                 } else {
-                                    // Space is tight: draw a smaller preview lifted above the footer
+                                    // Space is tight: draw a smaller left-aligned preview above the footer
                                     float minY = MARGIN + 80f;
                                     float smallH = 200f;
                                     float smallW = Math.min(360f, mb2.getWidth() - MARGIN * 2);
-                                    float smallX = (mb2.getWidth() - smallW) / 2f;
-                                    drawImageOrPlaceholder(cs, mobileMockup, smallX, minY, smallW, smallH, "Mobile Preview");
+                                    float iw = mobileMockup.getWidth();
+                                    float ih = mobileMockup.getHeight();
+                                    float scale = Math.min(smallW / iw, smallH / ih);
+                                    float dw = iw * scale;
+                                    float dh = ih * scale;
+                                    float dx = MARGIN;
+                                    float dy = minY;
+                                    cs.drawImage(mobileMockup, dx, dy, dw, dh);
                                     y = minY - GAP * 2;
                                 }
                             } else {
@@ -715,9 +728,8 @@ public class TemplateService {
                     stepY -= GAP; // spacing before mobile preview
                 }
                 
-                // Mobile mockup - centered below sections with some spacing
-                // Show mobile mockup for all non-PRINT_ONLY types; if space is tight, draw smaller above footer
-                if (type != com.utilityzone.model.PdfType.PRINT_ONLY) {
+                // Mobile mockup - only for PRINT_MOBILE on page 3 (Invite Suite shows on page 2)
+                if (type == com.utilityzone.model.PdfType.PRINT_MOBILE) {
                     stepY -= GAP;
                     float mobileW = Math.min(400f, contentW);
                     float mobileH = 280f;
