@@ -218,10 +218,24 @@ public class TemplateService {
                 .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
         Path pdfPath = getPdfPathFor(t);
 
-        // Parse pdfType string to enum (default to PRINT_MOBILE if null/invalid)
+        // Map frontend values to backend enum values
+        String backendType;
+        switch (pdfType) {
+            case "print-mobile":
+                backendType = "PRINT_MOBILE";
+                break;
+            case "print-only":
+                backendType = "PRINT_ONLY";
+                break;
+            case "invite-suite":
+                backendType = "INVITE_SUITE";
+                break;
+            default:
+                backendType = "PRINT_MOBILE";
+        }
         com.utilityzone.model.PdfType type;
         try {
-            type = com.utilityzone.model.PdfType.valueOf(pdfType.toUpperCase().replace('-', '_'));
+            type = com.utilityzone.model.PdfType.valueOf(backendType);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid pdfType: " + pdfType);
         }
@@ -278,7 +292,7 @@ public class TemplateService {
                 }
                 String typeLabel;
                 switch (type) {
-                    case WEDDING_SET: typeLabel = "Invite Suite"; break;
+                    case INVITE_SUITE: typeLabel = "Invite Suite"; break;
                     case PRINT_MOBILE: typeLabel = "Mobile + Print"; break;
                     case PRINT_ONLY: typeLabel = "Only Print"; break;
                     default: typeLabel = "PDF"; // safe fallback
@@ -299,11 +313,11 @@ public class TemplateService {
                 drawImageOrPlaceholder(cs, mockup, mockupX, mockupY, mockupW, mockupH, "Main mockup");
 
                 // Example: use pdfType to control PDF content (expand as needed)
-                if (type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.WEDDING_SET) {
+                if (type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.INVITE_SUITE) {
                     // Add mobile mockup or extra content for these types
                     // ...
                 }
-                if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
+                if (type == com.utilityzone.model.PdfType.INVITE_SUITE) {
                     // Add secondary mockup or extra content for wedding set
                     // ...
                 }
@@ -317,7 +331,7 @@ public class TemplateService {
                         // What's Included (type-specific)
                         String[] itemsPg1;
                         switch (type) {
-                        case WEDDING_SET:
+                        case INVITE_SUITE:
                             itemsPg1 = new String[]{
                                 "Print Invitation (5×7 in)",
                                 "Mobile Invitation (1080×1920 px)",
@@ -465,7 +479,7 @@ public class TemplateService {
                     case PRINT_MOBILE:
                         // Will render Mobile section below; no RSVP/Detail/Secondary
                         break;
-                    case WEDDING_SET:
+                    case INVITE_SUITE:
                         // RSVP
                         y -= 20f;
                         drawText(cs, "RSVP Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
@@ -549,8 +563,8 @@ public class TemplateService {
                         break;
                 }
 
-                // Mobile version section (only for PRINT_MOBILE and WEDDING_SET)
-                if (type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.WEDDING_SET) {
+                // Mobile version section (only for PRINT_MOBILE and INVITE_SUITE)
+                if (type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.INVITE_SUITE) {
                     drawText(cs, "Mobile Invitation (1080 x 1920 px)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
                     y -= 14f; // tighter spacing before button
                     String mobileLink = t.getMobileCanvaUseCopyUrl();
@@ -609,7 +623,7 @@ public class TemplateService {
                         }
 
                         // On page 2, only Wedding Set shows a mobile preview; Print+Mobile uses secondary mockup below instead.
-                        if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
+                        if (type == com.utilityzone.model.PdfType.INVITE_SUITE) {
                             if (mobileMockup != null) {
                                 float previewW = Math.min(380f, mb2.getWidth() - MARGIN * 2);
                                 float previewH = 260f;
@@ -738,7 +752,7 @@ public class TemplateService {
                 drawDivider(cs, MARGIN, stepY - 6f, mb3.getWidth() - MARGIN * 2);
                 stepY -= GAP * 2; // spacing before optional RSVP Instructions
                 // RSVP Instructions (Invite Suite) moved here for better readability
-                if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
+                if (type == com.utilityzone.model.PdfType.INVITE_SUITE) {
                     drawText(cs, "RSVP Instructions", MARGIN, stepY, PDType1Font.HELVETICA_BOLD, 13f);
                     stepY -= 18f;
                     String[] rsvpNotes = new String[]{
@@ -882,7 +896,7 @@ public class TemplateService {
         boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
 
         // Prefer explicit pdf type when provided
-        if (type == com.utilityzone.model.PdfType.WEDDING_SET) {
+        if (type == com.utilityzone.model.PdfType.INVITE_SUITE) {
             return base + " (Invite Suite)";
         }
         if (type == com.utilityzone.model.PdfType.PRINT_MOBILE) {

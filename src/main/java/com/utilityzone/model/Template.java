@@ -26,7 +26,7 @@ public class Template {
     @Column(name = "buyer_pdf_url", length = 1000)
     private String buyerPdfUrl;
 
-    // Persisted preferred buyer PDF type (e.g., PRINT_ONLY, PRINT_MOBILE, WEDDING_SET)
+    // Persisted preferred buyer PDF type (e.g., PRINT_ONLY, PRINT_MOBILE, INVITE_SUITE)
     @Column(name = "buyer_pdf_type", length = 50)
     private String buyerPdfType;
 

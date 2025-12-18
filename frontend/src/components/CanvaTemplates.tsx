@@ -11,9 +11,9 @@ const CanvaTemplates = () => {
   // const [templates, setTemplates] = useState<Template[]>([]);
   // const [loading, setLoading] = useState(false);
   // PDF type selection for Buyer PDF
-  const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'wedding-set'>('print-mobile');
+  const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'invite-suite'>('print-mobile');
   const handlePdfTypeChange = (event: SelectChangeEvent) => {
-    setPdfType(event.target.value as 'print-mobile' | 'print-only' | 'wedding-set');
+    setPdfType(event.target.value as 'print-mobile' | 'print-only' | 'invite-suite');
   };
 
   // Public form state
@@ -119,7 +119,7 @@ const CanvaTemplates = () => {
           >
             <MenuItem value="print-mobile">Print + Mobile (default)</MenuItem>
             <MenuItem value="print-only">Print-only</MenuItem>
-            <MenuItem value="wedding-set">Invite Suite (Invitation + RSVP + Details)</MenuItem>
+            <MenuItem value="invite-suite">Invite Suite (Invitation + RSVP + Details)</MenuItem>
           </Select>
         </FormControl>
         <TextField label="Title" value={title} onChange={e => setTitle(e.target.value)} fullWidth required sx={{ mb: 2 }} />
@@ -130,7 +130,7 @@ const CanvaTemplates = () => {
             setMockup(file);
           }} required />
         </Box>
-        {(pdfType === 'print-mobile' || pdfType === 'wedding-set') && (
+        {(pdfType === 'print-mobile' || pdfType === 'invite-suite') && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2">Mobile Mockup Image</Typography>
             <Input type="file" onChange={e => {
@@ -139,7 +139,7 @@ const CanvaTemplates = () => {
             }} />
           </Box>
         )}
-        {(pdfType === 'wedding-set') && (
+        {(pdfType === 'invite-suite') && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2">Secondary Mockup Image</Typography>
             <Input type="file" onChange={e => {
@@ -149,10 +149,10 @@ const CanvaTemplates = () => {
           </Box>
         )}
          <TextField label="Canva Link" value={canvaLink} onChange={e => setCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
-         {(pdfType === 'print-mobile' || pdfType === 'wedding-set') && (
+         {(pdfType === 'print-mobile' || pdfType === 'invite-suite') && (
            <TextField label="Mobile Canva Link" value={mobileCanvaLink} onChange={e => setMobileCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
          )}
-         {pdfType === 'wedding-set' && (
+         {pdfType === 'invite-suite' && (
            <>
              <TextField label="RSVP Canva Link" value={rsvpCanvaLink} onChange={e => setRsvpCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
              <TextField label="Detail Card Canva Link" value={detailCardCanvaLink} onChange={e => setDetailCardCanvaLink(e.target.value)} fullWidth sx={{ mb: 2 }} />
