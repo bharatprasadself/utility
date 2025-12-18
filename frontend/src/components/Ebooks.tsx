@@ -182,16 +182,12 @@ export default function Ebooks() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [data, authorData] = await Promise.all([
+        const [catalogContent, authorData] = await Promise.all([
           EbookService.getContent(),
           AuthorService.get()
         ]);
-        setContent({
-          ...defaultEbookContent,
-          ...data,
-          books: data?.books ?? [],
-          contacts: data?.contacts ?? []
-        });
+        const onlyPublished = (catalogContent?.books || []).filter(b => (b.status || '').toLowerCase() === 'published');
+        setContent({ ...(catalogContent || defaultEbookContent), books: onlyPublished });
         setAuthor({
           name: authorData?.name || '',
           bio: authorData?.bio || '',
@@ -240,8 +236,8 @@ export default function Ebooks() {
 
         {/* Books */}
         <SectionHeader title="Books" />
-        {hasBooks && content.books.filter(b => b.status === 'published').length > 0 ? (
-          <BooksGrid books={content.books.filter(b => b.status === 'published')} updatedAt={content.updatedAt} />
+        {hasBooks ? (
+          <BooksGrid books={content.books} updatedAt={content.updatedAt} />
         ) : (
           <Typography color="text.secondary">No published books available.</Typography>
         )}

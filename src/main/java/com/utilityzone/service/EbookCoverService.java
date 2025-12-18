@@ -20,6 +20,11 @@ public class EbookCoverService {
         return repository.findById(id);
     }
 
+    @Cacheable(value = "ebookCoverByHash", key = "#hash")
+    public Optional<EbookCoverEntity> findByHash(String hash) {
+        return repository.findByContentHash(hash);
+    }
+
     // If we save a new cover (or replace), clear cache so subsequent fetch uses fresh bytes
     @CacheEvict(value = "ebookCoverById", allEntries = true, beforeInvocation = false)
     public EbookCoverEntity save(EbookCoverEntity entity) {

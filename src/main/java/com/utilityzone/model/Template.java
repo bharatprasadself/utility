@@ -26,6 +26,10 @@ public class Template {
     @Column(name = "buyer_pdf_url", length = 1000)
     private String buyerPdfUrl;
 
+    // Persisted preferred buyer PDF type (e.g., PRINT_ONLY, PRINT_MOBILE, WEDDING_SET)
+    @Column(name = "buyer_pdf_type", length = 50)
+    private String buyerPdfType;
+
     @Column(name = "etsy_listing_url", length = 1000)
     private String etsyListingUrl;
 
@@ -43,6 +47,10 @@ public class Template {
 
     @Column(name = "mobile_mockup_url", length = 1000)
     private String mobileMockupUrl;
+
+    // Optional custom wording for storefront and buyer PDF heading
+    @Column(name = "public_description", length = 1000)
+    private String publicDescription;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -83,6 +91,9 @@ public class Template {
     public String getBuyerPdfUrl() { return buyerPdfUrl; }
     public void setBuyerPdfUrl(String buyerPdfUrl) { this.buyerPdfUrl = buyerPdfUrl; }
 
+    public String getBuyerPdfType() { return buyerPdfType; }
+    public void setBuyerPdfType(String buyerPdfType) { this.buyerPdfType = buyerPdfType; }
+
     public String getEtsyListingUrl() { return etsyListingUrl; }
     public void setEtsyListingUrl(String etsyListingUrl) { this.etsyListingUrl = etsyListingUrl; }
 
@@ -97,6 +108,9 @@ public class Template {
 
     public String getMobileMockupUrl() { return mobileMockupUrl; }
     public void setMobileMockupUrl(String mobileMockupUrl) { this.mobileMockupUrl = mobileMockupUrl; }
+
+    public String getPublicDescription() { return publicDescription; }
+    public void setPublicDescription(String publicDescription) { this.publicDescription = publicDescription; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

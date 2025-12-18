@@ -1,27 +1,12 @@
 // AdminEditor: Handles editing and publishing of ebooks
 import React, { useEffect, useState } from 'react';
-// Utility to generate a UUID (RFC4122 v4)
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0,
-      v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-// Ensure every book has a unique id
-function ensureBookIds(books: EbookItem[]): EbookItem[] {
-  return (books || []).map((book) => ({
-    ...book,
-    id: book.id || generateUUID(),
-  }));
-}
+// Per-ebook rows use numeric IDs from the backend; do not generate UUIDs
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
-import { Box, Typography, Button, Stack, Alert, Paper, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Typography, Button, Stack, Alert, Paper, TextField, FormControl, InputLabel, Select, MenuItem, Snackbar } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
 import Advertisement from '../Advertisement';
 import type { EbookContent, EbookItem, EbookStatus } from '@/types/Ebooks';
@@ -32,6 +17,7 @@ import EbookService from '@/services/ebooks';
 const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: EbookContent) => void; }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const MAX_COVER_BYTES = 2 * 1024 * 1024;
   const booksSafe: EbookItem[] = value.books ?? [];
@@ -44,14 +30,14 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
     onChange(next);
   };
 
-  // Remove book using backend delete endpoint and refresh content
+  // Remove book using per-ebook delete endpoint
   const removeBook = async (index: number) => {
     setSaving(true);
     setError(null);
     try {
       const book = booksSafe[index];
-      if (!book.rowId) throw new Error('Row ID is required for delete');
-      await EbookService.deleteBook(book.rowId);
+      if (!book.id) throw new Error('Book id is required for delete');
+      await EbookService.deleteItem(Number(book.id));
       // Remove from UI immediately
       const nextBooks = booksSafe.filter((_, i) => i !== index);
       onChange({ ...value, books: nextBooks });
@@ -63,20 +49,45 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
     }
   };
 
-  // Handler to update a single book (including status)
-  const updateBook = async (_index: number) => {
+  // Handler to update a single book (including status) using per-ebook endpoints
+  const updateBook = async (index: number) => {
     setSaving(true);
     setError(null);
     try {
-      // Persist current local values for all books
-      const nextBooks: EbookItem[] = booksSafe.map((b) => ({ ...b }));
-      // Compute top-level status: published if any book is published, else draft
-      const anyPublished = nextBooks.some((b) => (b.status as string) === 'published');
-      const aggregatedStatus = (anyPublished ? 'published' : 'draft') as EbookStatus;
-      const contentToSave = { ...value, books: nextBooks, status: aggregatedStatus };
-      await EbookService.upsertContent(contentToSave);
-      // Reflect change in local state
-      onChange(contentToSave);
+      const book = booksSafe[index];
+      const payload: EbookItem = { ...book };
+      const isNumericId = book.id && /^\d+$/.test(String(book.id));
+      if (isNumericId) {
+        const updated = await EbookService.updateItem(Number(book.id), payload);
+        // Preserve curated fields (buyLink, description) which are not returned by per-ebook endpoint
+        const nextBooks = booksSafe.map((b, i) => (
+          i === index
+            ? {
+                ...b,
+                ...updated,
+                buyLink: b.buyLink,
+                description: b.description,
+              }
+            : b
+        ));
+        onChange({ ...value, books: nextBooks });
+        setSuccessMsg('Book updated and catalog patched');
+      } else {
+        // Create new per-ebook row if missing id
+        const created = await EbookService.createItem(payload);
+        const nextBooks = booksSafe.map((b, i) => (
+          i === index
+            ? {
+                ...b,
+                ...created,
+                buyLink: b.buyLink,
+                description: b.description,
+              }
+            : b
+        ));
+        onChange({ ...value, books: nextBooks });
+        setSuccessMsg('Book created');
+      }
     } catch (e: any) {
       setError(e?.message || 'Failed to update');
     } finally {
@@ -89,6 +100,13 @@ const AdminEditor = ({ value, onChange }: { value: EbookContent; onChange: (c: E
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
       )}
+      <Snackbar
+        open={Boolean(successMsg)}
+        autoHideDuration={3000}
+        onClose={() => setSuccessMsg(null)}
+        message={successMsg || ''}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      />
       <Stack spacing={4} sx={{ mb: 3 }}>
         {booksSafe.map((b, i) => (
           <Box key={i} sx={{
@@ -228,19 +246,28 @@ export default function PublishEbooks() {
   useEffect(() => {
     const load = async () => {
       try {
-        // Load only the current/active ebooks content
-        const data = await EbookService.getContent();
-        // Build books from the active content only to avoid pulling in older draft rows
-        let books: EbookItem[] = ensureBookIds(data?.books ?? []).map((book: any) => ({
-          ...book,
-          status: (book && book.status) ? book.status : 'draft',
-          rowId: (data as any)?.id,
+        // Load both curated catalog and per-ebook items, then merge curated fields
+        const [catalog, items] = await Promise.all([
+          EbookService.getContent().catch(() => defaultEbookContent),
+          EbookService.listItems()
+        ]);
+        const curatedById = ((catalog?.books || []) as EbookItem[])
+          .filter(b => b.id)
+          .reduce<Record<string, Pick<EbookItem,'buyLink'|'description'>>>(
+            (acc, b) => {
+              acc[String(b.id)] = { buyLink: b.buyLink, description: b.description };
+              return acc;
+            },
+            {}
+          );
+        const merged: EbookItem[] = ((items as any) || []).map((b: any) => ({
+          ...b,
+          buyLink: curatedById[String(b.id)]?.buyLink ?? b.buyLink ?? '',
+          description: curatedById[String(b.id)]?.description ?? b.description ?? ''
         }));
         setContent({
-          ...defaultEbookContent,
-          ...data,
-          books,
-          contacts: data?.contacts ?? []
+          ...(catalog || defaultEbookContent),
+          books: merged,
         });
       } finally {
         setLoading(false);
@@ -257,6 +284,8 @@ export default function PublishEbooks() {
     );
   }
 
+  const [catalogSuccessMsg, setCatalogSuccessMsg] = useState<string | null>(null);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
       <Box sx={{ p: 3, flexGrow: 1 }}>
@@ -266,7 +295,37 @@ export default function PublishEbooks() {
         {loading ? (
           <Typography color="text.secondary">Loading…</Typography>
         ) : (
-          <AdminEditor value={content} onChange={setContent} />
+          <>
+            <AdminEditor value={content} onChange={setContent} />
+            <Snackbar
+              open={Boolean(catalogSuccessMsg)}
+              autoHideDuration={3000}
+              onClose={() => setCatalogSuccessMsg(null)}
+              message={catalogSuccessMsg || ''}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={async () => {
+                  try {
+                    await EbookService.upsertContent({
+                      ...content,
+                      // Ensure only curated fields are saved; books list comes from content
+                      updatedAt: new Date().toISOString()
+                    } as any);
+                    setCatalogSuccessMsg('Catalogue Saved');
+                  } catch (e: any) {
+                    alert(e?.message || 'Failed to save catalog');
+                  }
+                }}
+                sx={{ fontWeight: 600 }}
+              >
+                Save Catalog
+              </Button>
+            </Box>
+          </>
         )}
       </Box>
       <Box
