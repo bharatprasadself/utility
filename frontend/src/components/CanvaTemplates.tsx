@@ -119,7 +119,7 @@ const CanvaTemplates = () => {
           >
             <MenuItem value="print-mobile">Print + Mobile (default)</MenuItem>
             <MenuItem value="print-only">Print-only</MenuItem>
-            <MenuItem value="wedding-set">Full Wedding Set (Invitation + RSVP + Details)</MenuItem>
+            <MenuItem value="wedding-set">Invite Suite (Invitation + RSVP + Details)</MenuItem>
           </Select>
         </FormControl>
         <TextField label="Title" value={title} onChange={e => setTitle(e.target.value)} fullWidth required sx={{ mb: 2 }} />

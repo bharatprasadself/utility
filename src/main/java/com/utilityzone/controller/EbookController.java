@@ -24,11 +24,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -155,15 +151,37 @@ public class EbookController {
         String orig = file.getOriginalFilename();
         String original = StringUtils.cleanPath(orig != null ? orig : "cover");
         String mime = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+        byte[] bytes = file.getBytes();
+        // Compute SHA-256 to deduplicate covers
+        String hash;
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(bytes);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) sb.append(String.format("%02x", b));
+            hash = sb.toString();
+        } catch (Exception ex) {
+            hash = null; // fallback if digest fails
+        }
 
-    // Store in DB
-    com.utilityzone.model.EbookCoverEntity entity = new com.utilityzone.model.EbookCoverEntity();
+        // Attempt to reuse existing cover by hash
+        if (hash != null) {
+            var existing = coverService.findByHash(hash);
+            if (existing.isPresent()) {
+                String publicUrl = buildCoverUrl(existing.get().getId());
+                return ResponseEntity.ok(Map.of("url", publicUrl));
+            }
+        }
+
+        // Store new cover in DB
+        com.utilityzone.model.EbookCoverEntity entity = new com.utilityzone.model.EbookCoverEntity();
         entity.setOriginalFilename(original);
         entity.setMimeType(mime);
-        entity.setData(file.getBytes());
+        entity.setData(bytes);
+        entity.setContentHash(hash);
         var saved = coverService.save(entity);
 
-        String publicUrl = "/api/ebooks/covers/" + saved.getId();
+        String publicUrl = buildCoverUrl(saved.getId());
         return ResponseEntity.ok(Map.of("url", publicUrl));
     }
 
@@ -184,12 +202,23 @@ public class EbookController {
                     .build();
         }
 
+        String mimeType = java.util.Objects.requireNonNull(entity.getMimeType() != null ? entity.getMimeType() : MediaType.APPLICATION_OCTET_STREAM_VALUE);
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(entity.getMimeType() != null ? entity.getMimeType() : MediaType.APPLICATION_OCTET_STREAM_VALUE))
+            .contentType(MediaType.parseMediaType(mimeType))
                 .header("Cache-Control", "public, max-age=86400, immutable")
                 .eTag(eTag)
                 .contentLength(length)
                 .body(entity.getData());
+    }
+
+    // Build a context-aware public URL for covers, honoring servlet context path (e.g., /utility)
+    private String buildCoverUrl(Long id) {
+        String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+        // Ensure single slash when concatenating
+        if (baseUri.endsWith("/")) {
+            baseUri = baseUri.substring(0, baseUri.length() - 1);
+        }
+        return baseUri + "/api/ebooks/covers/" + id;
     }
 
     @PostMapping("/api/admin/ebooks/newsletter/send")
@@ -199,15 +228,18 @@ public class EbookController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Subject and htmlBody are required"));
         }
         var activeSubs = subscriberRepository.findAllByActiveTrue();
-            java.util.List<String> emails = activeSubs != null ? activeSubs.stream().map(NewsletterSubscriber::getEmail).toList() : java.util.Collections.emptyList();
+        java.util.List<String> emails = java.util.Objects.requireNonNull(activeSubs != null ? activeSubs.stream().map(NewsletterSubscriber::getEmail).toList() : java.util.Collections.emptyList());
         // Build base URI from current request context to generate unsubscribe links
         String baseUri = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
         // fire-and-forget async send to avoid long request times
-            emailService.sendToAllAsync(
-                emails,
-            req.getSubject() != null ? req.getSubject().trim() : "",
-            req.getHtmlBody() != null ? req.getHtmlBody() : "",
-            baseUri != null ? baseUri : ""
+        String subject = java.util.Objects.requireNonNull(req.getSubject() != null ? req.getSubject().trim() : "");
+        String body = java.util.Objects.requireNonNull(req.getHtmlBody() != null ? req.getHtmlBody() : "");
+        String base = java.util.Objects.requireNonNull(baseUri != null ? baseUri : "");
+        emailService.sendToAllAsync(
+            emails,
+            subject,
+            body,
+            base
         );
         return ResponseEntity.accepted().body(Map.of("success", true, "recipients", emails.size()));
     }
@@ -215,16 +247,9 @@ public class EbookController {
     @PostMapping("/api/admin/ebooks/create")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<EbookContentDto> create(@RequestBody EbookContentDto dto) {
-        // Always insert a new record
-        com.utilityzone.model.EbookContentEntity entity = new com.utilityzone.model.EbookContentEntity();
-        dto.setUpdatedAt(java.time.Instant.now());
-        entity.setContentJson(service.toJson(dto));
-        entity.setUpdatedAt(dto.getUpdatedAt());
-        com.utilityzone.repository.EbookContentRepository repo = service.getRepository();
-        if (repo != null && entity != null) {
-            repo.save(entity);
-        }
-        return ResponseEntity.ok(dto);
+        // Delegate to upsert to ensure catalog sanitation
+        dto.setId(null); // force create semantics
+        return ResponseEntity.ok(service.upsert(dto));
     }
 
     @GetMapping("/api/admin/ebooks/all")
@@ -241,10 +266,11 @@ public class EbookController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteBook(@PathVariable("bookId") Long bookId) {
         com.utilityzone.repository.EbookContentRepository repo = service.getRepository();
-        if (!repo.existsById(bookId)) {
+        Long idVal = java.util.Objects.requireNonNull(bookId);
+        if (!repo.existsById(idVal)) {
             return ResponseEntity.notFound().build();
         }
-        repo.deleteById(bookId);
+        repo.deleteById(idVal);
         // Evict cache so next getContent returns fresh data
         org.springframework.cache.Cache cache = cacheManager.getCache("ebooks");
         if (cache != null) cache.evict("content");

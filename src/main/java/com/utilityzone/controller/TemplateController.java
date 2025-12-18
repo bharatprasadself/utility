@@ -44,7 +44,36 @@ public class TemplateController {
             .map(t -> {
                 java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
                 m.put("id", t.getId());
-                m.put("title", t.getTitle());
+                // Build storefront title: use custom wording if present, always append friendly PDF type suffix
+                String baseTitle = (t.getPublicDescription() != null && !t.getPublicDescription().isBlank())
+                    ? t.getPublicDescription().trim()
+                    : "NextStepLabs digital invite";
+
+                // Derive type label from preferred buyerPdfType or heuristics
+                String typeRaw = t.getBuyerPdfType();
+                String typeLabel;
+                if (typeRaw != null) {
+                    // Normalize common client values like 'wedding-set' -> 'WEDDING_SET'
+                    String norm = typeRaw.trim().toUpperCase().replace('-', '_');
+                    switch (norm) {
+                        case "WEDDING_SET": typeLabel = "Invite Suite"; break;
+                        case "PRINT_MOBILE": typeLabel = "Mobile + Print"; break;
+                        case "PRINT_ONLY": typeLabel = "Only Print"; break;
+                        default: typeLabel = "Mobile + Print"; break; // default aligns with Buyer PDF common type
+                    }
+                } else {
+                    boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
+                    boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
+                    boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
+                    boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
+                    if (hasRsvp || hasDetail) typeLabel = "Invite Suite";
+                    else if (hasPrint && hasMobile) typeLabel = "Mobile + Print";
+                    else if (hasPrint && !hasMobile) typeLabel = "Only Print";
+                    else typeLabel = "Mobile + Print"; // fallback
+                }
+
+                String desc = baseTitle + " (" + typeLabel + ")";
+                m.put("title", desc);
                 m.put("mockupUrl", t.getMockupUrl());
                 m.put("etsyListingUrl", t.getEtsyListingUrl());
                 return m;
@@ -62,6 +91,13 @@ public class TemplateController {
         ct.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
         ct.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
         ct.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
+        ct.setRsvpCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getRsvpCanvaUseCopyUrl()));
+        ct.setDetailCardCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getDetailCardCanvaUseCopyUrl()));
+        ct.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
+        // Persist preferred buyer PDF type if provided
+        if (req.getBuyerPdfType() != null) {
+            ct.setBuyerPdfType(StringUtils.trimWhitespace(req.getBuyerPdfType()));
+        }
         return service.create(ct);
     }
 
@@ -82,8 +118,13 @@ public class TemplateController {
         changes.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
         changes.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
         changes.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
+        changes.setRsvpCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getRsvpCanvaUseCopyUrl()));
+        changes.setDetailCardCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getDetailCardCanvaUseCopyUrl()));
+        changes.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
         // do not touch buyerPdfUrl unless provided explicitly
         if (req.getBuyerPdfUrl() != null) changes.setBuyerPdfUrl(StringUtils.trimWhitespace(req.getBuyerPdfUrl()));
+        // allow updating persisted preferred buyer PDF type
+        if (req.getBuyerPdfType() != null) changes.setBuyerPdfType(StringUtils.trimWhitespace(req.getBuyerPdfType()));
         return service.update(id, changes);
     }
 
@@ -165,10 +206,11 @@ public class TemplateController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> generateBuyerPdf(
             @RequestParam("templateId") Long templateId,
-            @RequestParam(value = "pdfType", required = false) String pdfType
+            @RequestParam(value = "pdfType") String pdfType
     ) throws IOException {
         Template updated = service.generateBuyerPdf(templateId, pdfType);
-        return ResponseEntity.ok(Map.of("success", true, "buyerPdfUrl", updated.getBuyerPdfUrl()));
+        // Echo back canonical type value for client display
+        return ResponseEntity.ok(Map.of("success", true, "buyerPdfUrl", updated.getBuyerPdfUrl(), "pdfType", pdfType));
     }
 
     @GetMapping("/api/canva-templates/pdfs/{id}.pdf")
@@ -192,8 +234,8 @@ public class TemplateController {
                         }
                         byte[] bytes = Files.readAllBytes(path);
                         return ResponseEntity.ok()
-                                .contentType(MediaType.APPLICATION_PDF)
-                                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=buyer-" + id + ".pdf")
+                            .contentType(MediaType.APPLICATION_PDF)
+                            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=buyer-template-" + id + ".pdf")
                             .header("Cache-Control", "no-cache, must-revalidate")
                             .header("Pragma", "no-cache")
                             .header("Expires", "0")
@@ -211,5 +253,22 @@ public class TemplateController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public Template publish(@PathVariable("id") Long id) {
         return service.publish(id);
+    }
+
+    // Diagnostic endpoint: resolved buyer PDF path and existence
+    @GetMapping("/api/admin/canva-templates/diagnose/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, Object>> diagnose(@PathVariable("id") Long id) throws IOException {
+        java.util.Optional<Template> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        Template t = opt.get();
+        Path pdfPath = service.getPdfPathFor(t);
+        boolean exists = Files.exists(pdfPath);
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("id", t.getId());
+        body.put("title", t.getTitle());
+        body.put("pdfPath", pdfPath.toAbsolutePath().toString());
+        body.put("exists", exists);
+        return ResponseEntity.ok(body);
     }
 }

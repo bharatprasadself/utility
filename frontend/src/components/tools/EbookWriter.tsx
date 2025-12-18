@@ -1,6 +1,6 @@
-import { Box, Typography, Paper, Button, Stack, TextField, Divider, List, ListItem, ListItemText, Switch, FormControlLabel, Tooltip } from '@mui/material';
+import { Box, Typography, Paper, Button, Stack, TextField, Divider, List, ListItem, ListItemText, Switch, FormControlLabel, Tooltip, Collapse, Snackbar } from '@mui/material';
 import Advertisement from '../Advertisement';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { EbookProject, Chapter } from '@/types/ebook-writer';
 import { emptyProject } from '@/types/ebook-writer';
@@ -9,98 +9,65 @@ import { exportProjectToDocx } from '@/utils/docxExport';
 import { EbookService } from '@/services/ebooks';
 import type { EbookItem } from '@/types/Ebooks';
 
+// Prefilled generic questions for NotebookLM that users can edit
+const GENERIC_NOTEBOOKLM_QUESTIONS: string[] = [
+  'Generate a 10–12 chapter outline based on the research and notes.',
+  'Draft an engaging introduction that summarizes the core theme and goal.',
+  'Write a sample chapter in a friendly teaching tone for beginners.',
+  'Create a practical 30-day action plan with daily prompts and tasks.',
+  'List key takeaways at the end of each chapter (3–5 bullets).',
+  'Suggest relevant case studies and examples to illustrate major concepts.',
+  'Recommend visuals or diagrams that would support the explanations.',
+  'Refine chapter titles for clarity and consistency with the TOC.',
+  'Improve transitions between chapters to ensure smooth narrative flow.',
+  'Summarize research citations and sources into an appendix-ready format.'
+];
+
 const EbookWriter = () => {
-        // Draft ebooks state
-        // Store both flat EbookItem[] for display and full EbookContentDto[] for loading all fields
-        const [drafts, setDrafts] = useState<EbookItem[]>([]);
-        const [draftContents, setDraftContents] = useState<any[]>([]);
-
-        useEffect(() => {
-          const fetchDrafts = async () => {
-            try {
-              const all = await EbookService.listAll();
-              setDraftContents(all);
-              // Build a map from book id to parent content
-              const bookIdToParent: Record<string, any> = {};
-              const items: EbookItem[] = [];
-              (all as any[]).forEach((content: any) => {
-                if (Array.isArray(content.books)) {
-                  content.books.forEach((book: any) => {
-                    items.push({ ...book, status: content.status || 'draft' });
-                    if (book.id) bookIdToParent[book.id] = content;
-                  });
-                }
-              });
-              setDrafts(items.filter((b) => (b.status || 'draft') === 'draft'));
-              setBookIdToParent(bookIdToParent);
-            } catch (e) {
-              // Optionally handle error
-            }
-          };
-          fetchDrafts();
-        }, []);
-
-        // Map from book id to parent content
-        const [bookIdToParent, setBookIdToParent] = useState<Record<string, any>>({});
-      // Store uploaded file in state for admin draft upload
-        // Store uploaded file in state for admin draft upload (removed unused coverFile)
-    // Save as Draft handler
-    const handleSaveDraft = async () => {
-      setSavingDraft(true);
-      setSaveDraftMsg(null);
-      try {
-        // Convert project to EbookContentDto shape
-        const ebookContent: any = {
-          id: project.id,
-          headerTitle: project.title || '',
-          books: [
-            {
-              id: project.bookId, // optional, if you want to track book id
-              title: project.title || '',
-              coverUrl: project.cover?.imageDataUrl || '',
-              description: project.cover?.content || '',
-              buyLink: '',
-            }
-          ],
-          about: project.preface || '',
-          newsletterEnabled: false,
-          contacts: [],
-          preface: project.preface || '',
-          disclaimer: project.disclaimer || '',
-          chapters: project.chapters || [],
-        };
-        if (project.id) {
-          await EbookService.upsertContent(ebookContent);
-          setSaveDraftMsg('Draft updated successfully!');
-        } else {
-          await EbookService.createContent(ebookContent);
-          setSaveDraftMsg('Draft saved successfully!');
-        }
-      } catch (e: any) {
-        setSaveDraftMsg('Failed to save draft.');
-      } finally {
-        setSavingDraft(false);
-      }
-    };
-  // Auth context
   const { isAdmin } = useAuth();
-  // Save as Draft state
   const [savingDraft, setSavingDraft] = useState(false);
   const [saveDraftMsg, setSaveDraftMsg] = useState<string | null>(null);
-
-  // State
+  const [snackbarMsg, setSnackbarMsg] = useState<string | null>(null);
   const [project, setProject] = useState<EbookProject>(emptyProject());
   const [tocLocked, setTocLocked] = useState<boolean>(false);
+
   const editorRef = useRef<HTMLDivElement>(null);
-  // Refs for file inputs
   const coverImageInputRef = useRef<HTMLInputElement>(null);
-  // Removed unused coverTextInputRef
   const prefaceInputRef = useRef<HTMLInputElement>(null);
   const disclaimerInputRef = useRef<HTMLInputElement>(null);
+  const chapterIdeasRef = useRef<HTMLInputElement>(null);
+  const researchNotesRef = useRef<HTMLInputElement>(null);
+  const dataStatsExamplesRef = useRef<HTMLInputElement>(null);
+  const personalThoughtsRef = useRef<HTMLInputElement>(null);
+  const questionsImportRef = useRef<HTMLInputElement>(null);
   const tocInputRef = useRef<HTMLInputElement>(null);
   const chaptersInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to update cover
+  const [newQuestion, setNewQuestion] = useState<string>('');
+  const [showResearchIdeation, setShowResearchIdeation] = useState<boolean>(true);
+  const [showTocAdvanced, setShowTocAdvanced] = useState<boolean>(false);
+  const [showHelp, setShowHelp] = useState<boolean>(true);
+
+  // Draft ebooks state
+  const [drafts, setDrafts] = useState<EbookItem[]>([]);
+  const [draftContents, setDraftContents] = useState<any[]>([]);
+  const [bookIdToParent, setBookIdToParent] = useState<Record<string, any>>({});
+
+  const fetchDrafts = useCallback(async () => {
+    try {
+      const items = await EbookService.listItems();
+      // items already represent per-ebook rows
+      const draftsOnly = (items || []).filter(b => (b.status || 'draft') === 'draft');
+      setDrafts(draftsOnly);
+      setDraftContents([]);
+      setBookIdToParent({});
+    } catch {
+      // ignore errors from drafts fetch
+    }
+  }, []);
+
+  useEffect(() => { fetchDrafts(); }, [fetchDrafts]);
+
   const updateCover = (patch: Partial<EbookProject['cover']>) => {
     setProject(p => ({
       ...p,
@@ -108,22 +75,98 @@ const EbookWriter = () => {
       lastUpdated: new Date().toISOString(),
     }));
   };
-  // Helpers
   const touch = (patch: Partial<EbookProject>) => setProject(p => ({ ...p, ...patch, lastUpdated: new Date().toISOString() }));
+
   const handleImportPreface = async (file?: File) => {
     if (!file) return;
     const content = await readTextFile(file);
     touch({ preface: content });
     if (prefaceInputRef.current) prefaceInputRef.current.value = '';
   };
-
   const handleImportDisclaimer = async (file?: File) => {
     if (!file) return;
     const content = await readTextFile(file);
     touch({ disclaimer: content });
     if (disclaimerInputRef.current) disclaimerInputRef.current.value = '';
   };
-
+  // Import helpers for Research & Ideation
+  const handleImportChapterIdeas = async (file?: File) => {
+    if (!file) return;
+    const content = await readTextFile(file);
+    touch({ chapterIdeas: content });
+    if (chapterIdeasRef.current) chapterIdeasRef.current.value = '';
+  };
+  const handleImportResearchNotes = async (file?: File) => {
+    if (!file) return;
+    const content = await readTextFile(file);
+    touch({ researchNotes: content });
+    if (researchNotesRef.current) researchNotesRef.current.value = '';
+  };
+  const handleImportDataStatsExamples = async (file?: File) => {
+    if (!file) return;
+    const content = await readTextFile(file);
+    touch({ dataStatsExamples: content });
+    if (dataStatsExamplesRef.current) dataStatsExamplesRef.current.value = '';
+  };
+  const handleImportPersonalThoughts = async (file?: File) => {
+    if (!file) return;
+    const content = await readTextFile(file);
+    touch({ personalThoughts: content });
+    if (personalThoughtsRef.current) personalThoughtsRef.current.value = '';
+  };
+  // Questions for NotebookLM helpers
+  const addQuestion = () => {
+    const q = newQuestion.trim();
+    if (!q) return;
+    const existing = project.questionsForNotebookLm || [];
+    touch({ questionsForNotebookLm: [...existing, q] });
+    setNewQuestion('');
+  };
+  const removeQuestion = (idx: number) => {
+    const arr = [...(project.questionsForNotebookLm || [])];
+    arr.splice(idx, 1);
+    touch({ questionsForNotebookLm: arr });
+  };
+  const handleImportQuestions = async (file?: File) => {
+    if (!file) return;
+    const content = await readTextFile(file);
+    const lines = content.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const existing = project.questionsForNotebookLm || [];
+    touch({ questionsForNotebookLm: [...existing, ...lines] });
+    if (questionsImportRef.current) questionsImportRef.current.value = '';
+  };
+  const useQuestionsTemplate = () => {
+    const template = [
+      'Propose a 10–12 chapter outline based on the research and notes.',
+      'Rewrite one chapter for a beginner audience in a friendly teaching tone.',
+      'Draft a concise, engaging introduction that sets up the reader’s journey.',
+      'Create a 30-day action plan with daily tasks and reflection prompts.'
+    ];
+    touch({ questionsForNotebookLm: template });
+  };
+  const addGenericQuestions = () => {
+    const existing = project.questionsForNotebookLm || [];
+    const merged = [...existing];
+    GENERIC_NOTEBOOKLM_QUESTIONS.forEach(q => {
+      if (!merged.includes(q)) merged.push(q);
+    });
+    touch({ questionsForNotebookLm: merged });
+  };
+  const copyAllQuestions = async () => {
+    const txt = (project.questionsForNotebookLm || []).join('\n');
+    try { await navigator.clipboard.writeText(txt); } catch {}
+  };
+  const exportQuestionsTxt = () => {
+    const txt = (project.questionsForNotebookLm || []).join('\n');
+    const blob = new Blob([txt], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (project.title ? project.title.replace(/[^a-z0-9]/gi, '_') : 'questions') + '_notebooklm.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+  };
   const handleImportTOC = async (file?: File) => {
     if (!file) return;
     const content = await readTextFile(file);
@@ -132,7 +175,6 @@ const EbookWriter = () => {
     touch({ toc: lines });
     if (tocInputRef.current) tocInputRef.current.value = '';
   };
-
   const handleImportChapters = async (files?: FileList | null) => {
     if (!files || files.length === 0) return;
     const results = await readMultipleTextFiles(files);
@@ -144,11 +186,21 @@ const EbookWriter = () => {
     touch({ chapters });
     if (chaptersInputRef.current) chaptersInputRef.current.value = '';
   };
-
   const handleImportCoverImage = async (file?: File) => {
     if (!file) return;
-    const dataUrl = await readImageAsDataUrl(file);
-    updateCover({ imageDataUrl: dataUrl });
+    try {
+      // Use authenticated service to avoid 401
+      const url = await EbookService.uploadCover(file);
+      if (url) {
+        updateCover({ imageDataUrl: url });
+        return;
+      }
+      const dataUrl = await readImageAsDataUrl(file);
+      updateCover({ imageDataUrl: dataUrl });
+    } catch (e) {
+      const dataUrl = await readImageAsDataUrl(file);
+      updateCover({ imageDataUrl: dataUrl });
+    }
   };
   const generateTocFromChapters = () => {
     if (tocLocked) { alert('TOC is locked. Unlock to regenerate.'); return; }
@@ -169,20 +221,19 @@ const EbookWriter = () => {
     touch({ toc: merged });
   };
 
-  // Main layout (two-column, like Blog page)
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
       <Box sx={{ p: 3, flexGrow: 1 }} ref={editorRef}>
-        {/* Draft Ebooks List */}
-        {drafts.length > 0 && (
+        {isAdmin() && drafts.length > 0 && (
           <Paper elevation={2} sx={{ mb: 4, p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Draft Ebooks</Typography>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+              <Typography variant="h6">Draft Ebooks</Typography>
+              <Button variant="outlined" size="small" onClick={fetchDrafts}>Refresh</Button>
+            </Stack>
             <Stack spacing={2}>
               {drafts.map((ebook, idx) => {
-                // Improved: Robustly find parent content for this book
                 let parentContent = (ebook.id && bookIdToParent[ebook.id]) || null;
                 if (!parentContent) {
-                  // Fallback: try to find by matching title and coverUrl
                   parentContent = draftContents.find((content: any) =>
                     Array.isArray(content.books) && content.books.some((b: any) =>
                       b.title === ebook.title && b.coverUrl === ebook.coverUrl
@@ -190,14 +241,17 @@ const EbookWriter = () => {
                   ) || null;
                 }
                 if (!parentContent) {
-                  // Fallback: try to find by matching just title
                   parentContent = draftContents.find((content: any) =>
                     Array.isArray(content.books) && content.books.some((b: any) => b.title === ebook.title)
                   ) || {};
                 }
-                // Defensive: ensure preface/disclaimer are always strings
-                const preface = typeof parentContent.preface === 'string' ? parentContent.preface : '';
-                const disclaimer = typeof parentContent.disclaimer === 'string' ? parentContent.disclaimer : '';
+                const preface = typeof parentContent.preface === 'string' ? parentContent.preface : (ebook as any).preface || '';
+                const disclaimer = typeof parentContent.disclaimer === 'string' ? parentContent.disclaimer : (ebook as any).disclaimer || '';
+                const chapterIdeas = typeof parentContent.chapterIdeas === 'string' ? parentContent.chapterIdeas : (ebook as any).chapterIdeas || '';
+                const researchNotes = typeof parentContent.researchNotes === 'string' ? parentContent.researchNotes : (ebook as any).researchNotes || '';
+                const dataStatsExamples = typeof parentContent.dataStatsExamples === 'string' ? parentContent.dataStatsExamples : (ebook as any).dataStatsExamples || '';
+                const personalThoughts = typeof parentContent.personalThoughts === 'string' ? parentContent.personalThoughts : (ebook as any).personalThoughts || '';
+                const questionsForNotebookLm = Array.isArray(parentContent.questionsForNotebookLm) ? parentContent.questionsForNotebookLm : (ebook as any).questionsForNotebookLm || [];
                 return (
                   <Box key={ebook.id || ebook.title || idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, border: '1px solid #eee', borderRadius: 2, p: 2 }}>
                     <Box sx={{ width: 60, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', borderRadius: 1, border: '1px solid #ccc', mr: 2 }}>
@@ -218,8 +272,8 @@ const EbookWriter = () => {
                       onClick={() => {
                         setProject(prev => ({
                           ...prev,
-                          id: parentContent.id, // store DB row id for upsert
-                          bookId: ebook.id, // optional, if you want to track book id
+                          id: parentContent.id,
+                          bookId: ebook.id,
                           title: ebook.title || '',
                           cover: {
                             ...(prev.cover || {}),
@@ -227,7 +281,12 @@ const EbookWriter = () => {
                           },
                           preface,
                           disclaimer,
-                          chapters: Array.isArray(parentContent.chapters) ? parentContent.chapters : [],
+                          chapters: Array.isArray(parentContent.chapters) ? parentContent.chapters : ((ebook as any).chapters || []),
+                          chapterIdeas,
+                          researchNotes,
+                          dataStatsExamples,
+                          personalThoughts,
+                          questionsForNotebookLm,
                           status: ebook.status || 'draft',
                         }));
                         setTimeout(() => {
@@ -243,101 +302,263 @@ const EbookWriter = () => {
             </Stack>
           </Paper>
         )}
+
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 2 }}>
           Ebook Writer
         </Typography>
-        <Stack spacing={3}>
 
-          {/* Title */}
+        <Stack spacing={3}>
+          {/* End-to-end Workflow */}
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Typography variant="h6">End‑to‑end Workflow</Typography>
+              <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => setShowHelp(v => !v)}>
+                {showHelp ? 'Hide' : 'Show'}
+              </Button>               
+            </Stack>
+            <Divider sx={{ my: 1 }} />
+            <Collapse in={showHelp}>
+              <Stack spacing={1}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Flow Overview</Typography>
+                <List dense sx={{
+                  '& .MuiListItem-root': { py: 0.25 },
+                  '& .MuiListItemText-primary': { lineHeight: 1.2 }
+                }}>
+                  <ListItem disableGutters><ListItemText primary="1) Research with AI (Perplexity): Gather summaries, citations, links, data points, and insights." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="2) Add Personal Thoughts: Write your perspective and lived experience to shape the narrative." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="3) Craft NotebookLM Prompts: Use ‘Add Generic Questions’ or ‘Use Template’, then tailor tone, audience, and constraints." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="4) Generate Content in NotebookLM: Produce outline, preface, disclaimer, and chapters based on your sources." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="5) Import Outputs: Preface/Disclaimer via .txt files; Chapters as multiple .txt files (one per chapter)." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="6) Build TOC: Generate from chapters or sync with titles; lock when finalized." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="7) Save & Export: Admins save as draft to DB; export DOCX anytime for sharing." /></ListItem>
+                </List>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mt: 1 }}>Prompt Tips</Typography>
+                <List dense sx={{
+                  '& .MuiListItem-root': { py: 0.25 },
+                  '& .MuiListItemText-primary': { lineHeight: 1.2 }
+                }}>
+                  <ListItem disableGutters><ListItemText primary="• Reference your research notes for context; specify audience and tone (beginner-friendly, teaching style)." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="• Ask for concrete artifacts: 10–12 chapter outline, sample chapter, 30-day plan, and key takeaways." /></ListItem>
+                  <ListItem disableGutters><ListItemText primary="• Use ‘Copy All’ and ‘Export .txt’ to move prompts into NotebookLM easily." /></ListItem>
+                </List>
+                {isAdmin() && (
+                  <><Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Admin Notes</Typography>
+                  <List dense sx={{
+                  '& .MuiListItem-root': { py: 0.25 },
+                  '& .MuiListItemText-primary': { lineHeight: 1.2 }
+                  }}>
+                      <ListItem disableGutters><ListItemText primary="• Use Save as Draft to persist content and the cover image." /></ListItem>
+                      <ListItem disableGutters><ListItemText primary="• Finalize and lock the TOC before publishing; DOCX export is available anytime." /></ListItem>
+                    </List>
+                  </>
+                )}
+              </Stack>
+            </Collapse>
+          </Paper>
           <TextField
             label="Ebook Title"
             fullWidth
             value={project.title}
             onChange={(e) => touch({ title: e.target.value })}
           />
-                    {/* Upload Ebook Cover Section */}
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="h6" sx={{ mb: 1 }}>Upload Ebook Cover</Typography>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-                        {project.cover?.imageDataUrl && (
-                          <img src={project.cover.imageDataUrl} alt="Cover Preview" style={{ maxHeight: 120, maxWidth: 90, borderRadius: 4, border: '1px solid #ccc' }} />
-                        )}
-                        <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => coverImageInputRef.current?.click()}>
-                          Upload Cover Image
-                        </Button>
-                        <input ref={coverImageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleImportCoverImage(e.target.files?.[0])} />
-                      </Stack>
-                      {project.cover?.imageDataUrl && (
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                          Cover image will be {isAdmin() ? 'saved to the database on Save as Draft' : 'included in the exported DOCX only'}.
-                        </Typography>
-                      )}
-                    </Paper>
-          
 
-          {/* Preface & Disclaimer */}
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="h6" sx={{ mb: 1 }}>Upload Ebook Cover</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+              {project.cover?.imageDataUrl && (
+                <img src={project.cover.imageDataUrl} alt="Cover Preview" style={{ maxHeight: 120, maxWidth: 90, borderRadius: 4, border: '1px solid #ccc' }} />
+              )}
+              <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => coverImageInputRef.current?.click()}>
+                Upload Cover Image
+              </Button>
+              <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => updateCover({ imageDataUrl: '', content: '' })}>
+                Clear Cover
+              </Button>
+              <input ref={coverImageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleImportCoverImage(e.target.files?.[0])} />
+            </Stack>
+            {/* Cover upload status indicator */}
+            {project.cover?.imageDataUrl && (
+              <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                {project.cover.imageDataUrl.startsWith('/api/ebooks/covers/')
+                  ? 'Cover upload status: stored in database (ebooks_covers)'
+                  : project.cover.imageDataUrl.startsWith('data:')
+                  ? 'Cover upload status: local preview only (upload failed)'
+                  : 'Cover upload status: external URL reference'}
+              </Typography>
+            )}
+            {project.cover?.imageDataUrl && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Cover image will be {isAdmin() ? 'saved to the database on Save as Draft' : 'included in the exported DOCX only'}.
+              </Typography>
+            )}
+          </Paper>
+
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack spacing={3}>
+              
+
               <Box>
-                <Typography variant="h6">Preface</Typography>
-                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => prefaceInputRef.current?.click()}>Import Preface</Button>
-                  <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ preface: '' })}>Clear</Button>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="h6">Research & Ideation</Typography>
+                  <Button variant="text" size="small" onClick={() => setShowResearchIdeation(v => !v)}>
+                    {showResearchIdeation ? 'Hide' : 'Show'}
+                  </Button>
                 </Stack>
-                <input ref={prefaceInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportPreface(e.target.files?.[0])} />
-                <TextField
-                  label="Preface"
-                  fullWidth
-                  multiline
-                  minRows={2}
-                  value={project.preface || ''}
-                  onChange={e => touch({ preface: e.target.value })}
-                />
+                <Collapse in={showResearchIdeation}>
+                  <Stack spacing={3}>
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Chapter Ideas</Typography>
+                      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                        <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => chapterIdeasRef.current?.click()}>Import Chapter Ideas</Button>
+                        <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ chapterIdeas: '' })}>Clear</Button>
+                      </Stack>
+                      <input ref={chapterIdeasRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportChapterIdeas(e.target.files?.[0])} />
+                      <TextField
+                        label="Chapter Ideas"
+                        fullWidth
+                        multiline
+                        minRows={3}
+                        placeholder="Dump raw ideas, bullets, and notes – we’ll shape them into chapters later."
+                        value={project.chapterIdeas || ''}
+                        onChange={e => touch({ chapterIdeas: e.target.value })}
+                      />
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Research Notes</Typography>
+                      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                        <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => researchNotesRef.current?.click()}>Import Research Notes</Button>
+                        <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ researchNotes: '' })}>Clear</Button>
+                      </Stack>
+                      <input ref={researchNotesRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportResearchNotes(e.target.files?.[0])} />
+                      <TextField
+                        label="Research Notes (Paste everything from AI research here)"
+                        fullWidth
+                        multiline
+                        minRows={4}
+                        placeholder="Paste raw research outputs, citations, links, and summaries from Perplexity or other tools."
+                        value={project.researchNotes || ''}
+                        onChange={e => touch({ researchNotes: e.target.value })}
+                      />
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Data, Stats, and Examples</Typography>
+                      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                        <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => dataStatsExamplesRef.current?.click()}>Import Data/Stats/Examples</Button>
+                        <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ dataStatsExamples: '' })}>Clear</Button>
+                      </Stack>
+                      <input ref={dataStatsExamplesRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportDataStatsExamples(e.target.files?.[0])} />
+                      <TextField
+                        label="Data, Stats, and Examples"
+                        fullWidth
+                        multiline
+                        minRows={4}
+                        placeholder="Collect key numbers, evidence, case studies, and illustrative examples to strengthen arguments."
+                        value={project.dataStatsExamples || ''}
+                        onChange={e => touch({ dataStatsExamples: e.target.value })}
+                      />
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Personal Thoughts (Your Vision/Experience)</Typography>
+                      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                        <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => personalThoughtsRef.current?.click()}>Import Personal Thoughts</Button>
+                        <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ personalThoughts: '' })}>Clear</Button>
+                      </Stack>
+                      <input ref={personalThoughtsRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportPersonalThoughts(e.target.files?.[0])} />
+                      <TextField
+                        label="Personal Thoughts (Your Vision/Experience)"
+                        fullWidth
+                        multiline
+                        minRows={4}
+                        placeholder="Write your perspective, lived experience, and vision that ties the research and data together."
+                        value={project.personalThoughts || ''}
+                        onChange={e => touch({ personalThoughts: e.target.value })}
+                      />
+                    </Box>
+                  </Stack>
+                </Collapse>
               </Box>
+
+              {/* Questions for NotebookLM */}
               <Box>
-                <Typography variant="h6">Disclaimer</Typography>
-                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => disclaimerInputRef.current?.click()}>Import Disclaimer</Button>
-                  <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ disclaimer: '' })}>Clear</Button>
+                <Typography variant="h6">Questions for NotebookLM</Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1 }}>
+                  <TextField
+                    label="Add a question"
+                    value={newQuestion}
+                    onChange={e => setNewQuestion(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addQuestion(); } }}
+                    fullWidth
+                  />
+                  <Button variant="contained" onClick={addQuestion}>Add</Button>
                 </Stack>
-                <input ref={disclaimerInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportDisclaimer(e.target.files?.[0])} />
-                <TextField
-                  label="Disclaimer"
-                  fullWidth
-                  multiline
-                  minRows={2}
-                  value={project.disclaimer || ''}
-                  onChange={e => touch({ disclaimer: e.target.value })}
-                />
+                <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap' }}>
+                  
+                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={useQuestionsTemplate}>Use Template</Button>
+                  <Tooltip title="Insert a curated set of editable generic prompts for NotebookLM">
+                    <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={addGenericQuestions}>Add Generic Questions</Button>
+                  </Tooltip>
+                  <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ questionsForNotebookLm: [] })}>Clear</Button>
+                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={copyAllQuestions}>Copy All</Button>
+                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => questionsImportRef.current?.click()}>Import .txt</Button>
+                  <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={exportQuestionsTxt}>Export .txt</Button>
+                </Stack>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                  These prompts are for NotebookLM to generate outlines, sample chapters, plans, and takeaways. Start with generic/templates, then tailor tone, audience, and constraints.
+                </Typography>
+                <input ref={questionsImportRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportQuestions(e.target.files?.[0])} />
+                <List dense>
+                  {(project.questionsForNotebookLm || []).map((q, idx) => (
+                    <ListItem key={idx} secondaryAction={<Button size="small" color="error" onClick={() => removeQuestion(idx)}>Remove</Button>}>
+                      <ListItemText primary={`${idx + 1}. ${q}`} />
+                    </ListItem>
+                  ))}
+                </List>
               </Box>
             </Stack>
           </Paper>
 
-          {/* TOC Section */}
+          {/* Preface placed above Chapters */}
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Typography variant="h6">Table of Contents</Typography>
-              <FormControlLabel
-                control={<Switch checked={tocLocked} onChange={e => setTocLocked(e.target.checked)} />}
-                label="Lock TOC"
+            <Box>
+              <Typography variant="h6">Preface</Typography>
+              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => prefaceInputRef.current?.click()}>Import Preface</Button>
+                <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ preface: '' })}>Clear</Button>
+              </Stack>
+              <input ref={prefaceInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportPreface(e.target.files?.[0])} />
+              <TextField
+                label="Preface"
+                fullWidth
+                multiline
+                minRows={4}
+                value={project.preface || ''}
+                onChange={e => touch({ preface: e.target.value })}
               />
-              <Tooltip title="Import TOC from .txt file (one chapter per line)"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => tocInputRef.current?.click()}>Import TOC</Button></Tooltip>
-              <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ toc: [] })}>Clear</Button>
-              <input ref={tocInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportTOC(e.target.files?.[0])} />
-              <Tooltip title="Generate TOC from chapters"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={generateTocFromChapters}>Generate from Chapters</Button></Tooltip>
-              <Tooltip title="Sync TOC with chapters"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={syncTocWithChapters}>Sync with Chapters</Button></Tooltip>
-            </Stack>
-            <Divider sx={{ my: 1 }} />
-            <List dense>
-              {project.toc.map((item, idx) => (
-                <ListItem key={idx}>
-                  <ListItemText primary={item} />
-                </ListItem>
-              ))}
-            </List>
+            </Box>
           </Paper>
 
-          {/* Chapters Section */}
+          {/* Copyright & Disclaimer */}
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Box>
+              <Typography variant="h6">Copyright & Disclaimer</Typography>
+              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                <Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => disclaimerInputRef.current?.click()}>Import Disclaimer</Button>
+                <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ disclaimer: '' })}>Clear</Button>
+              </Stack>
+              <input ref={disclaimerInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportDisclaimer(e.target.files?.[0])} />
+              <TextField
+                label="Copyright & Disclaimer"
+                fullWidth
+                multiline
+                minRows={4}
+                placeholder="Add copyright notice, liability disclaimer, and usage terms."
+                value={project.disclaimer || ''}
+                onChange={e => touch({ disclaimer: e.target.value })}
+              />
+            </Box>
+          </Paper>
+
+          {/* Chapters */}
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction="row" alignItems="center" spacing={2}>
               <Typography variant="h6">Chapters</Typography>
@@ -381,14 +602,99 @@ const EbookWriter = () => {
             </List>
           </Paper>
 
-          {/* Export Section */}
+          {/* Table of Contents */}
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Typography variant="h6">Table of Contents</Typography>
+              <FormControlLabel
+                control={<Switch checked={tocLocked} onChange={e => setTocLocked(e.target.checked)} />}
+                label="Lock TOC"
+              />
+              <Button variant="outlined" size="small" color="error" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => touch({ toc: [] })}>Clear</Button>
+              <input ref={tocInputRef} type="file" accept=".txt" style={{ display: 'none' }} onChange={e => handleImportTOC(e.target.files?.[0])} />
+              <Tooltip title="Generate TOC from chapters"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={generateTocFromChapters}>Generate from Chapters</Button></Tooltip>
+              <Tooltip title="Sync TOC with chapters"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={syncTocWithChapters}>Sync with Chapters</Button></Tooltip>
+              <Button variant="text" size="small" onClick={() => setShowTocAdvanced(v => !v)}>{showTocAdvanced ? 'Hide Advanced' : 'Show Advanced'}</Button>
+            </Stack>
+            <Collapse in={showTocAdvanced}>
+              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                <Tooltip title="Import TOC from .txt file (one chapter per line)"><Button variant="outlined" size="small" sx={{ borderWidth: 2, borderStyle: 'solid' }} onClick={() => tocInputRef.current?.click()}>Import TOC</Button></Tooltip>
+              </Stack>
+            </Collapse>
+            <Divider sx={{ my: 1 }} />
+            <List dense>
+              {project.toc.map((item, idx) => (
+                <ListItem key={idx}>
+                  <ListItemText primary={item} />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+
+          {/* Actions */}
           <Stack direction="row" spacing={2} justifyContent="flex-end">
             {isAdmin() && (
               <Button
                 variant="outlined"
                 color="secondary"
-                onClick={handleSaveDraft}
-                disabled={savingDraft}
+                onClick={async () => {
+                  setSavingDraft(true);
+                  setSaveDraftMsg(null);
+                  try {
+                    // Load current active content so we can merge the books array instead of replacing it
+                    let baseContent: any = null;
+                    try { baseContent = await EbookService.getContent(); } catch {}
+                    const existingBooks: any[] = Array.isArray(baseContent?.books) ? baseContent.books : [];
+                    // Prefer ID match when available; fallback to title match
+                    let idx = -1;
+                    if (project.bookId) {
+                      idx = existingBooks.findIndex((b: any) => (b.id || '').toString() === (project.bookId as any).toString());
+                    }
+                    if (idx < 0) {
+                      idx = existingBooks.findIndex((b: any) => (b.title || '').trim().toLowerCase() === (project.title || '').trim().toLowerCase());
+                    }
+                    const bookPayload: any = {
+                      id: project.bookId || (idx >= 0 ? existingBooks[idx]?.id : undefined),
+                      title: project.title || '',
+                      coverUrl: project.cover?.imageDataUrl || (idx >= 0 ? existingBooks[idx]?.coverUrl : ''),
+                      description: project.cover?.content || (idx >= 0 ? existingBooks[idx]?.description : ''),
+                      buyLink: idx >= 0 ? (existingBooks[idx]?.buyLink || '') : '',
+                      status: idx >= 0 ? (existingBooks[idx]?.status || 'draft') : 'draft',
+                      // Include full per-book content
+                      preface: project.preface || '',
+                      disclaimer: project.disclaimer || '',
+                      chapters: project.chapters || [],
+                      // Research & ideation
+                      chapterIdeas: project.chapterIdeas || '',
+                      researchNotes: project.researchNotes || '',
+                      dataStatsExamples: project.dataStatsExamples || '',
+                      personalThoughts: project.personalThoughts || '',
+                      questionsForNotebookLm: project.questionsForNotebookLm || [],
+                    };
+                    // Use per-ebook CRUD: create or update single book row
+                    let savedItem: any;
+                    const isNumericId = bookPayload.id && /^\d+$/.test(String(bookPayload.id));
+                    if (isNumericId) {
+                      savedItem = await EbookService.updateItem(Number(bookPayload.id), bookPayload);
+                    } else {
+                      savedItem = await EbookService.createItem(bookPayload);
+                    }
+                    // reflect returned id for future edits
+                    if (savedItem?.id) touch({ bookId: savedItem.id as any });
+                    setSaveDraftMsg('Draft saved successfully!');
+                      setSnackbarMsg('Draft Saved');
+                  } catch {
+                    setSaveDraftMsg('Failed to save draft.');
+                      setSnackbarMsg('Failed to save draft');
+                  } finally {
+                    setSavingDraft(false);
+                  }
+                }}
+                disabled={
+                  savingDraft || (
+                    !((project.title || '').trim()) && !(project.bookId || project.id)
+                  )
+                }
               >
                 {savingDraft ? 'Saving...' : 'Save as Draft'}
               </Button>
@@ -413,6 +719,13 @@ const EbookWriter = () => {
               Export as DOCX
             </Button>
           </Stack>
+          <Snackbar
+            open={Boolean(snackbarMsg)}
+            autoHideDuration={3000}
+            onClose={() => setSnackbarMsg(null)}
+            message={snackbarMsg || ''}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          />
           {saveDraftMsg && (
             <Typography variant="body2" color={saveDraftMsg.includes('success') ? 'success.main' : 'error.main'} sx={{ mt: 1 }}>
               {saveDraftMsg}
@@ -420,6 +733,7 @@ const EbookWriter = () => {
           )}
         </Stack>
       </Box>
+      {/* Sidebar Ad */}
       <Box
         sx={{
           marginTop: { xs: 2, md: 0 },
@@ -437,5 +751,8 @@ const EbookWriter = () => {
       </Box>
     </Box>
   );
-}
+};
+
 export default EbookWriter;
+
+              

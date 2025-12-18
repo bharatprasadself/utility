@@ -19,6 +19,11 @@ export interface EbookProject {
   cover: EbookCover;
   preface: string;
   disclaimer: string;
+  chapterIdeas?: string; // optional: initial brain dump of chapter ideas
+  researchNotes?: string; // optional: raw research notes pasted from Perplexity
+  dataStatsExamples?: string; // optional: data points, statistics, and concrete examples
+  personalThoughts?: string; // optional: author's vision, experience, and perspective
+  questionsForNotebookLm?: string[]; // optional: prompts for NotebookLM, one per item
   toc: string[]; // list of chapter titles or headings
   chapters: Chapter[];
   lastUpdated: string; // ISO timestamp
@@ -31,6 +36,11 @@ export const emptyProject = (): EbookProject => ({
   cover: { title: '', subtitle: '', imageDataUrl: undefined, content: '' },
   preface: '',
   disclaimer: '',
+  chapterIdeas: '',
+  researchNotes: '',
+  dataStatsExamples: '',
+  personalThoughts: '',
+  questionsForNotebookLm: [],
   toc: [],
   chapters: [],
   lastUpdated: new Date().toISOString()

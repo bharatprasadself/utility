@@ -27,6 +27,9 @@ public class EbookCoverEntity {
     @Column(name = "data", nullable = false, columnDefinition = "bytea")
     private byte[] data;
 
+    @Column(name = "content_hash", length = 64, unique = true)
+    private String contentHash;
+
     @Column(name = "created_at")
     private Instant createdAt;
 
