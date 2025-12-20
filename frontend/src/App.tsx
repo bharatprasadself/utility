@@ -21,6 +21,7 @@ import Ebooks from '@/components/Ebooks';
 import theme from './theme';
 // import CanvaTemplates from './components/CanvaTemplates';
 import BuyerPdfTool from './components/tools/BuyerPdfTool';
+import TemplateDescription from './components/tools/TemplateDescription';
 import CanvaTemplatesPublic from './components/CanvaTemplatesPublic';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
@@ -73,10 +74,11 @@ function App() {
                     <Route path="/finance/compounding" element={<CompoundingCalculator />} />
                     <Route path="/tools/ebook-writer" element={<EbookWriter />} />
                     <Route path="/tools/publish-ebooks" element={<PublishEbooks />} />
+                    <Route path="/tools/publish-template" element={<PublishTemplate />} />
                     <Route path="/tools/author-page" element={<AuthorPage />} />
                     <Route path="/shop/canva-templates" element={<CanvaTemplatesPublic />} />
                     <Route path="/admin/canva-templates" element={<BuyerPdfTool />} />
-                    <Route path="/tools/publish-template" element={<PublishTemplate />} />
+                    <Route path="/tools/template-description" element={<TemplateDescription />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </Container>

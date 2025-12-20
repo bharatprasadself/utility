@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
       { label: 'Publish Ebooks', path: '/tools/publish-ebooks' },
       { label: 'Template', path: '/tools/templates', isHeader: true },
       { label: 'Publish Template', path: '/tools/publish-template' },
+      { label: 'Template Description', path: '/tools/template-description' },
       { label: 'Buyer PDF', path: '/admin/canva-templates' }
     ]
   },
@@ -81,7 +82,8 @@ const Navigation = () => {
     const adminOnlyPaths = new Set([
       '/tools/author-page',
       '/tools/publish-ebooks',
-      '/tools/publish-template'
+      '/tools/publish-template',
+      '/tools/template-description'
     ]);
 
     const filterSubItems = (items?: SubNavItem[]) => {
@@ -131,6 +133,7 @@ const Navigation = () => {
       'Publish Ebooks': '🚀',
       'Template': '🎨',
       'Publish Template': '📝',
+      'Template Description': '🔖',
       'Buyer PDF': '📄'
     };
 
@@ -189,7 +192,7 @@ const Navigation = () => {
           <Box key={item.path}>
             <Button
               color="inherit"
-              onClick={filterSubItems(item.subItems).length > 0 ? (e) => handleOpenSubMenu(e, item.label) : () => navigate(item.path)}
+              onClick={filterSubItems(item.subItems).length > 0 ? (e) => handleOpenSubMenu(e, item.label) : () => handleNavigation(item.path)}
               aria-current={location.pathname === item.path ? 'page' : undefined}
               aria-label={`Navigate to ${item.label}`}
               aria-controls={filterSubItems(item.subItems).length > 0 ? `${item.label}-menu` : undefined}
