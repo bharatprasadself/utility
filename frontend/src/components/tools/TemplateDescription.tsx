@@ -42,7 +42,7 @@ export default function TemplateDescription() {
 
   const { isAdmin } = useAuth();
   const admin = isAdmin();
-  const styles = ['Traditional', 'Minimal', 'Floral', 'Modern', 'Kids', 'Other'];
+  const styles = ['Traditional', 'Minimal', 'Floral', 'Modern', 'Kids', 'Rustic', 'Boho', 'Cartoon'];
   const audiences = ['Kids', 'Adults', 'All'];
   const regions = ['India', 'Other Countries'];
 
@@ -136,9 +136,19 @@ export default function TemplateDescription() {
                       label="Event Type"
                       onChange={e => setEventType(e.target.value)}
                     >
-                      {['Wedding', 'Reception', 'Birthday'].map(type => (
-                        <MenuItem key={type} value={type}>{type}</MenuItem>
-                      ))}
+                      {['Wedding', 'Reception', 'Birthday'].map(type => {
+                        // Only enable 'Birthday' for Kids audience
+                        if (audience === 'Kids' && type !== 'Birthday') {
+                          return (
+                            <MenuItem key={type} value={type} disabled>
+                              {type} (Adults only)
+                            </MenuItem>
+                          );
+                        }
+                        return (
+                          <MenuItem key={type} value={type}>{type}</MenuItem>
+                        );
+                      })}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -166,9 +176,19 @@ export default function TemplateDescription() {
                       label="Style"
                       onChange={e => setStyle(e.target.value)}
                     >
-                      {styles.map(s => (
-                        <MenuItem key={s} value={s}>{s}</MenuItem>
-                      ))}
+                      {styles.map(s => {
+                        // Only enable 'Kids' and 'Cartoon' styles for Kids audience
+                        if ((s === 'Kids' || s === 'Cartoon') && audience !== 'Kids') {
+                          return (
+                            <MenuItem key={s} value={s} disabled>
+                              {s} (Kids only)
+                            </MenuItem>
+                          );
+                        }
+                        return (
+                          <MenuItem key={s} value={s}>{s}</MenuItem>
+                        );
+                      })}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -179,7 +199,13 @@ export default function TemplateDescription() {
                       labelId="audience-label"
                       value={audience}
                       label="Audience"
-                      onChange={e => setAudience(e.target.value)}
+                      onChange={e => {
+                        const newAudience = e.target.value;
+                        setAudience(newAudience);
+                        if (newAudience === 'Kids') {
+                          setEventType('Birthday');
+                        }
+                      }}
                     >
                       {audiences.map(a => (
                         <MenuItem key={a} value={a}>{a}</MenuItem>
