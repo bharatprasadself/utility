@@ -220,7 +220,7 @@ export default function TemplateDescription() {
       </Grid>
 
       <Typography variant="h6" sx={{ mt: 4 }}>Edit Master Template</Typography>
-      <Box sx={{ border: '1px solid #bbb', borderBottom: '2px solid #333', borderRadius: 1, mt: 1, p: 2 }}>
+      <Box sx={{ border: '1px solid #bbb', borderBottom: '2px solid #333', borderRadius: 1, mt: 1, p: 2, maxHeight: 400, minHeight: 300, overflowY: 'auto', background: '#fafbfc' }}>
         <TextField
           label="Master Template Body"
           value={masterTemplateBody}
@@ -228,6 +228,7 @@ export default function TemplateDescription() {
           fullWidth
           multiline
           minRows={10}
+          sx={{ maxHeight: 300, overflowY: 'auto', background: '#fff' }}
         />
         <Button
           variant="contained"

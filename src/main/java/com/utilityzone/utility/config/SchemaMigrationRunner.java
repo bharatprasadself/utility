@@ -43,14 +43,14 @@
          }
      }
 
-     private void dropTemplateDescriptionsTable(Connection conn) {
-         try (Statement st = conn.createStatement()) {
-             st.executeUpdate("DROP TABLE IF EXISTS template_descriptions");
-             log.info("Dropped template_descriptions table if it existed.");
-         } catch (SQLException e) {
-             log.warn("Failed to drop template_descriptions table: {}", e.getMessage());
-         }
-     }
+    //  private void dropTemplateDescriptionsTable(Connection conn) {
+    //      try (Statement st = conn.createStatement()) {
+    //          st.executeUpdate("DROP TABLE IF EXISTS template_descriptions");
+    //          log.info("Dropped template_descriptions table if it existed.");
+    //      } catch (SQLException e) {
+    //          log.warn("Failed to drop template_descriptions table: {}", e.getMessage());
+    //      }
+    //  }
 
 //     private void ensureCanvaTemplatesTable(Connection conn) {
 //         try {
