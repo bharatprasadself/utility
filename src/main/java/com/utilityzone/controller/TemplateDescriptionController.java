@@ -17,9 +17,16 @@ public class TemplateDescriptionController {
         this.service = service;
     }
 
+
+    // Return only the master template (with placeholders)
     @GetMapping
-    public List<TemplateDescription> listAll() {
-        return service.findAll();
+    public ResponseEntity<List<TemplateDescription>> listAll() {
+        List<TemplateDescription> all = service.findAll();
+        if (all.size() > 0) {
+            // Return the raw master template (with {{region}})
+            return ResponseEntity.ok(List.of(all.get(0)));
+        }
+        return ResponseEntity.ok(List.of());
     }
 
     @GetMapping("/search")

@@ -31,30 +31,14 @@ public class TemplateSeederConfig {
     public CommandLineRunner seedMasterTemplate(TemplateDescriptionRepository repository) {
         return args -> {
             if (repository.count() == 0) {
-                List<String> events = List.of("Wedding","Birthday","Reception");
-                List<String> buyerTypes = List.of("Print Only","Print & Mobile","Invite Suite");
-                List<String> styles = List.of("Traditional","Minimal","Floral","Modern","Kids","Other");
-                List<String> audiences = List.of("Kids","Adults","All");
-                List<String> regions = List.of("India","Other Countries");
-
-                List<TemplateDescription> entities = new ArrayList<>();
-
-                for (String e : events)
-                    for (String b : buyerTypes)
-                        for (String s : styles)
-                            for (String a : audiences)
-                                for (String r : regions) {
-                                    TemplateDescription t = new TemplateDescription();
-                                    t.setEventType(e);
-                                    t.setBuyerPdfType(b);
-                                    t.setStyle(s);
-                                    t.setAudience(a);
-                                    t.setRegion(r);
-                                    t.setTemplateBody(MASTER_TEMPLATE);
-                                    entities.add(t);
-                                }
-
-                repository.saveAll(entities);
+                TemplateDescription t = new TemplateDescription();
+                t.setEventType("{{eventType}}");
+                t.setBuyerPdfType("{{buyerPdfType}}");
+                t.setStyle("{{style}}");
+                t.setAudience("{{audience}}");
+                t.setRegion("{{region}}");
+                t.setTemplateBody(MASTER_TEMPLATE);
+                repository.save(t);
             }
         };
     }

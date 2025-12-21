@@ -15,7 +15,6 @@ public class TemplateDescription {
     @Column(name = "event_type", nullable = false, length = 50)
     private String eventType;
 
-
     @Column(name = "buyer_pdf_type", nullable = false, length = 50)
     private String buyerPdfType;
 
@@ -48,6 +47,15 @@ public class TemplateDescription {
         this.updatedAt = LocalDateTime.now();
     }
 
+    // Returns display string for region
+    public String getRegionDisplay() {
+        if ("India".equals(region)) {
+            return "Indian celebrations";
+        } else {
+            return "worldwide use";
+        }
+    }
+
     // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -68,3 +76,4 @@ public class TemplateDescription {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
+

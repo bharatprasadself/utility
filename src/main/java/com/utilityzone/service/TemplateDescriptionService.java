@@ -3,7 +3,6 @@ package com.utilityzone.service;
 import com.utilityzone.model.TemplateDescription;
 import com.utilityzone.repository.TemplateDescriptionRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +12,14 @@ public class TemplateDescriptionService {
 
     public TemplateDescriptionService(TemplateDescriptionRepository repository) {
         this.repository = repository;
+    }
+
+    public String getProcessedTemplateBody(TemplateDescription templateDescription) {
+        String body = templateDescription.getTemplateBody();
+        if (body != null) {
+            body = body.replace("{{region}}", templateDescription.getRegionDisplay());
+        }
+        return body;
     }
 
     public Optional<TemplateDescription> findByEventTypeStyleAudience(String eventType, String style, String audience) {
