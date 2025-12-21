@@ -1,17 +1,15 @@
-// package com.utilityzone.utility.config;
+ package com.utilityzone.utility.config;
 
-// import org.slf4j.Logger;
-// import org.slf4j.LoggerFactory;
-// import org.springframework.boot.context.event.ApplicationReadyEvent;
-// import org.springframework.context.event.EventListener;
-// import org.springframework.stereotype.Component;
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+ import org.springframework.boot.context.event.ApplicationReadyEvent;
+ import org.springframework.context.event.EventListener;
+ import org.springframework.stereotype.Component;
 
-// import javax.sql.DataSource;
-// import java.sql.Connection;
-// import java.sql.DatabaseMetaData;
-// import java.sql.ResultSet;
-// import java.sql.SQLException;
-// import java.sql.Statement;
+ import javax.sql.DataSource;
+ import java.sql.Connection;
+ import java.sql.SQLException;
+ import java.sql.Statement;
 
 // /**
 //  * Lightweight safeguard to align schema changes when DDL auto is disabled.
@@ -19,19 +17,20 @@
 //  * This is intentionally minimal and safe to run multiple times.
 //  * For production-grade migrations, prefer Flyway/Liquibase.
 //  */
-// @Component
-// public class SchemaMigrationRunner {
-//     private static final Logger log = LoggerFactory.getLogger(SchemaMigrationRunner.class);
+ @Component
+ public class SchemaMigrationRunner {
+     private static final Logger log = LoggerFactory.getLogger(SchemaMigrationRunner.class);
 
-//     private final DataSource dataSource;
+     private final DataSource dataSource;
 
-//     public SchemaMigrationRunner(DataSource dataSource) {
-//         this.dataSource = dataSource;
-//     }
+     public SchemaMigrationRunner(DataSource dataSource) {
+         this.dataSource = dataSource;
+     }
 
-//     @EventListener(ApplicationReadyEvent.class)
-//     public void onReady() {
-//         try (Connection conn = dataSource.getConnection()) {
+     @EventListener(ApplicationReadyEvent.class)
+     public void onReady() {
+         try (Connection conn = dataSource.getConnection()) {
+//             dropTemplateDescriptionsTable(conn);
 //             ensureCanvaTemplatesTable(conn);
 //             ensureCanvaTemplatesStatusColumn(conn);
 //             ensureBlogsStatusColumn(conn);
@@ -39,10 +38,19 @@
 //             ensureUsersEmailColumn(conn);
 //             ensurePasswordResetTokenTable(conn);
 //             ensureTemplatesTable(conn);
-//         } catch (SQLException e) {
-//             log.warn("Schema migration runner encountered an error: {}", e.getMessage());
-//         }
-//     }
+         } catch (SQLException e) {
+             log.warn("Schema migration runner encountered an error: {}", e.getMessage());
+         }
+     }
+
+     private void dropTemplateDescriptionsTable(Connection conn) {
+         try (Statement st = conn.createStatement()) {
+             st.executeUpdate("DROP TABLE IF EXISTS template_descriptions");
+             log.info("Dropped template_descriptions table if it existed.");
+         } catch (SQLException e) {
+             log.warn("Failed to drop template_descriptions table: {}", e.getMessage());
+         }
+     }
 
 //     private void ensureCanvaTemplatesTable(Connection conn) {
 //         try {
@@ -215,4 +223,4 @@
 //             log.warn("Failed to ensure TEMPLATES table: {}", e.getMessage());
 //         }
 //     }
-// }
+}

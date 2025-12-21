@@ -14,18 +14,6 @@ public class TemplateDescriptionService {
         this.repository = repository;
     }
 
-    public String getProcessedTemplateBody(TemplateDescription templateDescription) {
-        String body = templateDescription.getTemplateBody();
-        if (body != null) {
-            body = body.replace("{{region}}", templateDescription.getRegionDisplay());
-        }
-        return body;
-    }
-
-    public Optional<TemplateDescription> findByEventTypeStyleAudience(String eventType, String style, String audience) {
-        return repository.findByEventTypeAndStyleAndAudience(eventType, style, audience);
-    }
-
     public List<TemplateDescription> findAll() {
         return repository.findAll();
     }

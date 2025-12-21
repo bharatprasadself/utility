@@ -32,11 +32,6 @@ public class TemplateSeederConfig {
         return args -> {
             if (repository.count() == 0) {
                 TemplateDescription t = new TemplateDescription();
-                t.setEventType("{{eventType}}");
-                t.setBuyerPdfType("{{buyerPdfType}}");
-                t.setStyle("{{style}}");
-                t.setAudience("{{audience}}");
-                t.setRegion("{{region}}");
                 t.setTemplateBody(MASTER_TEMPLATE);
                 repository.save(t);
             }

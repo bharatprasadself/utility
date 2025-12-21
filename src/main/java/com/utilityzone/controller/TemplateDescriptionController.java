@@ -17,48 +17,28 @@ public class TemplateDescriptionController {
         this.service = service;
     }
 
-
-    // Return only the master template (with placeholders)
-    @GetMapping
-    public ResponseEntity<List<TemplateDescription>> listAll() {
+    // Get the single master template
+    @GetMapping("/master")
+    public ResponseEntity<TemplateDescription> getMasterTemplate() {
         List<TemplateDescription> all = service.findAll();
-        if (all.size() > 0) {
-            // Return the raw master template (with {{region}})
-            return ResponseEntity.ok(List.of(all.get(0)));
+        if (!all.isEmpty()) {
+            return ResponseEntity.ok(all.get(0));
         }
-        return ResponseEntity.ok(List.of());
+        return ResponseEntity.notFound().build();
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<TemplateDescription> getByCombination(@RequestParam String eventType,
-                                                               @RequestParam String style,
-                                                               @RequestParam String audience) {
-        return service.findByEventTypeStyleAudience(eventType, style, audience)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PostMapping
-    public TemplateDescription create(@RequestBody TemplateDescription templateDescription) {
-        return service.save(templateDescription);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<TemplateDescription> update(@PathVariable Long id, @RequestBody TemplateDescription updated) {
-        return service.findById(id)
-                .map(existing -> {
-                    existing.setEventType(updated.getEventType());
-                    existing.setStyle(updated.getStyle());
-                    existing.setAudience(updated.getAudience());
-                    existing.setTemplateBody(updated.getTemplateBody());
-                    return ResponseEntity.ok(service.save(existing));
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
-        return ResponseEntity.noContent().build();
+    // Update the master template
+    @PutMapping("/master")
+    public ResponseEntity<TemplateDescription> updateMasterTemplate(@RequestBody TemplateDescription updated) {
+        List<TemplateDescription> all = service.findAll();
+        if (!all.isEmpty()) {
+            TemplateDescription existing = all.get(0);
+            existing.setTemplateBody(updated.getTemplateBody());
+            return ResponseEntity.ok(service.save(existing));
+        } else {
+            // If no template exists, create one
+            TemplateDescription created = service.save(updated);
+            return ResponseEntity.ok(created);
+        }
     }
 }
