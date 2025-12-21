@@ -9,23 +9,17 @@ export default function TemplateDescription() {
   const buyerPdfTypes = ['Print Only', 'Mobile & Print', 'Invite Suite'];
   const leftPaperRef = useRef<HTMLDivElement>(null);
   const rightPaperRef = useRef<HTMLDivElement>(null);
-  // const [balancedHeight, setBalancedHeight] = useState<number|undefined>(undefined); // unused
   const [eventType, setEventType] = useState('Wedding');
   const [style, setStyle] = useState('Traditional');
   const [audience, setAudience] = useState('All');
-  const [templateBody, setTemplateBody] = useState('');
-  // const [templateId, setTemplateId] = useState<number|null>(null); // unused
-  // const [loading, setLoading] = useState(false); // unused
-  // ...existing code...
-  const [error, setError] = useState<string|null>(null);
-  const [success, setSuccess] = useState<string|null>(null);
   const [allTemplates, setAllTemplates] = useState<any[]>([]);
-  const [masterEditValue, setMasterEditValue] = useState('');
-  const [masterEditId, setMasterEditId] = useState<number|null>(null);
-  const [masterEditSaving, setMasterEditSaving] = useState(false);
+  // Add/Edit mode state for unified form
+  const [editTemplateId, setEditTemplateId] = useState<number|null>(null);
   const [masterEditSuccess, setMasterEditSuccess] = useState<string|null>(null);
   const [masterEditError, setMasterEditError] = useState<string|null>(null);
   const [region, setRegion] = useState('India');
+  // Dropdown for selecting master template
+  const [selectedMasterId, setSelectedMasterId] = useState<number|null>(null);
 
   // Use ResizeObserver for dynamic height sync
   useEffect(() => {
@@ -44,7 +38,7 @@ export default function TemplateDescription() {
       leftObserver.disconnect();
       rightObserver.disconnect();
     };
-  }, [eventType, style, audience, region, error, success, templateBody]);
+  }, [eventType, style, audience, region]);
 
 
   const { isAdmin } = useAuth();
@@ -54,73 +48,66 @@ export default function TemplateDescription() {
   const regions = ['India', 'Other Countries'];
 
   // API helpers
-  // Fetch the master template and substitute placeholders dynamically
-  const fetchTemplate = async (eventType: string, style: string, audience: string, buyerPdfTypeOverride?: string, _regionOverride?: string) => {
+  // Find the template for the current filter combination
+  function findTemplateForFilters() {
+    return allTemplates.find(t =>
+      t.eventType === eventType &&
+      t.style === style &&
+      t.audience === audience &&
+      t.buyerPdfType === buyerPdfType &&
+      t.region === region
+    );
+  }
 
-    setError(null);
-    setSuccess(null);
-    setTemplateBody('');
-
-    try {
-      const res = await fetch('/api/template-descriptions');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.length > 0) {
-          let body = data[0].templateBody || '';
-          // Dynamically generate WHAT YOU WILL RECEIVE section
-          let whatYouReceive = '';
-          const pdfType = buyerPdfTypeOverride || buyerPdfType;
-          if (pdfType === 'Invite Suite') {
-            whatYouReceive =
-              '• Editable {{eventType}} Invitation – Canva Template\n' +
-              '• RSVP Card – Canva Template\n' +
-              '• Details Card – Canva Template\n' +
-              '• Buyer PDF with Canva access link & instructions';
-          } else if (pdfType === 'Mobile & Print' || pdfType === 'Print & Mobile') {
-            whatYouReceive =
-              '• Editable {{eventType}} Invitation – Canva Template\n' +
-              '• Mobile Version – Canva Template\n' +
-              '• Buyer PDF with Canva access link & instructions';
-          } else {
-            whatYouReceive =
-              '• Editable {{eventType}} Invitation – Canva Template\n' +
-              '• Buyer PDF with Canva access link & instructions';
-          }
-          // Replace the WHAT YOU WILL RECEIVE section
-          body = body.replace(/WHAT YOU WILL RECEIVE \(\{\{buyerPdfType\}\}\)[\s\S]*?(-{10,}|EDITING DETAILS)/, (match: string) => {
-            // Keep the dashed line or next section header
-            const nextSection = match.match(/(-{10,}|EDITING DETAILS)/);
-            return `WHAT YOU WILL RECEIVE (${pdfType})\n\n${whatYouReceive}\n\n${nextSection ? nextSection[0] : ''}`;
-          });
-          // Replace placeholders for preview only
-          function getRegionDisplay(region: string) {
-            return region === "India" ? "Indian celebrations" : "worldwide use";
-          }
-          body = body.replace(/\{\{eventType\}\}/g, eventType)
-            .replace(/\{\{style\}\}/g, style)
-            .replace(/\{\{audience\}\}/g, audience)
-            .replace(/\{\{buyerPdfType\}\}/g, pdfType)
-            .replace(/\{\{region\}\}/g, getRegionDisplay(region));
-          
-          setTemplateBody(body);
-
-        } else {
-          setTemplateBody('');
-
-        }
-      }
-    } catch (e: any) {
-      setError('Failed to load template');
-    } finally {
-
+  // Generate preview for the selected combination
+  function getPreviewBody() {
+    // If a master template is selected, use it for preview (with placeholders replaced)
+    let template = null;
+    if (selectedMasterId) {
+      template = allTemplates.find(t => t.id === selectedMasterId);
+    } else {
+      template = findTemplateForFilters();
     }
-  };
+    if (!template) return 'No template for this combination.';
+    let body = template.templateBody || '';
+    // Dynamically generate WHAT YOU WILL RECEIVE section
+    let whatYouReceive = '';
+    if (buyerPdfType === 'Invite Suite') {
+      whatYouReceive =
+        '• Editable {{eventType}} Invitation – Canva Template\n' +
+        '• RSVP Card – Canva Template\n' +
+        '• Details Card – Canva Template\n' +
+        '• Buyer PDF with Canva access link & instructions';
+    } else if (buyerPdfType === 'Mobile & Print' || buyerPdfType === 'Print & Mobile') {
+      whatYouReceive =
+        '• Editable {{eventType}} Invitation – Canva Template\n' +
+        '• Mobile Version – Canva Template\n' +
+        '• Buyer PDF with Canva access link & instructions';
+    } else {
+      whatYouReceive =
+        '• Editable {{eventType}} Invitation – Canva Template\n' +
+        '• Buyer PDF with Canva access link & instructions';
+    }
+    body = body.replace(/WHAT YOU WILL RECEIVE \(\{\{buyerPdfType\}\}\)[\s\S]*?(-{10,}|EDITING DETAILS)/, (match: any) => {
+      const nextSection = match.match(/(-{10,}|EDITING DETAILS)/);
+      return `WHAT YOU WILL RECEIVE (${buyerPdfType})\n\n${whatYouReceive}\n\n${nextSection ? nextSection[0] : ''}`;
+    });
+    function getRegionDisplay(region: string) {
+      return region === "India" ? "Indian celebrations" : "worldwide use";
+    }
+    body = body.replace(/\{\{eventType\}\}/g, eventType)
+      .replace(/\{\{style\}\}/g, style)
+      .replace(/\{\{audience\}\}/g, audience)
+      .replace(/\{\{buyerPdfType\}\}/g, buyerPdfType)
+      .replace(/\{\{region\}\}/g, getRegionDisplay(region));
+    return body;
+  }
 
   // Save only the master template (with placeholders)
   // ...existing code...
 
 
-  // Only show the master template in the list
+  // Fetch all master template variations
   const fetchAllTemplates = async () => {
     try {
       const res = await fetch('/api/template-descriptions');
@@ -130,10 +117,19 @@ export default function TemplateDescription() {
     } catch {}
   };
 
-  // Load template when dropdowns change
-  useEffect(() => {
-    fetchTemplate(eventType, style, audience, buyerPdfType, region);
-  }, [eventType, style, audience, buyerPdfType, region]);
+  // Add new master template variation
+
+  // Delete a master template variation
+
+  // State for new template variation
+  function defaultNewTemplate() {
+    return {
+      templateBody: ''
+    };
+  }
+  const [newTemplate, setNewTemplate] = useState(defaultNewTemplate());
+
+
 
   // Optionally, you may want to fetch template when region changes as well, if region is part of template logic
 
@@ -148,12 +144,34 @@ export default function TemplateDescription() {
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto', mt: 4 }}>
       <Typography variant="h4" gutterBottom>Template Description</Typography>
-      <Grid container spacing={2} alignItems="stretch" sx={{ mb: 3 }}>
-            <Grid item xs={12} md={3}>
-          <Paper sx={{ width: '100%', alignItems: 'flex-start', p: 2, minHeight: 500, maxHeight: 500 }} ref={leftPaperRef}>
-            <Stack spacing={2} direction="column" sx={{ width: '100%' }}>
+      <Grid container spacing={2} alignItems="stretch" sx={{ mb: 3, minHeight: 0, height: 'auto' }}>
+        <Grid item xs={12} md={3} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Paper sx={{ width: '100%', alignItems: 'flex-start', p: 2, flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }} ref={leftPaperRef}>
+            <Stack spacing={2} direction="column" sx={{ width: '100%', flex: 1 }}>
               <Typography variant="h6" sx={{ mb: 1 }}>Keyword Filter</Typography>
               <Grid container spacing={2} sx={{ width: '100%' }}>
+                {/* Master Template Dropdown */}
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel id="master-template-label">Select Master Template</InputLabel>
+                    <Select
+                      labelId="master-template-label"
+                      value={selectedMasterId ?? ''}
+                      label="Select Master Template"
+                      onChange={e => {
+                        const id = e.target.value === '' ? null : Number(e.target.value);
+                        setSelectedMasterId(id);
+                        // Do not load the selected master template into the Add/Edit Template box
+                      }}
+                    >
+                      <MenuItem value="">-- None --</MenuItem>
+                      {allTemplates.map(t => (
+                        <MenuItem key={t.id} value={t.id}>Template #{t.id}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                {/* Existing filters */}
                 <Grid item xs={12}>
                   <FormControl fullWidth>
                     <InputLabel id="event-type-label">Event Type</InputLabel>
@@ -215,7 +233,6 @@ export default function TemplateDescription() {
                   </FormControl>
                 </Grid>
                 <Grid item xs={12}>
-                <Grid item xs={12}>
                   <FormControl fullWidth>
                     <InputLabel id="region-label">Region</InputLabel>
                     <Select
@@ -230,28 +247,23 @@ export default function TemplateDescription() {
                     </Select>
                   </FormControl>
                 </Grid>
-</Grid>
-              {/* Update/Save button removed as saving is not required */}
-              <Grid item xs={12}>
-                {error && <Alert severity="error">{error}</Alert>}
-                {success && <Alert severity="success">{success}</Alert>}
               </Grid>
-            </Grid>
+              <Grid item xs={12}></Grid>
             </Stack>
           </Paper>
         </Grid>
-            <Grid item xs={12} md={9}>
-          <Paper sx={{ width: '100%', alignItems: 'flex-start', p: 2, minHeight: 500, maxHeight: 500, display: 'flex', flexDirection: 'column' }} ref={rightPaperRef}>
+        <Grid item xs={12} md={9} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Paper sx={{ width: '100%', alignItems: 'flex-start', p: 2, flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }} ref={rightPaperRef}>
             <Stack spacing={2} sx={{ flex: 1, width: '100%' }}>
-              <Box sx={{ height: 400, overflowY: 'auto', width: '100%', border: '1px solid #ccc', borderRadius: 2, p: 2, background: '#fff', boxSizing: 'border-box' }}>
-                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit', fontSize: '1rem' }}>{templateBody}</pre>
+              <Box sx={{ minHeight: 200, maxHeight: 500, overflowY: 'auto', width: '100%', border: '1px solid #ccc', borderRadius: 2, p: 2, background: '#fff', boxSizing: 'border-box' }}>
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit', fontSize: '1rem' }}>{getPreviewBody()}</pre>
               </Box>
               <Button
                 variant="outlined"
                 sx={{ mt: 2 }}
                 onClick={() => {
                   if (navigator.clipboard) {
-                    navigator.clipboard.writeText(templateBody);
+                    navigator.clipboard.writeText(getPreviewBody());
                   }
                 }}
               >
@@ -261,97 +273,166 @@ export default function TemplateDescription() {
           </Paper>
         </Grid>
       </Grid>
-      <Typography variant="h6" sx={{ mt: 4 }}>Master Template (with placeholders)</Typography>
-      <Box sx={{ maxHeight: 280, overflow: 'auto', border: '1px solid #bbb', borderBottom: '2px solid #333', borderRadius: 1, mt: 1, pb: 3 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f5f5f5' }}>
-              <th style={{ padding: 6, border: '1px solid #eee' }}>Template Body</th>
-              <th style={{ padding: 6, border: '1px solid #eee' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allTemplates.map(t => (
-              <tr key={t.id}>
-                <td style={{ padding: 6, border: '1px solid #eee' }}>
-                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{t.templateBody}</pre>
-                </td>
-                <td style={{ padding: 6, border: '1px solid #eee' }}>
-                  <Button size="small" variant="outlined" onClick={() => {
-                    setMasterEditValue(t.templateBody);
-                    setMasterEditId(t.id);
+
+      <Typography variant="h6" sx={{ mt: 4 }}>Master Template Variations</Typography>
+      <Box sx={{
+        maxHeight: 320,
+        border: '1px solid #bbb',
+        borderBottom: '2px solid #333',
+        borderRadius: 1,
+        mt: 1,
+        position: 'relative',
+        pb: 0,
+        minHeight: 120,
+      }}>
+        {selectedMasterId ? (
+          <>
+            <Box sx={{
+              maxHeight: 264,
+              overflow: 'auto',
+              pr: 1,
+              pb: 7,
+            }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <th style={{ padding: 6, border: '1px solid #eee' }}>Template Body</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allTemplates.filter(t => t.id === selectedMasterId).map(t => (
+                    <tr key={t.id}>
+                      <td style={{ padding: 6, border: '1px solid #eee' }}>
+                        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{t.templateBody}</pre>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Box>
+            {/* Edit button absolutely at the bottom, outside scrollable area */}
+            {allTemplates.some(t => t.id === selectedMasterId) && (
+              <Box sx={{
+                position: 'absolute',
+                left: 0,
+                bottom: 0,
+                width: '100%',
+                background: '#fff',
+                zIndex: 2,
+                p: 1,
+                borderTop: '1px solid #eee',
+                display: 'flex',
+                justifyContent: 'flex-start',
+              }}>
+                <Button size="small" variant="outlined" onClick={() => {
+                  const t = allTemplates.find(t => t.id === selectedMasterId);
+                  if (t) {
+                    setNewTemplate({ templateBody: t.templateBody });
+                    setEditTemplateId(t.id);
                     setMasterEditSuccess(null);
                     setMasterEditError(null);
-                  }}>Edit</Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  }
+                }}>Edit</Button>
+              </Box>
+            )}
+          </>
+        ) : (
+          <Typography sx={{ p: 2 }} color="text.secondary">Select a Master Template to view its details.</Typography>
+        )}
       </Box>
 
-      {masterEditId !== null && (
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <Typography variant="subtitle1">Edit Master Template (with placeholders)</Typography>
-          <TextField
-            label="Master Template Body"
-            value={masterEditValue}
-            onChange={e => setMasterEditValue(e.target.value)}
-            multiline
-            minRows={10}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
+      {/* Unified Add/Edit Template form */}
+      <Box sx={{ mt: 3, mb: 2, border: '1px solid #eee', borderRadius: 1, p: 2 }}>
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>{editTemplateId ? 'Edit Template' : 'Add Template'} for Current Filters</Typography>
+        <TextField
+          label="Template Body"
+          value={newTemplate.templateBody}
+          onChange={e => setNewTemplate(nt => ({ ...nt, templateBody: e.target.value }))}
+          fullWidth
+          multiline
+          minRows={4}
+          size="small"
+        />
+        <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
           <Button
             variant="contained"
             onClick={async () => {
-              setMasterEditSaving(true);
-              setMasterEditSuccess(null);
-              setMasterEditError(null);
-              try {
-                // Find the master template object to get all required fields
-                const masterTemplate = allTemplates.find(t => t.id === masterEditId);
-                const payload = masterTemplate ? {
-                  eventType: masterTemplate.eventType || '{{eventType}}',
-                  style: masterTemplate.style || '{{style}}',
-                  audience: masterTemplate.audience || '{{audience}}',
-                  buyerPdfType: masterTemplate.buyerPdfType || '{{buyerPdfType}}',
-                  region: masterTemplate.region || '{{region}}',
-                  templateBody: masterEditValue
-                } : {
-                  eventType: '{{eventType}}',
-                  style: '{{style}}',
-                  audience: '{{audience}}',
-                  buyerPdfType: '{{buyerPdfType}}',
-                  region: '{{region}}',
-                  templateBody: masterEditValue
-                };
-                const res = await fetch(`/api/template-descriptions/${masterEditId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                  setMasterEditSuccess('Master template updated successfully.');
-                  fetchAllTemplates();
-                  fetchTemplate(eventType, style, audience, buyerPdfType, region);
-                } else {
-                  setMasterEditError('Failed to update master template.');
+              if (editTemplateId) {
+                // Edit mode: update existing
+                try {
+                  const res = await fetch(`/api/template-descriptions/${editTemplateId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      eventType,
+                      style,
+                      audience,
+                      buyerPdfType,
+                      region,
+                      templateBody: newTemplate.templateBody
+                    })
+                  });
+                  if (res.ok) {
+                    setMasterEditSuccess('Template updated.');
+                    setNewTemplate(defaultNewTemplate());
+                    setEditTemplateId(null);
+                    fetchAllTemplates();
+                  } else {
+                    setMasterEditError('Failed to update template.');
+                  }
+                } catch {
+                  setMasterEditError('Failed to update template.');
                 }
-              } catch {
-                setMasterEditError('Failed to update master template.');
-              } finally {
-                setMasterEditSaving(false);
+              } else {
+                // Add mode: create new
+                try {
+                  const res = await fetch('/api/template-descriptions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      eventType,
+                      style,
+                      audience,
+                      buyerPdfType,
+                      region,
+                      templateBody: newTemplate.templateBody
+                    })
+                  });
+                  if (res.ok) {
+                    setMasterEditSuccess('New template added.');
+                    setNewTemplate(defaultNewTemplate());
+                    fetchAllTemplates();
+                  } else {
+                    setMasterEditError('Failed to add template.');
+                  }
+                } catch {
+                  setMasterEditError('Failed to add template.');
+                }
               }
             }}
-            disabled={masterEditSaving}
           >
-            {masterEditSaving ? 'Saving...' : 'Save'}
+            {editTemplateId ? 'Update Template' : 'Add Template'}
           </Button>
-          {masterEditSuccess && <Alert severity="success" sx={{ mt: 2 }}>{masterEditSuccess}</Alert>}
-          {masterEditError && <Alert severity="error" sx={{ mt: 2 }}>{masterEditError}</Alert>}
-        </Box>
-      )}
+          {editTemplateId && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => {
+                setEditTemplateId(null);
+                setNewTemplate(defaultNewTemplate());
+                setMasterEditError(null);
+                setMasterEditSuccess(null);
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+        </Stack>
+        {masterEditError && <Alert severity="error" sx={{ mt: 2 }}>{masterEditError}</Alert>}
+        {masterEditSuccess && <Alert severity="success" sx={{ mt: 2 }}>{masterEditSuccess}</Alert>}
+      </Box>
+
+      {/* Edit section removed: unified with Add/Edit form above */}
     </Box>
   );
 }
