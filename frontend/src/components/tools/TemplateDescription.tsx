@@ -9,13 +9,13 @@ export default function TemplateDescription() {
   const buyerPdfTypes = ['Print Only', 'Mobile & Print', 'Invite Suite'];
   const leftPaperRef = useRef<HTMLDivElement>(null);
   const rightPaperRef = useRef<HTMLDivElement>(null);
-  const [balancedHeight, setBalancedHeight] = useState<number|undefined>(undefined);
+  // const [balancedHeight, setBalancedHeight] = useState<number|undefined>(undefined); // unused
   const [eventType, setEventType] = useState('Wedding');
   const [style, setStyle] = useState('Traditional');
   const [audience, setAudience] = useState('All');
   const [templateBody, setTemplateBody] = useState('');
-  const [templateId, setTemplateId] = useState<number|null>(null);
-  const [loading, setLoading] = useState(false);
+  // const [templateId, setTemplateId] = useState<number|null>(null); // unused
+  // const [loading, setLoading] = useState(false); // unused
   // ...existing code...
   const [error, setError] = useState<string|null>(null);
   const [success, setSuccess] = useState<string|null>(null);
@@ -31,10 +31,9 @@ export default function TemplateDescription() {
   useEffect(() => {
     if (!leftPaperRef.current || !rightPaperRef.current) return;
     const updateHeight = () => {
-      const left = leftPaperRef.current?.offsetHeight || 0;
-      const right = rightPaperRef.current?.offsetHeight || 0;
-      const max = Math.max(left, right);
-      setBalancedHeight(max > 0 ? max : undefined);
+
+
+
     };
     updateHeight();
     const leftObserver = new window.ResizeObserver(updateHeight);
@@ -57,11 +56,11 @@ export default function TemplateDescription() {
   // API helpers
   // Fetch the master template and substitute placeholders dynamically
   const fetchTemplate = async (eventType: string, style: string, audience: string, buyerPdfTypeOverride?: string, _regionOverride?: string) => {
-    setLoading(true);
+
     setError(null);
     setSuccess(null);
     setTemplateBody('');
-    setTemplateId(null);
+
     try {
       const res = await fetch('/api/template-descriptions');
       if (res.ok) {
@@ -94,23 +93,26 @@ export default function TemplateDescription() {
             return `WHAT YOU WILL RECEIVE (${pdfType})\n\n${whatYouReceive}\n\n${nextSection ? nextSection[0] : ''}`;
           });
           // Replace placeholders for preview only
+          function getRegionDisplay(region: string) {
+            return region === "India" ? "Indian celebrations" : "worldwide use";
+          }
           body = body.replace(/\{\{eventType\}\}/g, eventType)
             .replace(/\{\{style\}\}/g, style)
             .replace(/\{\{audience\}\}/g, audience)
             .replace(/\{\{buyerPdfType\}\}/g, pdfType)
-            .replace(/\{\{region\}\}/g, region);
+            .replace(/\{\{region\}\}/g, getRegionDisplay(region));
           
           setTemplateBody(body);
-          setTemplateId(data[0].id);
+
         } else {
           setTemplateBody('');
-          setTemplateId(null);
+
         }
       }
     } catch (e: any) {
       setError('Failed to load template');
     } finally {
-      setLoading(false);
+
     }
   };
 
