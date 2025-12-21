@@ -27,13 +27,14 @@ public class TemplateDescriptionController {
         return ResponseEntity.notFound().build();
     }
 
-    // Update the master template
+    // Update the master template (body and title)
     @PutMapping("/master")
     public ResponseEntity<TemplateDescription> updateMasterTemplate(@RequestBody TemplateDescription updated) {
         List<TemplateDescription> all = service.findAll();
         if (!all.isEmpty()) {
             TemplateDescription existing = all.get(0);
             existing.setTemplateBody(updated.getTemplateBody());
+            existing.setTemplateTitle(updated.getTemplateTitle());
             return ResponseEntity.ok(service.save(existing));
         } else {
             // If no template exists, create one

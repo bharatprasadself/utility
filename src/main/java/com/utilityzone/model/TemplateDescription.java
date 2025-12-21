@@ -13,6 +13,9 @@ public class TemplateDescription {
     @Column(name = "template_body", nullable = false, columnDefinition = "TEXT")
     private String templateBody;
 
+    @Column(name = "template_title", length = 255)
+    private String templateTitle;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -35,6 +38,8 @@ public class TemplateDescription {
     public void setId(Long id) { this.id = id; }
     public String getTemplateBody() { return templateBody; }
     public void setTemplateBody(String templateBody) { this.templateBody = templateBody; }
+    public String getTemplateTitle() { return templateTitle; }
+    public void setTemplateTitle(String templateTitle) { this.templateTitle = templateTitle; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

@@ -17,6 +17,8 @@ export default function TemplateDescription() {
   const [masterTemplateBody, setMasterTemplateBody] = useState('');
   const [masterEditSuccess, setMasterEditSuccess] = useState<string|null>(null);
   const [masterEditError, setMasterEditError] = useState<string|null>(null);
+  // Template title state (fetched from backend, not editable here)
+  const [templateTitle, setTemplateTitle] = useState('');
 
   // Use ResizeObserver for dynamic height sync
   useEffect(() => {
@@ -45,6 +47,13 @@ export default function TemplateDescription() {
   const regions = ['India', 'Other Countries'];
 
   // Generate preview for the selected combination
+  function getPreviewTitle() {
+    return templateTitle
+      .replace(/\{\{eventType\}\}/g, eventType)
+      .replace(/\{\{style\}\}/g, style)
+      .replace(/\{\{buyerPdfType\}\}/g, buyerPdfType);
+  }
+
   function getPreviewBody() {
     let body = masterTemplateBody || '';
     // Dynamically generate WHAT YOU WILL RECEIVE section
@@ -84,13 +93,14 @@ export default function TemplateDescription() {
   // ...existing code...
 
 
-  // Fetch master template body
+  // Fetch master template body and title
   const fetchMasterTemplate = async () => {
     try {
       const res = await fetch('/api/template-descriptions/master');
       if (res.ok) {
         const data = await res.json();
         setMasterTemplateBody(data.templateBody || '');
+        setTemplateTitle(data.templateTitle || '');
       }
     } catch {}
   };
@@ -200,6 +210,27 @@ export default function TemplateDescription() {
         <Grid item xs={12} md={9} sx={{ display: 'flex', flexDirection: 'column' }}>
           <Paper sx={{ width: '100%', alignItems: 'flex-start', p: 2, flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }} ref={rightPaperRef}>
             <Stack spacing={2} sx={{ flex: 1, width: '100%' }}>
+              {/* Template Title Preview Section */}
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>Preview Title:</Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(getPreviewTitle());
+                      }
+                    }}
+                  >
+                    Copy Title
+                  </Button>
+                </Box>
+                <Box sx={{ mt: 1, p: 1, border: '1px solid #ccc', borderRadius: 1, background: '#f9f9f9', fontFamily: 'inherit', fontSize: '1rem', wordBreak: 'break-word' }}>
+                  {getPreviewTitle()}
+                </Box>
+              </Box>
+              {/* Template Body Section */}
               <Box sx={{ minHeight: 200, maxHeight: 500, overflowY: 'auto', width: '100%', border: '1px solid #ccc', borderRadius: 2, p: 2, background: '#fff', boxSizing: 'border-box' }}>
                 <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit', fontSize: '1rem' }}>{getPreviewBody()}</pre>
               </Box>
@@ -222,13 +253,20 @@ export default function TemplateDescription() {
       <Typography variant="h6" sx={{ mt: 4 }}>Edit Master Template</Typography>
       <Box sx={{ border: '1px solid #bbb', borderBottom: '2px solid #333', borderRadius: 1, mt: 1, p: 2, maxHeight: 400, minHeight: 300, overflowY: 'auto', background: '#fafbfc' }}>
         <TextField
+          label="Template Title (with placeholders)"
+          value={templateTitle}
+          onChange={e => setTemplateTitle(e.target.value)}
+          fullWidth
+          sx={{ mb: 2, background: '#fff' }}
+        />
+        <TextField
           label="Master Template Body"
           value={masterTemplateBody}
           onChange={e => setMasterTemplateBody(e.target.value)}
           fullWidth
           multiline
           minRows={10}
-          sx={{ maxHeight: 300, overflowY: 'auto', background: '#fff' }}
+          sx={{ maxHeight: 230, overflowY: 'auto', background: '#fff' }}
         />
         <Button
           variant="contained"
@@ -238,7 +276,7 @@ export default function TemplateDescription() {
               const res = await fetch('/api/template-descriptions/master', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ templateBody: masterTemplateBody })
+                body: JSON.stringify({ templateBody: masterTemplateBody, templateTitle })
               });
               if (res.ok) {
                 setMasterEditSuccess('Master template updated.');
