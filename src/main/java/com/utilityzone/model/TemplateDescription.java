@@ -10,11 +10,14 @@ public class TemplateDescription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "template_body", nullable = false, columnDefinition = "TEXT")
-    private String templateBody;
+    @Column(name = "name", length = 255)
+    private String name;
 
-    @Column(name = "template_title", length = 255)
-    private String templateTitle;
+    @Column(name = "title", length = 255)
+    private String title;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -36,12 +39,19 @@ public class TemplateDescription {
     // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public String getTemplateBody() { return templateBody; }
-    public void setTemplateBody(String templateBody) { this.templateBody = templateBody; }
-    public String getTemplateTitle() { return templateTitle; }
-    public void setTemplateTitle(String templateTitle) { this.templateTitle = templateTitle; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

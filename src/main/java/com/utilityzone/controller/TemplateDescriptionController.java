@@ -6,7 +6,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/template-descriptions")
@@ -33,8 +32,9 @@ public class TemplateDescriptionController {
         List<TemplateDescription> all = service.findAll();
         if (!all.isEmpty()) {
             TemplateDescription existing = all.get(0);
-            existing.setTemplateBody(updated.getTemplateBody());
-            existing.setTemplateTitle(updated.getTemplateTitle());
+            existing.setName(updated.getName());
+            existing.setTitle(updated.getTitle());
+            existing.setDescription(updated.getDescription());
             return ResponseEntity.ok(service.save(existing));
         } else {
             // If no template exists, create one

@@ -17,7 +17,8 @@ export default function TemplateDescription() {
   const [masterTemplateBody, setMasterTemplateBody] = useState('');
   const [masterEditSuccess, setMasterEditSuccess] = useState<string|null>(null);
   const [masterEditError, setMasterEditError] = useState<string|null>(null);
-  // Template title state (fetched from backend, not editable here)
+  // Template name, title, and description state
+  const [templateName, setTemplateName] = useState('');
   const [templateTitle, setTemplateTitle] = useState('');
 
   // Use ResizeObserver for dynamic height sync
@@ -99,8 +100,9 @@ export default function TemplateDescription() {
       const res = await fetch('/api/template-descriptions/master');
       if (res.ok) {
         const data = await res.json();
-        setMasterTemplateBody(data.templateBody || '');
-        setTemplateTitle(data.templateTitle || '');
+        setMasterTemplateBody(data.description || '');
+        setTemplateTitle(data.title || '');
+        setTemplateName(data.name || '');
       }
     } catch {}
   };
@@ -279,6 +281,13 @@ export default function TemplateDescription() {
       <Typography variant="h6" sx={{ mt: 4 }}>Edit Master Template</Typography>
       <Box sx={{ border: '1px solid #bbb', borderBottom: '2px solid #333', borderRadius: 1, mt: 1, p: 2, maxHeight: 400, minHeight: 300, overflowY: 'auto', background: '#fafbfc' }}>
         <TextField
+          label="Template Name"
+          value={templateName}
+          onChange={e => setTemplateName(e.target.value)}
+          fullWidth
+          sx={{ mb: 2, background: '#fff' }}
+        />
+        <TextField
           label="Template Title (with placeholders)"
           value={templateTitle}
           onChange={e => setTemplateTitle(e.target.value)}
@@ -302,7 +311,7 @@ export default function TemplateDescription() {
               const res = await fetch('/api/template-descriptions/master', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ templateBody: masterTemplateBody, templateTitle })
+                body: JSON.stringify({ name: templateName, title: templateTitle, description: masterTemplateBody })
               });
               if (res.ok) {
                 setMasterEditSuccess('Master template updated.');
