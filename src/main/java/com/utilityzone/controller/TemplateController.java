@@ -53,10 +53,10 @@ public class TemplateController {
                 String typeRaw = t.getBuyerPdfType();
                 String typeLabel;
                 if (typeRaw != null) {
-                    // Normalize common client values like 'wedding-set' -> 'WEDDING_SET'
+                    // Normalize common client values like 'invite_suite' -> 'INVITE_SUITE'
                     String norm = typeRaw.trim().toUpperCase().replace('-', '_');
                     switch (norm) {
-                        case "WEDDING_SET": typeLabel = "Invite Suite"; break;
+                        case "INVITE_SUITE": typeLabel = "Invite Suite"; break;
                         case "PRINT_MOBILE": typeLabel = "Mobile + Print"; break;
                         case "PRINT_ONLY": typeLabel = "Only Print"; break;
                         default: typeLabel = "Mobile + Print"; break; // default aligns with Buyer PDF common type
@@ -66,7 +66,7 @@ public class TemplateController {
                     boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
                     boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
                     boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
-                    if (hasRsvp || hasDetail) typeLabel = "Invite Suite";
+                    if (hasRsvp || hasDetail) typeLabel = "Invite Suit";
                     else if (hasPrint && hasMobile) typeLabel = "Mobile + Print";
                     else if (hasPrint && !hasMobile) typeLabel = "Only Print";
                     else typeLabel = "Mobile + Print"; // fallback

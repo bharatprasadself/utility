@@ -3,7 +3,7 @@ export const publishTemplate = async (id: number): Promise<void> => {
   await axiosInstance.post(`/api/admin/canva-templates/${id}/publish`);
 };
 import axiosInstance from './axiosConfig';
-export type BuyerPdfType = 'print-mobile' | 'print-only' | 'wedding-set';
+export type BuyerPdfType = 'print-mobile' | 'print-only' | 'invite-suite';
 export interface Template {
   id: number;
   title: string;

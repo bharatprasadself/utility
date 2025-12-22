@@ -4,7 +4,7 @@ import { Box, Typography, Button, Paper, Stack, TextField, MenuItem, Select, Inp
 import { generateBuyerPdf } from '../../services/templates';
 
 export default function BuyerPdfTool() {
-  const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'wedding-set'>('print-mobile');
+  const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'invite-suite'>('print-mobile');
   const [title, setTitle] = useState('');
   const [canvaUrl, setCanvaUrl] = useState('');
   const [mobileCanvaUrl, setMobileCanvaUrl] = useState('');
@@ -77,7 +77,7 @@ export default function BuyerPdfTool() {
     setSuccess(null);
     setPdfUrl(null);
     try {
-      const url = await generateBuyerPdf(0, pdfType); // 0 = dummy id
+      const url = await generateBuyerPdf(0, pdfType as 'print-mobile' | 'print-only' | 'invite-suite'); // 0 = dummy id
       setPdfUrl(url);
       setSuccess('Buyer PDF generated!');
     } catch (e: any) {
@@ -113,7 +113,7 @@ export default function BuyerPdfTool() {
                 >
                   <MenuItem value="print-mobile">Print + Mobile (default)</MenuItem>
                   <MenuItem value="print-only">Print-only</MenuItem>
-                  <MenuItem value="wedding-set">Invite Suite (Invitation + RSVP + Details)</MenuItem>
+                  <MenuItem value="invite-suite">Invite Suite (Invitation + RSVP + Details)</MenuItem>
                 </Select>
               </FormControl>
               <TextField
@@ -122,7 +122,7 @@ export default function BuyerPdfTool() {
                 onChange={e => setCanvaUrl(e.target.value)}
                 fullWidth
               />
-              {(pdfType === 'print-mobile' || pdfType === 'wedding-set') && (
+              {(pdfType === 'print-mobile' || pdfType === 'invite-suite') && (
                 <TextField
                   label="Mobile Canva ‘Use a Copy’ URL (1080 X 1920 px)"
                   value={mobileCanvaUrl}
@@ -130,7 +130,7 @@ export default function BuyerPdfTool() {
                   fullWidth
                 />
               )}
-              {pdfType === 'wedding-set' && (
+              {pdfType === 'invite-suite' && (
                 <>
                   <TextField
                     label="RSVP Canva ‘Use a Copy’ URL"
