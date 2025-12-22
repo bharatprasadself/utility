@@ -33,19 +33,19 @@ export default function PublishTemplate() {
   const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
   // Per-template PDF type selection
-  const [pdfTypeById, setPdfTypeById] = useState<Record<number, 'print-mobile' | 'print-only' | 'wedding-set'>>({});
-  const getPdfTypeFor = (id: number): 'print-mobile' | 'print-only' | 'wedding-set' => pdfTypeById[id] || 'print-mobile';
+  const [pdfTypeById, setPdfTypeById] = useState<Record<number, 'print-mobile' | 'print-only' | 'invite-suite'>>({});
+    const getPdfTypeFor = (id: number): 'print-mobile' | 'print-only' | 'invite-suite' => pdfTypeById[id] || 'print-mobile';
   const [publicDescription, setPublicDescription] = useState<string>('');
   // Create-form specific PDF type selector (since global was removed)
-  const [createPdfType, setCreatePdfType] = useState<'print-mobile' | 'print-only' | 'wedding-set'>('print-mobile');
+  const [createPdfType, setCreatePdfType] = useState<'print-mobile' | 'print-only' | 'invite-suite'>('print-mobile');
   // Removed global handler; each row controls its own type
 
   // Normalize server/DB values (e.g., PRINT_MOBILE) into UI values (print-mobile)
-  const normalizePdfType = (val?: string | null): 'print-mobile' | 'print-only' | 'wedding-set' => {
+  const normalizePdfType = (val?: string | null): 'print-mobile' | 'print-only' | 'invite-suite' => {
     if (!val) return 'print-mobile';
     const v = String(val).toUpperCase().replace(/\s+/g, '');
     if (v === 'PRINT_ONLY' || v === 'PRINT-ONLY') return 'print-only';
-    if (v === 'WEDDING_SET' || v === 'WEDDING-SET') return 'wedding-set';
+    if (v === 'INVITE-SUITE' || v === 'invite-suite') return 'invite-suite';
     // default and also covers PRINT_MOBILE/PRINT-MOBILE
     return 'print-mobile';
   };
@@ -282,7 +282,7 @@ export default function PublishTemplate() {
       const row = templates.find(x => x.id === id);
       const serverType = row ? normalizePdfType((row as any).buyerPdfType as string | undefined) : undefined;
       const selected = pdfTypeById[id];
-      const effectiveType = (selected || serverType || 'print-mobile') as 'print-mobile' | 'print-only' | 'wedding-set';
+      const effectiveType = (selected || serverType || 'print-mobile') as 'print-mobile' | 'print-only' | 'invite-suite';
       const url = await generateBuyerPdf(id, effectiveType);
       setSuccess('Buyer PDF generated successfully.');
       // Open the PDF in a new browser tab
@@ -332,11 +332,11 @@ export default function PublishTemplate() {
                       id="create-pdf-type-select"
                       value={createPdfType}
                       label="Buyer PDF Type"
-                      onChange={(e: SelectChangeEvent) => setCreatePdfType(e.target.value as 'print-mobile' | 'print-only' | 'wedding-set')}
+                      onChange={(e: SelectChangeEvent) => setCreatePdfType(e.target.value as 'print-mobile' | 'print-only' | 'invite-suite')}
                     >
                       <MenuItem value="print-mobile">Print & Mobile</MenuItem>
                       <MenuItem value="print-only">Print only</MenuItem>
-                      <MenuItem value="wedding-set">Invite Suite</MenuItem>
+                      <MenuItem value="invite-suite">Invite Suite</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -350,7 +350,7 @@ export default function PublishTemplate() {
                     sx={{ minWidth: 320, mb: 1 }}
                   />
                 </Grid>
-                {(createPdfType === 'print-mobile' || createPdfType === 'wedding-set') && (
+                {(createPdfType === 'print-mobile' || createPdfType === 'invite-suite') && (
                   <Grid item xs={12}>
                     <TextField
                       label="Mobile Canva ‘Use a Copy’ URL (1080 X 1920 px)"
@@ -361,7 +361,7 @@ export default function PublishTemplate() {
                     />
                   </Grid>
                 )}
-                {createPdfType === 'wedding-set' && (
+                {createPdfType === 'invite-suite' && (
                   <>
                     <Grid item xs={12}>
                       <TextField
@@ -554,10 +554,7 @@ export default function PublishTemplate() {
                   <TableCell>{t.mockupUrl ? <a href={resolveUrl(t.mockupUrl)} target="_blank" rel="noopener noreferrer">View</a> : '-'}</TableCell>
                   <TableCell>{t.status === 'published' ? 'Published' : 'Draft'}</TableCell>
                   <TableCell>
-                    {(() => {
-                      const rowType = normalizePdfType((t as any).buyerPdfType as string | undefined) || normalizePdfType(getPdfTypeFor(t.id));
-                      return rowType === 'print-mobile' ? 'Print & Mobile' : rowType === 'print-only' ? 'Print only' : 'Invite Suite';
-                    })()}
+                    {(t as any).buyerPdfType || '-'}
                   </TableCell>
                   <TableCell sx={{ py: 2 }}>
                     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">

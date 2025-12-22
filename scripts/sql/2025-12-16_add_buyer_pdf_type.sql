@@ -10,14 +10,14 @@ ALTER TABLE canva_templates
 
 -- 2) Backfill based on available links
 -- Rules:
--- - WEDDING_SET: if RSVP or Detail Card link present
+-- - INVITE_SUITE: if RSVP or Detail Card link present
 -- - PRINT_MOBILE: if both print (canva_use_copy_url) and mobile links present
 -- - PRINT_ONLY: if print link present and mobile link absent
 -- - otherwise leave NULL (will default in UI as Print & Mobile)
 UPDATE canva_templates
 SET buyer_pdf_type = CASE
   WHEN (NULLIF(TRIM(rsvp_canva_use_copy_url), '') IS NOT NULL OR NULLIF(TRIM(detail_card_canva_use_copy_url), '') IS NOT NULL)
-       THEN 'WEDDING_SET'
+      THEN 'INVITE_SUITE'
   WHEN (NULLIF(TRIM(canva_use_copy_url), '') IS NOT NULL AND NULLIF(TRIM(mobile_canva_use_copy_url), '') IS NOT NULL)
        THEN 'PRINT_MOBILE'
   WHEN (NULLIF(TRIM(canva_use_copy_url), '') IS NOT NULL AND NULLIF(TRIM(mobile_canva_use_copy_url), '') IS NULL)
@@ -33,7 +33,7 @@ BEGIN
   ) THEN
     ALTER TABLE canva_templates
       ADD CONSTRAINT chk_canva_templates_buyer_pdf_type
-      CHECK (buyer_pdf_type IN ('PRINT_MOBILE','PRINT_ONLY','WEDDING_SET') OR buyer_pdf_type IS NULL);
+      CHECK (buyer_pdf_type IN ('PRINT_MOBILE','PRINT_ONLY','INVITE_SUITE') OR buyer_pdf_type IS NULL);
   END IF;
 END $$;
 
@@ -54,7 +54,7 @@ UPDATE canva_templates
 SET buyer_pdf_type = CASE
   WHEN (rsvp_canva_use_copy_url IS NOT NULL AND TRIM(rsvp_canva_use_copy_url) <> '')
         OR (detail_card_canva_use_copy_url IS NOT NULL AND TRIM(detail_card_canva_use_copy_url) <> '')
-       THEN 'WEDDING_SET'
+      THEN 'INVITE_SUITE'
   WHEN (canva_use_copy_url IS NOT NULL AND TRIM(canva_use_copy_url) <> '')
         AND (mobile_canva_use_copy_url IS NOT NULL AND TRIM(mobile_canva_use_copy_url) <> '')
        THEN 'PRINT_MOBILE'
@@ -66,4 +66,4 @@ END;
 
 -- 3) Optional CHECK constraint (H2 supports simple CHECK)
 ALTER TABLE canva_templates ADD CONSTRAINT chk_canva_templates_buyer_pdf_type
-  CHECK (buyer_pdf_type IN ('PRINT_MOBILE','PRINT_ONLY','WEDDING_SET') OR buyer_pdf_type IS NULL);
+  CHECK (buyer_pdf_type IN ('PRINT_MOBILE','PRINT_ONLY','INVITE_SUITE') OR buyer_pdf_type IS NULL);
