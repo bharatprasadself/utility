@@ -1,6 +1,7 @@
 
 
 import { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '@/services/axiosConfig';
 import { Box, Typography, Alert, FormControl, InputLabel, Select, MenuItem, Button, TextField, Stack, Grid, Paper } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -97,7 +98,7 @@ export default function TemplateDescription() {
   // Fetch master template body and title
   const fetchMasterTemplate = async () => {
     try {
-      const res = await fetch('/api/template-descriptions/master');
+      const res = await fetch(`${API_BASE_URL}/api/template-descriptions/master`);
       if (res.ok) {
         const data = await res.json();
         setMasterTemplateBody(data.description || '');
@@ -308,7 +309,7 @@ export default function TemplateDescription() {
           sx={{ mt: 2 }}
           onClick={async () => {
             try {
-              const res = await fetch('/api/template-descriptions/master', {
+              const res = await fetch(`${API_BASE_URL}/api/template-descriptions/master`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: templateName, title: templateTitle, description: masterTemplateBody })
