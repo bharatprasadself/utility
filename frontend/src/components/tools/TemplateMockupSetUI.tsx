@@ -181,22 +181,33 @@ const TemplateMockupSetUI: React.FC = () => {
         </Box>
 
         {/* Product upload */}
+
         <Box mb={2}>
-          <Button variant="outlined" component="label">
-            Upload Product Image
+          <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+            Select Product Image
             <input type="file" hidden accept="image/*" onChange={handleProductChange} />
           </Button>
           {productFile && <Typography>{productFile.name}</Typography>}
         </Box>
 
-        {/* Merge */}
         <Button
           variant="contained"
           disabled={!selectedMockup || !productFile || loading}
           onClick={handleMerge}
           startIcon={loading ? <CircularProgress size={18} /> : undefined}
+          sx={{ mb: 2 }}
         >
           Merge & Preview
+        </Button>
+
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={handleDownload}
+          disabled={!resultUrl}
+          sx={{ mb: 2 }}
+        >
+          Download Mockup
         </Button>
 
         {error && <Alert severity="error">{error}</Alert>}
@@ -230,8 +241,12 @@ const TemplateMockupSetUI: React.FC = () => {
           >
             {addingNew ? 'Uploading...' : 'Upload'}
           </Button>
-          {newMockupFile && <Typography variant="body2">{newMockupFile.name}</Typography>}
         </Box>
+        {newMockupFile && (
+          <Typography variant="body2" sx={{ mt: 1, ml: 1 }}>
+            {newMockupFile.name}
+          </Typography>
+        )}
         {uploadSuccess && <Alert severity="success" sx={{ mt: 2 }}>{uploadSuccess}</Alert>}
         {uploadError && <Alert severity="error" sx={{ mt: 2 }}>{uploadError}</Alert>}
       </Box>

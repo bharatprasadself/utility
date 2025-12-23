@@ -1,4 +1,4 @@
-import { AppBar, Toolbar, Typography, Button, Box, IconButton, useMediaQuery, Menu, MenuItem } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, IconButton, Menu, MenuItem, useMediaQuery } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -51,7 +51,7 @@ const navItems: NavItem[] = [
     ]
   },
   { label: 'Blogs', path: '/blogs' },
-  { 
+  {
     label: 'Articles',
     path: '/articles',
     subItems: [
@@ -60,135 +60,96 @@ const navItems: NavItem[] = [
       { label: 'Java', path: '/articles/java' },
       { label: 'PostgreSQL', path: '/articles/postgresql' },
       { label: 'Docker', path: '/articles/docker' },
-      { label: 'Microservices', path: '/articles/microservices' },
+      { label: 'Microservices', path: '/articles/microservices' }
     ]
   }
-  //,
-  //{
-  //  label: 'Games',
-  //  path: '/games',
-  //  subItems: [
-  //    { label: 'Falling Ball', path: '/games/falling-ball' },
-  //    { label: 'Dino Runner', path: '/games/dino-runner' }
-  //  ]
-  //}
 ];
+
+const adminOnlyPaths = new Set([
+  '/tools/author-page',
+  '/tools/publish-ebooks',
+  '/tools/publish-template',
+  '/tools/template-description'
+]);
+
+const financeEmoji: Record<string, string> = {
+  'CAGR Calculator': '📈',
+  'SIP Calculator': '💰',
+  'ROI Calculator': '📊',
+  'Dividend Tracker': '🧾',
+  'Compounding Calculator': '🔁'
+};
+const articlesEmoji: Record<string, string> = {
+  'Spring Boot': '🌱',
+  'React JS': '⚛️',
+  'Java': '☕',
+  'PostgreSQL': '🐘',
+  'Docker': '🐳',
+  'Microservices': '🧩'
+};
+const toolsExtraEmoji: Record<string, string> = {
+  'Finance': '💰',
+  'ROI Calculator': '📊',
+  'Compounding Calculator': '🔁',
+  'CAGR Calculator': '📈',
+  'SIP Calculator': '💸',
+  'Dividend Tracker': '🧾',
+  'Ebook': '📚',
+  'Ebook Writer': '✍️',
+  'Author Page': '👤',
+  'Publish Ebooks': '🚀',
+  'Template': '🎨',
+  'Publish Template': '🚀',
+  'Template Description': '🔖',
+  'Template Mockup': '🖼️',
+  'Buyer PDF': '🧾'
+};
+const shopExtraEmoji: Record<string, string> = {
+  'Ebooks': '📚',
+  'Templates': '🎨'
+};
 
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, deleteAccount, isAdmin } = useAuth();
   const admin = isAdmin();
-    // Permission filtering: hide admin-only submenus for non-admin users
-    const adminOnlyPaths = new Set([
-      '/tools/author-page',
-      '/tools/publish-ebooks',
-      '/tools/publish-template',
-      '/tools/template-description'
-    ]);
-
-    const filterSubItems = (items?: SubNavItem[]) => {
-      if (!items) return [];
-      // Keep headers; filter actionable items by admin permission
-      return items.filter(si => si.isHeader || admin || !adminOnlyPaths.has(si.path));
-    };
-
   const isMobile = useMediaQuery('(max-width:600px)');
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [subMenuAnchorEl, setSubMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
-  // Second-level submenu for Tools groups
   const [toolsGroupAnchorEl, setToolsGroupAnchorEl] = useState<null | HTMLElement>(null);
   const [activeToolsGroup, setActiveToolsGroup] = useState<string | null>(null);
   const [userMenuAnchorEl, setUserMenuAnchorEl] = useState<null | HTMLElement>(null);
   const userMenuOpen = Boolean(userMenuAnchorEl);
 
-  // Emoji icons for Tools > Finance submenu items
-  const financeEmoji: Record<string, string> = {
-    'CAGR Calculator': '📈',
-    'SIP Calculator': '💰',
-    'ROI Calculator': '📊',
-    'Dividend Tracker': '🧾',
-    'Compounding Calculator': '🔁'
-  };
-  // Emoji icons for Articles submenu items
-  const articlesEmoji: Record<string, string> = {
-    'Spring Boot': '🌱',
-    'React JS': '⚛️',
-    'Java': '☕',
-    'PostgreSQL': '🐘',
-    'Docker': '🐳',
-    'Microservices': '🧩'
-  };
-    // Expanded icons for Tools submenu
-    const toolsExtraEmoji: Record<string, string> = {
-      'Finance': '💰',
-      'ROI Calculator': '📊',
-      'Compounding Calculator': '🔁',
-      'CAGR Calculator': '📈',
-      'SIP Calculator': '💸',
-      'Dividend Tracker': '🧾',
-      'Ebook': '📚',
-      'Ebook Writer': '✍️',
-      'Author Page': '👤',
-      'Publish Ebooks': '🚀',
-      'Template': '🎨',
-      'Publish Template': '📝',
-      'Template Description': '🔖',
-      'Template Mockup': '🖼️',
-      'Buyer PDF': '📄'
-    };
-
-    // Icons for Shop submenu
-    const shopExtraEmoji: Record<string, string> = {
-      'Ebooks': '📚',
-      'Templates': '🎨'
-    };
-
-  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
+  const filterSubItems = (items?: SubNavItem[]) => {
+    if (!items) return [];
+    return items.filter(si => si.isHeader || admin || !adminOnlyPaths.has(si.path));
   };
 
   const handleOpenSubMenu = (event: React.MouseEvent<HTMLElement>, label: string) => {
     setSubMenuAnchorEl(event.currentTarget);
     setActiveSubMenu(label);
   };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
   const handleSubMenuClose = () => {
     setSubMenuAnchorEl(null);
     setActiveSubMenu(null);
-    // also close any second-level tools submenu
     setToolsGroupAnchorEl(null);
     setActiveToolsGroup(null);
   };
-
   const handleNavigation = (path: string) => {
     navigate(path);
-    handleClose();
     handleSubMenuClose();
   };
-
   const handleUserMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
     setUserMenuAnchorEl(e.currentTarget);
   };
-
   const handleUserMenuClose = () => {
     setUserMenuAnchorEl(null);
   };
 
   const renderDesktopNav = () => (
-    <Box sx={{ 
-      display: 'flex', 
-      gap: 2,
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      width: '100%',
-      ml: 4
-    }}>
+    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'space-between', alignItems: 'center', width: '100%', ml: 4 }}>
       <Box sx={{ display: 'flex', gap: 3 }}>
         {navItems.map((item) => (
           <Box key={item.path}>
@@ -210,24 +171,15 @@ const Navigation = () => {
               {item.label}
               {filterSubItems(item.subItems).length > 0 && ' ▾'}
             </Button>
-            {/* sub-menu opens below (single Menu rendered outside the map) */}
           </Box>
         ))}
       </Box>
-      {/* Single sub-menu for any nav item with subItems (Games, Articles, etc.) */}
       <Menu
         id={activeSubMenu ? `${activeSubMenu}-menu` : 'sub-menu'}
         anchorEl={subMenuAnchorEl}
         open={Boolean(subMenuAnchorEl)}
         onClose={handleSubMenuClose}
-        sx={{
-          '& .MuiPaper-root': {
-            borderRadius: 2,
-            mt: 1,
-            minWidth: 240,
-            boxShadow: 3
-          }
-        }}
+        sx={{ '& .MuiPaper-root': { borderRadius: 2, mt: 1, minWidth: 240, boxShadow: 3 } }}
       >
         {activeSubMenu === 'Tools'
           ? (() => {
@@ -246,21 +198,27 @@ const Navigation = () => {
               const groupLabels = Object.keys(groups);
               return groupLabels
                 .filter(gl => (groups[gl] || []).length > 0)
-                .map(gl => (
-                <MenuItem
-                  key={`tools-group-${gl}`}
-                  aria-haspopup="true"
-                  aria-controls={`tools-${gl}-submenu`}
-                  onClick={e => {
-                    setActiveToolsGroup(gl);
-                    setToolsGroupAnchorEl(e.currentTarget);
-                  }}
-                  sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
-                >
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{gl}</Typography>
-                  <Box component="span" aria-hidden>▸</Box>
-                </MenuItem>
-              ));
+                .map(gl => {
+                  const emoji = toolsExtraEmoji[gl] || '';
+                  return (
+                    <MenuItem
+                      key={`tools-group-${gl}`}
+                      aria-haspopup="true"
+                      aria-controls={`tools-${gl}-submenu`}
+                      onClick={e => {
+                        setActiveToolsGroup(gl);
+                        setToolsGroupAnchorEl(e.currentTarget);
+                      }}
+                      sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {emoji && <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>}
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{gl}</Typography>
+                      </Box>
+                      <Box component="span" aria-hidden>▸</Box>
+                    </MenuItem>
+                  );
+                });
             })()
           : filterSubItems(navItems.find(i => i.label === activeSubMenu)?.subItems).map((subItem) => {
               const isArticles = activeSubMenu === 'Articles';
@@ -284,17 +242,8 @@ const Navigation = () => {
                   sx={{
                     py: 1,
                     px: 2,
-                    '&:hover': {
-                      bgcolor: 'primary.light',
-                      color: 'white'
-                    },
-                    '&.Mui-selected': {
-                      bgcolor: 'primary.main',
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: 'primary.dark'
-                      }
-                    }
+                    '&:hover': { bgcolor: 'primary.light', color: 'white' },
+                    '&.Mui-selected': { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 200 }}>
@@ -305,20 +254,12 @@ const Navigation = () => {
               );
             })}
       </Menu>
-      {/* Second-level submenu for Tools groups */}
       <Menu
         id={activeToolsGroup ? `tools-${activeToolsGroup}-submenu` : 'tools-submenu'}
         anchorEl={toolsGroupAnchorEl}
         open={Boolean(activeToolsGroup && toolsGroupAnchorEl)}
         onClose={() => { setToolsGroupAnchorEl(null); setActiveToolsGroup(null); }}
-        sx={{
-          '& .MuiPaper-root': {
-            borderRadius: 2,
-            mt: 1,
-            minWidth: 260,
-            boxShadow: 3
-          }
-        }}
+        sx={{ '& .MuiPaper-root': { borderRadius: 2, mt: 1, minWidth: 260, boxShadow: 3 } }}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
@@ -350,12 +291,10 @@ const Navigation = () => {
                   '&.Mui-selected': { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }
                 }}
               >
-                {emoji ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 220 }}>
-                    <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{si.label}</Typography>
-                  </Box>
-                ) : si.label}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 220 }}>
+                  {emoji && <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>}
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{si.label}</Typography>
+                </Box>
               </MenuItem>
             );
           });
@@ -445,121 +384,9 @@ const Navigation = () => {
   );
 
   const renderMobileNav = () => (
-    <>
-      <IconButton
-        size="large"
-        edge="end"
-        color="inherit"
-        aria-label="menu"
-        onClick={handleMenu}
-      >
-        <MenuIcon />
-      </IconButton>
-      <Menu
-        id="navigation-menu"
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleClose}
-        sx={{ mt: 1 }}
-        MenuListProps={{
-          'aria-label': 'Navigation options',
-          role: 'menu'
-        }}
-      >
-  {navItems.map((item) => (
-          item.subItems ? (
-            <Box key={item.label}>
-              <MenuItem
-                disabled
-                role="presentation"
-                sx={{ fontWeight: 600, opacity: 0.8 }}
-              >
-                {item.label}
-              </MenuItem>
-              {filterSubItems(item.subItems).map((sub) => {
-                const isShop = item.label === 'Shop';
-                let emoji = '';
-                if (isShop) emoji = shopExtraEmoji[sub.label];
-                else emoji = toolsExtraEmoji[sub.label];
-                return sub.isHeader ? (
-                  <MenuItem key={`${sub.path}-header`} disabled role="presentation" sx={{ pl: 2, fontWeight: 700, opacity: 0.8 }}>
-                    {sub.label}
-                  </MenuItem>
-                ) : (
-                  <MenuItem
-                    key={sub.path}
-                    onClick={() => handleNavigation(sub.path)}
-                    selected={location.pathname === sub.path}
-                    role="menuitem"
-                    aria-current={location.pathname === sub.path ? 'page' : undefined}
-                    sx={{ pl: 3 }}
-                  >
-                    {emoji ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                        <Box component="span" aria-hidden sx={{ fontSize: 18 }}>{emoji}</Box>
-                        {sub.label}
-                      </Box>
-                    ) : sub.label}
-                  </MenuItem>
-                );
-              })}
-            </Box>
-          ) : (
-            <MenuItem 
-              key={item.path}
-              onClick={() => handleNavigation(item.path)}
-              selected={location.pathname === item.path}
-              role="menuitem"
-              aria-current={location.pathname === item.path ? 'page' : undefined}
-            >
-              {item.label}
-            </MenuItem>
-          )
-        ))}
-        {user ? (
-          <>
-            <MenuItem 
-              onClick={() => { handleNavigation('/profile'); }}
-              role="menuitem"
-            >
-              My Profile
-            </MenuItem>
-            <MenuItem 
-              onClick={() => { logout(); handleClose(); }}
-              role="menuitem"
-            >
-              Logout ({user.username})
-            </MenuItem>
-            <MenuItem
-              onClick={async () => {
-                handleClose();
-                if (window.confirm('Delete account permanently?')) {
-                  try { await deleteAccount(); } catch (e: any) { alert(e?.message || 'Failed to delete account.'); }
-                }
-              }}
-              role="menuitem"
-            >
-              Delete Account
-            </MenuItem>
-          </>
-        ) : (
-          <>
-            <MenuItem 
-              onClick={() => handleNavigation('/login')}
-              role="menuitem"
-            >
-              Login
-            </MenuItem>
-            <MenuItem 
-              onClick={() => handleNavigation('/register')}
-              role="menuitem"
-            >
-              Register
-            </MenuItem>
-          </>
-        )}
-      </Menu>
-    </>
+    <IconButton color="inherit" edge="end" sx={{ ml: 'auto' }}>
+      <MenuIcon />
+    </IconButton>
   );
 
   return (
@@ -572,24 +399,12 @@ const Navigation = () => {
         left: 0,
         right: 0,
         mb: 3,
-        background: 'linear-gradient(45deg, #1565c0 30%, #1976d2 90%)', // Darker gradient
+        background: 'linear-gradient(45deg, #1565c0 30%, #1976d2 90%)',
         boxShadow: '0 3px 5px 2px rgba(33, 150, 243, .3)'
       }}
     >
-      <Toolbar sx={{ 
-          width: '100%', 
-          maxWidth: 'lg', 
-          mx: 'auto',
-          px: { xs: 2, sm: 3, md: 4 }
-        }}>
-        <Box 
-          component="div"
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            minWidth: 'fit-content'
-          }}
-        >
+      <Toolbar sx={{ width: '100%', maxWidth: 'lg', mx: 'auto', px: { xs: 2, sm: 3, md: 4 } }}>
+        <Box component="div" sx={{ display: 'flex', alignItems: 'center', minWidth: 'fit-content' }}>
           <img 
             src="/favicon.ico"
             alt="Utility Zone Logo"
