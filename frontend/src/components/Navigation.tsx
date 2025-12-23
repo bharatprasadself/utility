@@ -37,6 +37,7 @@ const navItems: NavItem[] = [
       { label: 'Template', path: '/tools/templates', isHeader: true },
       { label: 'Publish Template', path: '/tools/publish-template' },
       { label: 'Template Description', path: '/tools/template-description' },
+      { label: 'Template Mockup', path: '/tools/template-mockup'},
       { label: 'Buyer PDF', path: '/admin/canva-templates' }
     ]
   },
@@ -134,6 +135,7 @@ const Navigation = () => {
       'Template': '🎨',
       'Publish Template': '📝',
       'Template Description': '🔖',
+      'Template Mockup': '🖼️',
       'Buyer PDF': '📄'
     };
 
@@ -295,14 +297,10 @@ const Navigation = () => {
                     }
                   }}
                 >
-                  {emoji ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 200 }}>
-                      <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{subItem.label}</Typography>
-                    </Box>
-                  ) : (
-                    subItem.label
-                  )}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 200 }}>
+                    {emoji && <Box component="span" aria-hidden sx={{ fontSize: 18, width: 22, textAlign: 'center' }}>{emoji}</Box>}
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{subItem.label}</Typography>
+                  </Box>
                 </MenuItem>
               );
             })}
