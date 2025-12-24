@@ -16,7 +16,9 @@ const TemplateMockupSetUI: React.FC = () => {
       setUploadError(null);
       const formData = new FormData();
       formData.append('file', newMockupFile);
-      // No name field, backend should infer name from file or assign default
+      // Add mockupType field (user selects or inferred)
+      const mockupType = newMockupFile.name.toLowerCase().includes('mobile') ? 'mobile' : 'primary';
+      formData.append('mockupType', mockupType);
       try {
         await axios.post('/api/mockup-upload/master', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -116,6 +118,9 @@ const TemplateMockupSetUI: React.FC = () => {
       const formData = new FormData();
       formData.append('mockup', mockupBlob, selectedMockup);
       formData.append('product', productFile);
+      // Add mockupType for backend logic
+      const mockupType = selectedMockup.toLowerCase().includes('mobile') ? 'mobile' : 'primary';
+      formData.append('mockupType', mockupType);
       const res = await axios.post('/api/mockup-image/merge', formData, {
         responseType: 'blob',
         headers: { 'Content-Type': 'multipart/form-data' },

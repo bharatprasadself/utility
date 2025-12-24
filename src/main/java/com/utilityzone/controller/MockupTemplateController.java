@@ -63,13 +63,16 @@ public class MockupTemplateController {
     }
 
     @PostMapping(value = "/api/mockup-upload/master", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadMasterMockup(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadMasterMockup(@RequestParam("file") MultipartFile file, @RequestParam(value = "mockupType", required = false) String mockupType) {
         try {
             String original = file.getOriginalFilename();
             String cleaned = StringUtils.cleanPath(original != null ? original : "mockup");
+            String type = (mockupType != null && (mockupType.equalsIgnoreCase("mobile") || mockupType.equalsIgnoreCase("primary"))) ? mockupType.toLowerCase() : "primary";
             Path dir = Paths.get("data/uploads/mockup/master");
             if (!Files.exists(dir)) Files.createDirectories(dir);
-            Path target = dir.resolve(cleaned);
+            // Save with type prefix for clarity
+            String targetName = type + "_" + cleaned;
+            Path target = dir.resolve(targetName);
             Files.copy(file.getInputStream(), target);
             return ResponseEntity.ok("Uploaded successfully");
         } catch (Exception e) {

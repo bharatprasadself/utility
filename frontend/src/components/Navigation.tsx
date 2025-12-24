@@ -69,7 +69,8 @@ const adminOnlyPaths = new Set([
   '/tools/author-page',
   '/tools/publish-ebooks',
   '/tools/publish-template',
-  '/tools/template-description'
+  '/tools/template-description',
+  '/tools/template-mockup'
 ]);
 
 const financeEmoji: Record<string, string> = {
