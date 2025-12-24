@@ -16,8 +16,11 @@ const TemplateMockupSetUI: React.FC = () => {
       setUploadError(null);
       const formData = new FormData();
       formData.append('file', newMockupFile);
-      // Add mockupType field (user selects or inferred)
-      const mockupType = newMockupFile.name.toLowerCase().includes('mobile') ? 'mobile' : 'primary';
+      // Add mockupType field (dynamic: mobile, secondary, or primary)
+      let mockupType = 'primary';
+      const nameLc = newMockupFile.name.toLowerCase();
+      if (nameLc.includes('mobile')) mockupType = 'mobile';
+      else if (nameLc.includes('secondary')) mockupType = 'secondary';
       formData.append('mockupType', mockupType);
       try {
         await axios.post('/api/mockup-upload/master', formData, {
@@ -118,8 +121,11 @@ const TemplateMockupSetUI: React.FC = () => {
       const formData = new FormData();
       formData.append('mockup', mockupBlob, selectedMockup);
       formData.append('product', productFile);
-      // Add mockupType for backend logic
-      const mockupType = selectedMockup.toLowerCase().includes('mobile') ? 'mobile' : 'primary';
+      // Add mockupType for backend logic (dynamic: mobile, secondary, or primary)
+      let mockupType = 'primary';
+      const nameLc = selectedMockup.toLowerCase();
+      if (nameLc.includes('mobile')) mockupType = 'mobile';
+      else if (nameLc.includes('secondary')) mockupType = 'secondary';
       formData.append('mockupType', mockupType);
       const res = await axios.post('/api/mockup-image/merge', formData, {
         responseType: 'blob',

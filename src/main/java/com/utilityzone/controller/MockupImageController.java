@@ -15,6 +15,97 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/api/mockup-image")
 public class MockupImageController {
+        // Secondary mockup: placeholder logic, can be customized
+        private BufferedImage processSecondaryMockup(BufferedImage product) {
+            // Use default print mockup region
+            
+            int placeWidth = 880;
+            int placeHeight = 1240;
+            int prodW = product.getWidth();
+            int prodH = product.getHeight();
+            int targetW = Math.min(placeWidth, prodW);
+            int targetH = Math.min(placeHeight, prodH);
+
+            Image scaledProduct = product.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH);
+            BufferedImage productScaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D gProd = productScaled.createGraphics();
+            gProd.setComposite(AlphaComposite.Clear);
+            gProd.fillRect(0, 0, targetW, targetH);
+            gProd.setComposite(AlphaComposite.SrcOver);
+            gProd.drawImage(scaledProduct, 0, 0, null);
+            gProd.dispose();
+
+            // Tilt the image by 5 degrees without cropping
+            double angle = Math.toRadians(5); // 5 degree tilt
+            double sin = Math.abs(Math.sin(angle));
+            double cos = Math.abs(Math.cos(angle));
+            int newW = (int) Math.ceil(targetW * cos + targetH * sin);
+            int newH = (int) Math.ceil(targetH * cos + targetW * sin);
+            BufferedImage tilted = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D gTilt = tilted.createGraphics();
+            gTilt.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            gTilt.setComposite(AlphaComposite.Clear);
+            gTilt.fillRect(0, 0, newW, newH);
+            gTilt.setComposite(AlphaComposite.SrcOver);
+            // Center the image and rotate
+            gTilt.translate((newW - targetW) / 2.0, (newH - targetH) / 2.0);
+            gTilt.rotate(angle, targetW / 2.0, targetH / 2.0);
+            gTilt.drawImage(productScaled, 0, 0, null);
+            gTilt.dispose();
+            return tilted;
+        }
+    // Print mockup: no rounded corners, just scale and return
+    private BufferedImage processPrintMockup(BufferedImage product, int placeWidth, int placeHeight) {
+        int prodW = product.getWidth();
+        int prodH = product.getHeight();
+        int targetW = Math.min(placeWidth, prodW);
+        int targetH = Math.min(placeHeight, prodH);
+
+        Image scaledProduct = product.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH);
+        BufferedImage productScaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D gProd = productScaled.createGraphics();
+        gProd.setComposite(AlphaComposite.Clear);
+        gProd.fillRect(0, 0, targetW, targetH);
+        gProd.setComposite(AlphaComposite.SrcOver);
+        gProd.drawImage(scaledProduct, 0, 0, null);
+        gProd.dispose();
+        return productScaled;
+    }
+
+    // Mobile mockup: apply rounded top corners
+    private BufferedImage processMobileMockup(BufferedImage product, int placeWidth, int placeHeight) {
+        int prodW = product.getWidth();
+        int prodH = product.getHeight();
+        int targetW = Math.min(placeWidth, prodW);
+        int targetH = Math.min(placeHeight, prodH);
+
+        Image scaledProduct = product.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH);
+        BufferedImage productScaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D gProd = productScaled.createGraphics();
+        gProd.setComposite(AlphaComposite.Clear);
+        gProd.fillRect(0, 0, targetW, targetH);
+        gProd.setComposite(AlphaComposite.SrcOver);
+        gProd.drawImage(scaledProduct, 0, 0, null);
+        gProd.dispose();
+
+        int radius = Math.min(targetW, targetH) / 8;
+        BufferedImage roundedProduct = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = roundedProduct.createGraphics();
+        g2.setComposite(AlphaComposite.Clear);
+        g2.fillRect(0, 0, targetW, targetH);
+        g2.setComposite(AlphaComposite.SrcOver);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        java.awt.geom.RoundRectangle2D.Double roundRect = new java.awt.geom.RoundRectangle2D.Double(
+            0, 0, targetW, targetH, 2*radius, 2*radius
+        );
+        java.awt.geom.Area mask = new java.awt.geom.Area(roundRect);
+        mask.add(new java.awt.geom.Area(new java.awt.Rectangle(0, targetH - radius, radius, radius)));
+        mask.add(new java.awt.geom.Area(new java.awt.Rectangle(targetW - radius, targetH - radius, radius, radius)));
+        g2.setClip(mask);
+        g2.drawImage(productScaled, 0, 0, null);
+        g2.dispose();
+        return roundedProduct;
+    }
 
     @PostMapping(value = "/merge", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         public ResponseEntity<byte[]> mergeProductImage(
@@ -37,6 +128,9 @@ public class MockupImageController {
             placeY = 284;
             placeWidth = 710;
             placeHeight = 1300;
+        } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
+            placeX = 514;
+            placeY = 256;
         }
 
         BufferedImage mockup = ImageIO.read(mockupFile.getInputStream());
@@ -50,44 +144,21 @@ public class MockupImageController {
         gMockup.dispose();
 
 
-        // Scale product image to fit region, no aspect ratio enforced
-        int prodW = product.getWidth();
-        int prodH = product.getHeight();
-        int targetW = Math.min(placeWidth, prodW);
-        int targetH = Math.min(placeHeight, prodH);
+        // Use extracted methods for mockup image processing
+        BufferedImage roundedProduct;
+        if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
+            roundedProduct = processMobileMockup(product, placeWidth, placeHeight);
+        } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
+            roundedProduct = processSecondaryMockup(product);
+        } else {
+            roundedProduct = processPrintMockup(product, placeWidth, placeHeight);
+        }
 
-        Image scaledProduct = product.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH);
-        BufferedImage productScaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D gProd = productScaled.createGraphics();
-        gProd.setComposite(AlphaComposite.Clear);
-        gProd.fillRect(0, 0, targetW, targetH);
-        gProd.setComposite(AlphaComposite.SrcOver);
-        gProd.drawImage(scaledProduct, 0, 0, null);
-        gProd.dispose();
-
-        // Align product image to top of region
+        int targetW = roundedProduct.getWidth();
+        int targetH = roundedProduct.getHeight();
         int offsetX = placeX + (placeWidth - targetW) / 2;
         int offsetY = placeY;
-
-        // Create mask: round only the top left and top right corners
-        int radius = Math.min(targetW, targetH) / 8; // Average corners for top rounding
-        BufferedImage roundedProduct = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = roundedProduct.createGraphics();
-        g2.setComposite(AlphaComposite.Clear);
-        g2.fillRect(0, 0, targetW, targetH);
-        g2.setComposite(AlphaComposite.SrcOver);
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        // Use RoundRectangle2D for top corners only
-        java.awt.geom.RoundRectangle2D.Double roundRect = new java.awt.geom.RoundRectangle2D.Double(
-            0, 0, targetW, targetH, 2*radius, 2*radius
-        );
-        // To round only the top corners, overlay rectangles to cover the bottom corners
-        java.awt.geom.Area mask = new java.awt.geom.Area(roundRect);
-        mask.add(new java.awt.geom.Area(new java.awt.Rectangle(0, targetH - radius, radius, radius)));
-        mask.add(new java.awt.geom.Area(new java.awt.Rectangle(targetW - radius, targetH - radius, radius, radius)));
-        g2.setClip(mask);
-        g2.drawImage(productScaled, 0, 0, null);
-        g2.dispose();
+        
 
         BufferedImage combined = new BufferedImage(OUTPUT_WIDTH, OUTPUT_HEIGHT, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = combined.createGraphics();
