@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem } from '@mui/material';
-import axios from '@/services/axiosConfig';
+import axios, { API_BASE_URL } from '@/services/axiosConfig';
 
 const TemplateMockupSetUI: React.FC = () => {
 
@@ -68,8 +67,7 @@ const TemplateMockupSetUI: React.FC = () => {
   // Load selected mockup image when dropdown changes
   useEffect(() => {
     if (selectedMockup) {
-      // Assume backend serves images at /api/master-mockups/{filename}
-      setSelectedMockupUrl(`/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
+      setSelectedMockupUrl(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
     } else {
       setSelectedMockupUrl(null);
     }
@@ -92,7 +90,7 @@ const TemplateMockupSetUI: React.FC = () => {
     setResultUrl(null);
     try {
       // Fetch the selected mockup image as a Blob
-      const mockupResponse = await fetch(`/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
+      const mockupResponse = await fetch(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
       if (!mockupResponse.ok) throw new Error('Failed to fetch mockup image.');
       const mockupBlob = await mockupResponse.blob();
       const formData = new FormData();
