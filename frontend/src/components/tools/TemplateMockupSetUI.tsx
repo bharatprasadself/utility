@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, Alert, CircularProgress, Grid, Select, MenuItem, Snackbar } from '@mui/material';
+import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem } from '@mui/material';
 import axios from '@/services/axiosConfig';
 
 const TemplateMockupSetUI: React.FC = () => {
-  const [uploadFiles, setUploadFiles] = useState<{ [name: string]: File | null }>({});
+
   // For adding a new mockup when list is empty
   const [newMockupFile, setNewMockupFile] = useState<File | null>(null);
   const [addingNew, setAddingNew] = useState(false);
@@ -43,31 +43,11 @@ const TemplateMockupSetUI: React.FC = () => {
         setAddingNew(false);
       }
     };
-  const [uploading, setUploading] = useState<{ [name: string]: boolean }>({});
+  // Removed unused uploading state
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
     // Upload handler for each mockup
-    const handleUploadMockup = async (name: string) => {
-      const file = uploadFiles[name];
-      if (!file) return;
-      setUploading(prev => ({ ...prev, [name]: true }));
-      setUploadSuccess(null);
-      setUploadError(null);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', name);
-      try {
-        await axios.post('/api/mockup-upload/master', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        setUploadSuccess(`Uploaded ${name} successfully!`);
-        setUploadFiles(prev => ({ ...prev, [name]: null }));
-      } catch (err: any) {
-        setUploadError(`Failed to upload ${name}`);
-      } finally {
-        setUploading(prev => ({ ...prev, [name]: false }));
-      }
-    };
+  // Removed unused handleUploadMockup
   const [masterMockups, setMasterMockups] = useState<string[]>([]);
   const [selectedMockup, setSelectedMockup] = useState<string | null>(null);
     // Fetch master mockups on mount
@@ -93,14 +73,11 @@ const TemplateMockupSetUI: React.FC = () => {
     } else {
       setSelectedMockupUrl(null);
     }
+    // Clear resultUrl when selectedMockup changes
+    setResultUrl(null);
   }, [selectedMockup]);
 
-  const handleUploadFileChange = (name: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      setUploadFiles(prev => ({ ...prev, [name]: files[0] }));
-    }
-  };
+  // Removed unused handleUploadFileChange
   const handleProductChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setProductFile(e.target.files[0]);
@@ -127,6 +104,8 @@ const TemplateMockupSetUI: React.FC = () => {
       if (nameLc.includes('mobile')) mockupType = 'mobile';
       else if (nameLc.includes('secondary')) mockupType = 'secondary';
       formData.append('mockupType', mockupType);
+      // Store for download filename
+      setMergedMockupType(mockupType);
       const res = await axios.post('/api/mockup-image/merge', formData, {
         responseType: 'blob',
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -143,13 +122,17 @@ const TemplateMockupSetUI: React.FC = () => {
 
   const handleDownload = () => {
     if (!resultUrl) return;
+    let fileType = mergedMockupType || 'primary';
+    let fileName = 'Mockup_Image_' + fileType.charAt(0).toUpperCase() + fileType.slice(1) + '.png';
     const a = document.createElement('a');
     a.href = resultUrl;
-    a.download = 'mockup-result.png';
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     a.remove();
   };
+  // Track merged mockup type for download filename
+  const [mergedMockupType, setMergedMockupType] = useState<string>('primary');
 
     return (
   <Box
@@ -273,7 +256,13 @@ const TemplateMockupSetUI: React.FC = () => {
 
     {resultUrl && (
       <Box p={3} boxShadow={2} borderRadius={2} bgcolor="#fff">
-        <Typography>Result</Typography>
+        <Typography>
+          {mergedMockupType === 'mobile'
+            ? 'Mobile Mockup Image Preview'
+            : mergedMockupType === 'secondary'
+            ? 'Secondary Mockup Image Preview'
+            : 'Primary Mockup Image Preview'}
+        </Typography>
         <img src={resultUrl} style={{ maxWidth: '100%' }} />
       </Box>
     )}

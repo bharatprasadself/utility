@@ -67,12 +67,10 @@ public class MockupTemplateController {
         try {
             String original = file.getOriginalFilename();
             String cleaned = StringUtils.cleanPath(original != null ? original : "mockup");
-            String type = (mockupType != null && (mockupType.equalsIgnoreCase("mobile") || mockupType.equalsIgnoreCase("primary"))) ? mockupType.toLowerCase() : "primary";
             Path dir = Paths.get("data/uploads/mockup/master");
             if (!Files.exists(dir)) Files.createDirectories(dir);
-            // Save with type prefix for clarity
-            String targetName = type + "_" + cleaned;
-            Path target = dir.resolve(targetName);
+            // Save with original cleaned name only
+            Path target = dir.resolve(cleaned);
             Files.copy(file.getInputStream(), target);
             return ResponseEntity.ok("Uploaded successfully");
         } catch (Exception e) {
