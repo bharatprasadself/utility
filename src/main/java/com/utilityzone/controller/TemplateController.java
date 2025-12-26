@@ -10,20 +10,23 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import javax.imageio.ImageIO;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.imageio.ImageIO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 public class TemplateController {
+    private static final Logger logger = LoggerFactory.getLogger(TemplateController.class);
     private final TemplateService service;
 
     public TemplateController(TemplateService service) {
@@ -138,6 +141,7 @@ public class TemplateController {
     @PostMapping(value = "/api/admin/canva-templates/upload-mockup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, String>> uploadMockup(@RequestParam("file") MultipartFile file) throws IOException {
+        logger.info("Upload mockup called. File name: {}, size: {} bytes", file.getOriginalFilename(), file.getSize());
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Empty file"));
         }
@@ -146,7 +150,7 @@ public class TemplateController {
         String ext = cleaned.contains(".") ? cleaned.substring(cleaned.lastIndexOf('.')) : "";
         String storedName = UUID.randomUUID() + ext;
         Path target = service.getMockupDir().resolve(storedName);
-    Files.copy(file.getInputStream(), target);
+        Files.copy(file.getInputStream(), target);
         String publicUrl = "/api/canva-templates/mockups/" + storedName;
         return ResponseEntity.ok(Map.of("url", publicUrl));
     }
