@@ -23,6 +23,7 @@ public class MockupTemplateController {
     public ResponseEntity<Resource> getMasterMockup(@PathVariable("filename") String filename) {
         try {
             Path file = Paths.get(masterDirConfig).resolve(filename).normalize();
+            System.out.println("[DEBUG] Looking for file: " + file.toAbsolutePath() + " Exists: " + Files.exists(file));
             Resource resource = new UrlResource(file.toUri());
             if (!resource.exists() || !resource.isReadable()) {
                 return ResponseEntity.notFound().build();
