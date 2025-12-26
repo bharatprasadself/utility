@@ -15,17 +15,26 @@ import org.springframework.core.io.UrlResource;
 import java.net.MalformedURLException;
 import java.io.File;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 public class MockupTemplateController {
+    private static final Logger logger = LoggerFactory.getLogger(MockupTemplateController.class);
+
+    @Value("${mockup.master.dir:data/uploads/mockup/master}")
+    private String masterDirConfig;
 
     @GetMapping("/api/master-mockups/{filename}")
     public ResponseEntity<Resource> getMasterMockup(@PathVariable("filename") String filename) {
+        logger.info("getMasterMockup called with filename: {}", filename);
+        logger.info("masterDirConfig: {}", masterDirConfig);
         try {
             Path file = Paths.get(masterDirConfig).resolve(filename).normalize();
-            System.out.println("[DEBUG] Looking for file: " + file.toAbsolutePath() + " Exists: " + Files.exists(file));
+            logger.info("[DEBUG] Looking for file: {} Exists: {}", file.toAbsolutePath(), Files.exists(file));
             Resource resource = new UrlResource(file.toUri());
             if (!resource.exists() || !resource.isReadable()) {
+                logger.warn("File not found or unreadable: {}", file.toAbsolutePath());
                 return ResponseEntity.notFound().build();
             }
             String contentType = Files.probeContentType(file);
@@ -33,14 +42,13 @@ public class MockupTemplateController {
                     .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
                     .body(resource);
         } catch (MalformedURLException e) {
+            logger.error("MalformedURLException for file: {}", filename, e);
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
+            logger.error("Exception in getMasterMockup for file: {}", filename, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
-    @Value("${mockup.master.dir:data/uploads/mockup/master}")
-    private String masterDirConfig;
 
     @RequestMapping(value = "/api/master-mockups", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, List<String>>> listMasterMockups() {
