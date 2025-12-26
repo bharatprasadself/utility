@@ -129,6 +129,17 @@ const TemplateMockupSetUI: React.FC = () => {
     a.click();
     a.remove();
   };
+  // New: Download selected master mockup in new tab
+  const handleDownloadSelectedMockup = () => {
+    if (!selectedMockupUrl || !selectedMockup) return;
+    const a = document.createElement('a');
+    a.href = selectedMockupUrl;
+    a.download = selectedMockup;
+    a.target = '_blank'; // Open in new tab if browser allows, but still trigger download
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
   // Track merged mockup type for download filename
   const [mergedMockupType, setMergedMockupType] = useState<string>('primary');
 
@@ -200,6 +211,16 @@ const TemplateMockupSetUI: React.FC = () => {
           sx={{ mb: 2 }}
         >
           Download Mockup
+        </Button>
+        {/* New: Download selected master mockup button */}
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleDownloadSelectedMockup}
+          disabled={!selectedMockupUrl}
+          sx={{ mb: 2, ml: 2 }}
+        >
+          Download Selected Master Mockup
         </Button>
 
         {error && <Alert severity="error">{error}</Alert>}

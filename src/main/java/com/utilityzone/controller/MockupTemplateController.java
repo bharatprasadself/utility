@@ -17,6 +17,7 @@ import java.io.File;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 
 @RestController
 public class MockupTemplateController {
@@ -40,6 +41,7 @@ public class MockupTemplateController {
             String contentType = Files.probeContentType(file);
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                     .body(resource);
         } catch (MalformedURLException e) {
             logger.error("MalformedURLException for file: {}", filename, e);
