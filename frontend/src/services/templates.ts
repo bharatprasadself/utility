@@ -34,7 +34,10 @@ export const uploadMockup = async (file: File): Promise<string> => {
   const res = await axiosInstance.post<{ url: string }>(
     '/api/admin/canva-templates/upload-mockup',
     form,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000 // 60 seconds for large uploads
+    }
   );
   return res.data.url;
 };
