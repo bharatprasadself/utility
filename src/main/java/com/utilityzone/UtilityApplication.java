@@ -20,6 +20,7 @@ public class UtilityApplication {
     private static final Logger logger = LoggerFactory.getLogger(UtilityApplication.class);
 
     public static void main(String[] args) {
+        logger.info("=== UtilityApplication started: test log to verify file logging ===");
         SpringApplication.run(UtilityApplication.class, args);
     }
     
