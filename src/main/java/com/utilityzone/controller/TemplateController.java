@@ -36,13 +36,15 @@ public class TemplateController {
     @GetMapping("/api/admin/canva-templates")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public List<Template> list() {
-        return service.list();
+        // Default to first page, size 100 for admin listing
+        return service.list(0, 100);
     }
 
     // Public listing for shop (only published templates)
     @GetMapping("/api/canva-templates")
     public List<Map<String, Object>> publicList() {
-        return service.list().stream()
+        // Default to first page, size 100 for public listing
+        return service.list(0, 100).stream()
             .filter(t -> "published".equalsIgnoreCase(t.getStatus()))
             .map(t -> {
                 java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
@@ -78,6 +80,8 @@ public class TemplateController {
                 String desc = baseTitle + " (" + typeLabel + ")";
                 m.put("title", desc);
                 m.put("mockupUrl", t.getMockupUrl());
+                m.put("secondaryMockupUrl", t.getSecondaryMockupUrl());
+                m.put("mobileMockupUrl", t.getMobileMockupUrl());
                 m.put("etsyListingUrl", t.getEtsyListingUrl());
                 return m;
             }).collect(Collectors.toList());
@@ -87,19 +91,19 @@ public class TemplateController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public Template create(@RequestBody Template req) {
         Template ct = new Template();
-        ct.setTitle(StringUtils.trimWhitespace(req.getTitle()));
-    ct.setCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getCanvaUseCopyUrl()));
-    ct.setMobileCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getMobileCanvaUseCopyUrl()));
-        ct.setMockupUrl(StringUtils.trimWhitespace(req.getMockupUrl()));
-        ct.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
-        ct.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
-        ct.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
-        ct.setRsvpCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getRsvpCanvaUseCopyUrl()));
-        ct.setDetailCardCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getDetailCardCanvaUseCopyUrl()));
-        ct.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
+        ct.setTitle(req.getTitle() == null ? null : req.getTitle().trim());
+        ct.setCanvaUseCopyUrl(req.getCanvaUseCopyUrl() == null ? null : req.getCanvaUseCopyUrl().trim());
+        ct.setMobileCanvaUseCopyUrl(req.getMobileCanvaUseCopyUrl() == null ? null : req.getMobileCanvaUseCopyUrl().trim());
+        ct.setMockupUrl(req.getMockupUrl() == null ? null : req.getMockupUrl().trim());
+        ct.setEtsyListingUrl(req.getEtsyListingUrl() == null ? null : req.getEtsyListingUrl().trim());
+        ct.setSecondaryMockupUrl(req.getSecondaryMockupUrl() == null ? null : req.getSecondaryMockupUrl().trim());
+        ct.setMobileMockupUrl(req.getMobileMockupUrl() == null ? null : req.getMobileMockupUrl().trim());
+        ct.setRsvpCanvaUseCopyUrl(req.getRsvpCanvaUseCopyUrl() == null ? null : req.getRsvpCanvaUseCopyUrl().trim());
+        ct.setDetailCardCanvaUseCopyUrl(req.getDetailCardCanvaUseCopyUrl() == null ? null : req.getDetailCardCanvaUseCopyUrl().trim());
+        ct.setPublicDescription(req.getPublicDescription() == null ? null : req.getPublicDescription().trim());
         // Persist preferred buyer PDF type if provided
         if (req.getBuyerPdfType() != null) {
-            ct.setBuyerPdfType(StringUtils.trimWhitespace(req.getBuyerPdfType()));
+            ct.setBuyerPdfType(req.getBuyerPdfType().trim());
         }
         return service.create(ct);
     }
@@ -114,20 +118,20 @@ public class TemplateController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public Template update(@PathVariable("id") Long id, @RequestBody Template req) {
         Template changes = new Template();
-        changes.setTitle(StringUtils.trimWhitespace(req.getTitle()));
-    changes.setCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getCanvaUseCopyUrl()));
-    changes.setMobileCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getMobileCanvaUseCopyUrl()));
-        changes.setMockupUrl(StringUtils.trimWhitespace(req.getMockupUrl()));
-        changes.setEtsyListingUrl(StringUtils.trimWhitespace(req.getEtsyListingUrl()));
-        changes.setSecondaryMockupUrl(StringUtils.trimWhitespace(req.getSecondaryMockupUrl()));
-        changes.setMobileMockupUrl(StringUtils.trimWhitespace(req.getMobileMockupUrl()));
-        changes.setRsvpCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getRsvpCanvaUseCopyUrl()));
-        changes.setDetailCardCanvaUseCopyUrl(StringUtils.trimWhitespace(req.getDetailCardCanvaUseCopyUrl()));
-        changes.setPublicDescription(StringUtils.trimWhitespace(req.getPublicDescription()));
+        changes.setTitle(req.getTitle() == null ? null : req.getTitle().trim());
+        changes.setCanvaUseCopyUrl(req.getCanvaUseCopyUrl() == null ? null : req.getCanvaUseCopyUrl().trim());
+        changes.setMobileCanvaUseCopyUrl(req.getMobileCanvaUseCopyUrl() == null ? null : req.getMobileCanvaUseCopyUrl().trim());
+        changes.setMockupUrl(req.getMockupUrl() == null ? null : req.getMockupUrl().trim());
+        changes.setEtsyListingUrl(req.getEtsyListingUrl() == null ? null : req.getEtsyListingUrl().trim());
+        changes.setSecondaryMockupUrl(req.getSecondaryMockupUrl() == null ? null : req.getSecondaryMockupUrl().trim());
+        changes.setMobileMockupUrl(req.getMobileMockupUrl() == null ? null : req.getMobileMockupUrl().trim());
+        changes.setRsvpCanvaUseCopyUrl(req.getRsvpCanvaUseCopyUrl() == null ? null : req.getRsvpCanvaUseCopyUrl().trim());
+        changes.setDetailCardCanvaUseCopyUrl(req.getDetailCardCanvaUseCopyUrl() == null ? null : req.getDetailCardCanvaUseCopyUrl().trim());
+        changes.setPublicDescription(req.getPublicDescription() == null ? null : req.getPublicDescription().trim());
         // do not touch buyerPdfUrl unless provided explicitly
-        if (req.getBuyerPdfUrl() != null) changes.setBuyerPdfUrl(StringUtils.trimWhitespace(req.getBuyerPdfUrl()));
+        if (req.getBuyerPdfUrl() != null) changes.setBuyerPdfUrl(req.getBuyerPdfUrl().trim());
         // allow updating persisted preferred buyer PDF type
-        if (req.getBuyerPdfType() != null) changes.setBuyerPdfType(StringUtils.trimWhitespace(req.getBuyerPdfType()));
+        if (req.getBuyerPdfType() != null) changes.setBuyerPdfType(req.getBuyerPdfType().trim());
         return service.update(id, changes);
     }
 

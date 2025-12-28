@@ -41,6 +41,9 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 
 @Service
 public class TemplateService {
+        // Cache next default title for 1 minute to avoid repeated DB scans
+        private volatile String cachedDefaultTitle = null;
+        private volatile long cachedDefaultTitleTime = 0;
     private final TemplateRepository repo;
     private static final Logger log = LoggerFactory.getLogger(TemplateService.class);
 
@@ -60,7 +63,11 @@ public class TemplateService {
     private static final float LINE_BODY = 16f;        // line height for body text
     private static final float BUTTON_H = 28f;         // button height
 
-    public List<Template> list() { return repo.findAll(); }
+    // Use pagination for large datasets
+    public List<Template> list(int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return repo.findAll(pageable).getContent();
+    }
     @Transactional
     public Template create(@NonNull Template t) {
         if (t.getTitle() == null || t.getTitle().isBlank()) {
@@ -116,6 +123,10 @@ public class TemplateService {
 
     public String getNextDefaultTitle() {
         final String prefix = "NextStepLabs_Digital_Template_";
+        long now = System.currentTimeMillis();
+        if (cachedDefaultTitle != null && (now - cachedDefaultTitleTime) < 60000) {
+            return cachedDefaultTitle;
+        }
         int dbMax = 0;
         try {
             dbMax = repo.findMaxNumericSuffixForPrefix(prefix);
@@ -124,22 +135,30 @@ public class TemplateService {
         int scanMax = 0;
         try {
             java.util.regex.Pattern p = java.util.regex.Pattern.compile(java.util.regex.Pattern.quote(prefix) + "(\\d+)$");
-            for (Template t : repo.findAll()) {
-                String title = t.getTitle();
-                if (title == null) continue;
-                java.util.regex.Matcher m = p.matcher(title);
-                if (m.find()) {
-                    try {
-                        int n = Integer.parseInt(m.group(1));
-                        if (n > scanMax) scanMax = n;
-                    } catch (NumberFormatException ignored2) {}
+            int page = 0, size = 100;
+            List<Template> batch;
+            do {
+                batch = list(page, size);
+                for (Template t : batch) {
+                    String title = t.getTitle();
+                    if (title == null) continue;
+                    java.util.regex.Matcher m = p.matcher(title);
+                    if (m.find()) {
+                        try {
+                            int n = Integer.parseInt(m.group(1));
+                            if (n > scanMax) scanMax = n;
+                        } catch (NumberFormatException ignored2) {}
+                    }
                 }
-            }
+                page++;
+            } while (!batch.isEmpty());
         } catch (Exception ignored) {}
 
         int next = Math.max(Math.max(0, dbMax), scanMax) + 1;
-        // Use 3-digit zero padding (e.g., 001, 002, 003)
-        return String.format(prefix + "%03d", next);
+        String result = String.format(prefix + "%03d", next);
+        cachedDefaultTitle = result;
+        cachedDefaultTitleTime = now;
+        return result;
     }
 
     private void deleteMockupByUrl(String url) throws IOException {
@@ -1158,9 +1177,11 @@ public class TemplateService {
         if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) return null;
         Path p = getMockupDir().resolve(fileName);
         if (!Files.exists(p)) return null;
-        BufferedImage img = ImageIO.read(p.toFile());
-        if (img == null) return null;
-        return LosslessFactory.createFromImage(doc, img);
+        try (java.io.InputStream in = Files.newInputStream(p)) {
+            BufferedImage img = ImageIO.read(in);
+            if (img == null) return null;
+            return LosslessFactory.createFromImage(doc, img);
+        }
     }
 
     private String nonNull(String v) { return v == null ? "" : v; }

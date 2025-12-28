@@ -71,6 +71,8 @@ export interface PublicTemplate {
   title: string;
   publicDescription?: string;
   mockupUrl?: string;
+  secondaryMockupUrl?: string;
+  mobileMockupUrl?: string;
   etsyListingUrl?: string;
 }
 
