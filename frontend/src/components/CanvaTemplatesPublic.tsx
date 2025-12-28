@@ -25,9 +25,10 @@ const CanvaTemplatesPublic = () => {
 
   const [imgIndexes, setImgIndexes] = useState<{[id: number]: number}>({});
 
-  const getImages = (t: PublicTemplate) => {
-    const urls = [t.mockupUrl, t.secondaryMockupUrl, t.mobileMockupUrl].filter(Boolean).map(url => url!.startsWith('http') ? url! : `${API_BASE_URL}${url}`);
-    return urls.length ? urls : [undefined];
+  const getImages = (t: PublicTemplate): string[] => {
+    return [t.mockupUrl, t.secondaryMockupUrl, t.mobileMockupUrl]
+      .filter((url): url is string => !!url)
+      .map(url => url.startsWith('http') ? url : `${API_BASE_URL}${url}`);
   };
 
   const handlePrev = (id: number, images: string[]) => {
