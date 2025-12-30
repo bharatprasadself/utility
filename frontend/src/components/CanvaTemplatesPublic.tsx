@@ -23,6 +23,27 @@ const CanvaTemplatesPublic = () => {
 
   useEffect(() => { refresh(); }, []);
 
+  const [imgIndexes, setImgIndexes] = useState<{[id: number]: number}>({});
+
+  const getImages = (t: PublicTemplate): string[] => {
+    return [t.mockupUrl, t.secondaryMockupUrl, t.mobileMockupUrl]
+      .filter((url): url is string => !!url)
+      .map(url => url.startsWith('http') ? url : `${API_BASE_URL}${url}`);
+  };
+
+  const handlePrev = (id: number, images: string[]) => {
+    setImgIndexes(prev => ({
+      ...prev,
+      [id]: prev[id] === undefined ? images.length - 1 : (prev[id] - 1 + images.length) % images.length
+    }));
+  };
+  const handleNext = (id: number, images: string[]) => {
+    setImgIndexes(prev => ({
+      ...prev,
+      [id]: prev[id] === undefined ? 1 : (prev[id] + 1) % images.length
+    }));
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
       <Container maxWidth="md" sx={{ mt: 4, mb: 4, flexGrow: 1, minWidth: 0 }}>
@@ -48,75 +69,82 @@ const CanvaTemplatesPublic = () => {
           </Typography>
         </Box>
 
-        {/* Admin tools are intentionally not shown on Shop route */}
-
         {err && <Typography color="error" sx={{ mb: 2 }}>{err}</Typography>}
 
-  <Grid container spacing={2}>
-            {loading && Array.from({ length: 6 }).map((_, i) => (
-              <Grid key={i} item xs={12} sm={6} md={6}>
-                <Card>
-                  <Skeleton variant="rectangular" height={260} />
-                  <CardContent>
-                    <Skeleton variant="text" width="80%" />
+        <Grid container spacing={2}>
+          {loading && Array.from({ length: 6 }).map((_, i) => (
+            <Grid key={i} item xs={12} sm={6} md={6}>
+              <Card>
+                <Skeleton variant="rectangular" height={260} />
+                <CardContent>
+                  <Skeleton variant="text" width="80%" />
+                </CardContent>
+                <CardActions>
+                  <Button fullWidth disabled>Loading…</Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+
+          {!loading && items.map(t => {
+            const images = getImages(t);
+            const idx = imgIndexes[t.id] ?? 0;
+            const imgSrc = images[idx];
+            return (
+              <Grid key={t.id} item xs={12} sm={6} md={6}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: 'box-shadow .2s ease', '&:hover': { boxShadow: 6 } }}>
+                  <Box sx={{ position: 'relative', height: { xs: 200, sm: 220, md: 260 }, bgcolor: imgSrc ? undefined : 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {imgSrc ? (
+                      <CardMedia
+                        component="img"
+                        src={imgSrc}
+                        alt={t.title}
+                        loading="lazy"
+                        sx={{ height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <Box sx={{ height: '100%', width: '100%', bgcolor: 'grey.100' }} />
+                    )}
+                    {images.length > 1 && (
+                      <>
+                        <Button onClick={() => handlePrev(t.id, images)} sx={{ position: 'absolute', left: 8, minWidth: 32, bgcolor: 'rgba(255,255,255,0.7)' }} size="small">&#8592;</Button>
+                        <Button onClick={() => handleNext(t.id, images)} sx={{ position: 'absolute', right: 8, minWidth: 32, bgcolor: 'rgba(255,255,255,0.7)' }} size="small">&#8594;</Button>
+                      </>
+                    )}
+                  </Box>
+                  <CardContent sx={{ pb: 0, minHeight: 72 }}>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={600}
+                      title={t.title}
+                      sx={{
+                        display: 'block',
+                        overflowWrap: 'anywhere'
+                      }}
+                    >
+                      {t.title}
+                    </Typography>
                   </CardContent>
-                  <CardActions>
-                    <Button fullWidth disabled>Loading…</Button>
+                  <CardActions sx={{ mt: 'auto' }}>
+                    <Button 
+                      fullWidth
+                      variant="contained" 
+                      color="primary" 
+                      disabled={!t.etsyListingUrl}
+                      onClick={() => { if (t.etsyListingUrl) window.open(t.etsyListingUrl, '_blank'); }}
+                    >
+                      Buy
+                    </Button>
                   </CardActions>
                 </Card>
               </Grid>
-            ))}
+            );
+          })}
 
-            {!loading && items.map(t => {
-              const imgSrc = t.mockupUrl
-                ? (t.mockupUrl.startsWith('http') ? t.mockupUrl : `${API_BASE_URL}${t.mockupUrl}`)
-                : undefined;
-              return (
-              <Grid key={t.id} item xs={12} sm={6} md={6}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: 'box-shadow .2s ease', '&:hover': { boxShadow: 6 } }}>
-              {imgSrc ? (
-                <CardMedia
-                  component="img"
-                  src={imgSrc}
-                  alt={t.title}
-                  loading="lazy"
-                  sx={{ height: { xs: 200, sm: 220, md: 260 }, objectFit: 'cover' }}
-                />
-              ) : (
-                    <Box sx={{ height: { xs: 200, sm: 220, md: 260 }, bgcolor: 'grey.100' }} />
-              )}
-              <CardContent sx={{ pb: 0, minHeight: 72 }}>
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={600}
-                  title={t.title}
-                  sx={{
-                    display: 'block',
-                    overflowWrap: 'anywhere'
-                  }}
-                >
-                  {t.title}
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ mt: 'auto' }}>
-                <Button 
-                  fullWidth
-                  variant="contained" 
-                  color="primary" 
-                  disabled={!t.etsyListingUrl}
-                  onClick={() => { if (t.etsyListingUrl) window.open(t.etsyListingUrl, '_blank'); }}
-                >
-                  Buy
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        )})}
-
-        {!loading && items.length === 0 && (
-          <Grid item xs={12}><Typography color="text.secondary">No templates found.</Typography></Grid>
-        )}
-      </Grid>
+          {!loading && items.length === 0 && (
+            <Grid item xs={12}><Typography color="text.secondary">No templates found.</Typography></Grid>
+          )}
+        </Grid>
       </Container>
       {/* Right rail ads: match Blog layout exactly */}
       <Box

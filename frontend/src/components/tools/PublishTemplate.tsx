@@ -313,19 +313,18 @@ export default function PublishTemplate() {
         <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
           <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Stack spacing={2} direction="column">
-              <Grid container spacing={2} sx={{ width: '100%' }}>
+              
                 <Grid item xs={12}>
                   <TextField
                     label="Title (auto-generated)"
                     value={title}
                     InputProps={{ readOnly: true }}
                     fullWidth
-                    sx={{ minWidth: 320, mb: 1.25 }}
                   />
                 </Grid>
                 {/* Buyer PDF Type in its own grid row */}
                 <Grid item xs={12}>
-                  <FormControl fullWidth sx={{ minWidth: 320, mb: 1 }}>
+                  <FormControl fullWidth>
                     <InputLabel id="create-pdf-type">Buyer PDF Type</InputLabel>
                     <Select
                       labelId="create-pdf-type"
@@ -347,7 +346,6 @@ export default function PublishTemplate() {
                     value={canvaUrl}
                     onChange={(e) => setCanvaUrl(e.target.value)}
                     fullWidth
-                    sx={{ minWidth: 320, mb: 1 }}
                   />
                 </Grid>
                 {(createPdfType === 'print-mobile' || createPdfType === 'invite-suite') && (
@@ -357,7 +355,6 @@ export default function PublishTemplate() {
                       value={mobileCanvaUrl}
                       onChange={(e) => setMobileCanvaUrl(e.target.value)}
                       fullWidth
-                      sx={{ minWidth: 320, mb: 1 }}
                     />
                   </Grid>
                 )}
@@ -369,7 +366,6 @@ export default function PublishTemplate() {
                         value={rsvpCanvaUrl}
                         onChange={(e) => setRsvpCanvaUrl(e.target.value)}
                         fullWidth
-                        sx={{ minWidth: 320, mb: 1 }}
                       />
                     </Grid>
                     <Grid item xs={12}>
@@ -378,12 +374,10 @@ export default function PublishTemplate() {
                         value={detailCardCanvaUrl}
                         onChange={(e) => setDetailCardCanvaUrl(e.target.value)}
                         fullWidth
-                        sx={{ minWidth: 320, mb: 1 }}
                       />
                     </Grid>
                   </>
                 )}
-              </Grid>
               <Grid container alignItems="center" sx={{ width: '100%', mb: 1.25 }}>
                 <Grid item xs={12} sm={4} md={4} lg={3}>
                   <FormLabel>Primary mockup</FormLabel>
