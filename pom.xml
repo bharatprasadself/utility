@@ -12,7 +12,7 @@
 
     <groupId>com.utilityzone</groupId>
     <artifactId>utility</artifactId>
-    <version>1.10.04</version>
+    <version>1.10.05-SNAPSHOT</version>
     <name>utility</name>
     <description>Utility Zone Application</description>
 
