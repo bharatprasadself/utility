@@ -37,6 +37,8 @@ import PublishEbooks from './components/tools/PublishEbooks';
 import AuthorPage from './components/tools/AuthorPage';
 import PublishTemplate from './components/tools/PublishTemplate';
 
+import TemplateMockup from './components/tools/TemplateMockup';
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -75,6 +77,7 @@ function App() {
                     <Route path="/tools/ebook-writer" element={<EbookWriter />} />
                     <Route path="/tools/publish-ebooks" element={<PublishEbooks />} />
                     <Route path="/tools/publish-template" element={<PublishTemplate />} />
+                    <Route path="/tools/template-mockup" element={<TemplateMockup />} />
                     <Route path="/tools/author-page" element={<AuthorPage />} />
                     <Route path="/shop/canva-templates" element={<CanvaTemplatesPublic />} />
                     <Route path="/admin/canva-templates" element={<BuyerPdfTool />} />

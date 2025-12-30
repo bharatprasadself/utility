@@ -94,7 +94,7 @@ export default function BuyerPdfTool() {
       <Typography variant="h4" gutterBottom>Online Buyer PDF Generator</Typography>
       <Grid container spacing={2} alignItems="stretch" sx={{ mb: 3 }}>
         <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
-          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', minWidth: 380 }}>
             <Stack spacing={2} direction="column">
               <TextField
                 label="Title"
