@@ -118,19 +118,24 @@ export default function TemplateDescription() {
   const handleSelect = (id: number|null, t?: any) => {
     setSelectedId(id);
     setIsNew(false);
+    let name = '', title = '', desc = '';
     if (t) {
-      setTemplateName(t.name || '');
-      setTemplateTitle(t.title || '');
-      setTemplateBody(t.description || '');
+      name = t.name || '';
+      title = t.title || '';
+      desc = t.description || '';
     } else if (id != null) {
       const found = templates.find(tmp => tmp.id === id);
-      setTemplateName(found?.name || '');
-      setTemplateTitle(found?.title || '');
-      setTemplateBody(found?.description || '');
-    } else {
-      setTemplateName('');
-      setTemplateTitle('');
-      setTemplateBody('');
+      name = found?.name || '';
+      title = found?.title || '';
+      desc = found?.description || '';
+    }
+    setTemplateName(name);
+    setTemplateTitle(title);
+    setTemplateBody(desc);
+    // Auto-select Event and Style if Title contains 'Birthday'
+    if (title && title.toLowerCase().includes('birthday')) {
+      setEventType('Birthday');
+      setStyle('Kids');
     }
     setEditSuccess(null);
     setEditError(null);
