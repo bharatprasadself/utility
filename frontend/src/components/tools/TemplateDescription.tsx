@@ -115,10 +115,13 @@ export default function TemplateDescription() {
   }, []);
 
   // Select a template for editing/viewing
+  const [isBirthdayTemplate, setIsBirthdayTemplate] = useState(false);
+  const [isWeddingTemplate, setIsWeddingTemplate] = useState(false);
   const handleSelect = (id: number|null, t?: any) => {
     setSelectedId(id);
     setIsNew(false);
     let name = '', title = '', desc = '';
+    let birthday = false, wedding = false;
     if (t) {
       name = t.name || '';
       title = t.title || '';
@@ -132,10 +135,19 @@ export default function TemplateDescription() {
     setTemplateName(name);
     setTemplateTitle(title);
     setTemplateBody(desc);
-    // Auto-select Event and Style if Title contains 'Birthday'
-    if (title && title.toLowerCase().includes('birthday')) {
+    // Auto-select and disable logic for Birthday and Wedding
+    birthday = typeof title === 'string' && title.toLowerCase().includes('birthday');
+    wedding = typeof title === 'string' && title.toLowerCase().includes('wedding');
+    setIsBirthdayTemplate(birthday);
+    setIsWeddingTemplate(wedding);
+    if (birthday) {
       setEventType('Birthday');
       setStyle('Kids');
+      setAudience('Kids');
+    } else if (wedding) {
+      setEventType('Wedding');
+      setStyle('Traditional');
+      setAudience('Adults');
     }
     setEditSuccess(null);
     setEditError(null);
@@ -244,20 +256,18 @@ export default function TemplateDescription() {
                   value={eventType}
                   label="Event Type"
                   onChange={e => setEventType(e.target.value)}
+                  disabled={isBirthdayTemplate || isWeddingTemplate}
                 >
-                  {['Wedding', 'Reception', 'Birthday'].map(type => {
-                    // Only enable 'Birthday' for Kids audience
-                    if (audience === 'Kids' && type !== 'Birthday') {
-                      return (
-                        <MenuItem key={type} value={type} disabled>
-                          {type} (Adults only)
-                        </MenuItem>
-                      );
-                    }
-                    return (
-                      <MenuItem key={type} value={type}>{type}</MenuItem>
-                    );
-                  })}
+                  {['Wedding', 'Reception', 'Birthday'].map(type => (
+                    <MenuItem key={type} value={type}
+                      disabled={
+                        (isBirthdayTemplate && type !== 'Birthday') ||
+                        (isWeddingTemplate && type === 'Birthday')
+                      }
+                    >
+                      {type}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
               <FormControl fullWidth sx={{ mb: 2 }}>
@@ -280,20 +290,18 @@ export default function TemplateDescription() {
                   value={style}
                   label="Style"
                   onChange={e => setStyle(e.target.value)}
+                  disabled={isBirthdayTemplate || isWeddingTemplate}
                 >
-                  {styles.map(s => {
-                    // Only enable 'Kids' and 'Cartoon' styles for Kids audience
-                    if ((s === 'Kids' || s === 'Cartoon') && audience !== 'Kids') {
-                      return (
-                        <MenuItem key={s} value={s} disabled>
-                          {s} (Kids only)
-                        </MenuItem>
-                      );
-                    }
-                    return (
-                      <MenuItem key={s} value={s}>{s}</MenuItem>
-                    );
-                  })}
+                  {styles.map(s => (
+                    <MenuItem key={s} value={s}
+                      disabled={
+                        (isBirthdayTemplate && s !== 'Kids') ||
+                        (isWeddingTemplate && s === 'Kids')
+                      }
+                    >
+                      {s}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
               <FormControl fullWidth sx={{ mb: 2 }}>
@@ -309,9 +317,17 @@ export default function TemplateDescription() {
                       setEventType('Birthday');
                     }
                   }}
+                  disabled={isBirthdayTemplate || isWeddingTemplate}
                 >
                   {audiences.map(a => (
-                    <MenuItem key={a} value={a}>{a}</MenuItem>
+                    <MenuItem key={a} value={a}
+                      disabled={
+                        (isBirthdayTemplate && a !== 'Kids') ||
+                        (isWeddingTemplate && a === 'Kids')
+                      }
+                    >
+                      {a}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
