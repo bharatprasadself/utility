@@ -79,10 +79,22 @@ export default function TemplateDescription() {
         '• Editable {{eventType}} Invitation – Canva Template\n' +
         '• Buyer PDF with Canva access link & instructions';
     }
-    body = body.replace(/WHAT YOU WILL RECEIVE \(\{\{buyerPdfType\}\}\)[\s\S]*?(-{10,}|EDITING DETAILS)/, (match: any) => {
-      const nextSection = match.match(/(-{10,}|EDITING DETAILS)/);
-      return `WHAT YOU WILL RECEIVE (${buyerPdfType})\n\n${whatYouReceive}\n\n${nextSection ? nextSection[0] : ''}`;
-    });
+    const additional = [
+      '* Click on the balloon number element',
+      '* Delete the existing number and add a new number from Canva Elements',
+      '   (Search: “gold number balloon”)'
+    ].join('\n');
+    if (/EDITING DETAILS/.test(body)) {
+      body = body.replace(/(EDITING DETAILS[\s\S]*?)(-{10,}|$)/, (match: any, detailsSection: string, afterSection: string) => {
+        if (!detailsSection.includes('balloon number element')) {
+          return `${detailsSection.trim()}\n${additional}\n${afterSection}`;
+        }
+        return match;
+      });
+    } else {
+      // If not present, append the section at the end
+      body = `${body}\n\nEDITING DETAILS\n* All text is fully editable\n* Select design elements can be adjusted\n* Background and primary decorative elements are fixed to maintain the original design\n${additional}`;
+    }
     function getRegionDisplay(region: string) {
       return region === "India" ? "Indian celebrations" : "worldwide use";
     }

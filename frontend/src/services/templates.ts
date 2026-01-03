@@ -47,12 +47,12 @@ export const createTemplate = async (payload: { title: string; publicDescription
   return res.data;
 };
 
-export const generateBuyerPdf = async (templateId: number, pdfType: BuyerPdfType): Promise<string> => {
+export const generateBuyerPdf = async (templateId: number, pdfType: BuyerPdfType, includeAgeInstructions?: boolean): Promise<string> => {
   const res = await axiosInstance.post<{ success: boolean; buyerPdfUrl: string }>(
     '/api/admin/canva-templates/generate-buyer-pdf',
     null,
     {
-      params: { templateId, pdfType },
+      params: { templateId, pdfType, includeAgeInstructions },
       // PDF generation can take longer with large images; extend timeout for this request
       timeout: 60000
     }

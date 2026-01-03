@@ -214,9 +214,10 @@ public class TemplateController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> generateBuyerPdf(
             @RequestParam("templateId") Long templateId,
-            @RequestParam(value = "pdfType") String pdfType
+            @RequestParam(value = "pdfType") String pdfType,
+            @RequestParam(value = "includeAgeInstructions", required = false, defaultValue = "false") boolean includeAgeInstructions
     ) throws IOException {
-        Template updated = service.generateBuyerPdf(templateId, pdfType);
+        Template updated = service.generateBuyerPdf(templateId, pdfType, includeAgeInstructions);
         // Echo back canonical type value for client display
         return ResponseEntity.ok(Map.of("success", true, "buyerPdfUrl", updated.getBuyerPdfUrl(), "pdfType", pdfType));
     }

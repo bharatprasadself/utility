@@ -232,7 +232,7 @@ public class TemplateService {
         return MediaType.APPLICATION_OCTET_STREAM;
     }
 
-    public Template generateBuyerPdf(@NonNull Long id, String pdfType) throws IOException {
+    public Template generateBuyerPdf(@NonNull Long id, String pdfType, boolean includeAgeInstructions) throws IOException {
         Template t = repo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
         Path pdfPath = getPdfPathFor(t);
@@ -260,7 +260,7 @@ public class TemplateService {
         }
         try { log.info("[BuyerPDF] Generating id={} type={}", id, type); } catch (Exception ignore) {}
         // Persist the chosen type as the preferred buyer PDF type
-        t.setBuyerPdfType(type.name());
+        t.setBuyerPdfType(type.name().toLowerCase().replace('_', '-'));
 
         try (PDDocument doc = new PDDocument()) {
             // Load logo if present
@@ -764,6 +764,16 @@ public class TemplateService {
                     "Select design elements can be adjusted",
                     "Background and primary decorative elements are fixed to maintain the original design"
                 };
+                if (includeAgeInstructions) {
+                    String[] extra = new String[]{
+                        "Click on the balloon number element",
+                        "Delete the existing number and add a new number from Canva Elements (Search: \u201cgold number balloon\u201d)"
+                    };
+                    String[] combined = new String[editDetails.length + extra.length];
+                    System.arraycopy(editDetails, 0, combined, 0, editDetails.length);
+                    System.arraycopy(extra, 0, combined, editDetails.length, extra.length);
+                    editDetails = combined;
+                }
                 for (String note : editDetails) {
                     stepY = drawWrapped(cs, "• " + note, MARGIN + 10f, stepY, contentW - 10f, PDType1Font.HELVETICA, 11f, 14f);
                 }
