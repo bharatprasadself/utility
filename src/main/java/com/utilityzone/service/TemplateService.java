@@ -764,20 +764,16 @@ public class TemplateService {
                     "Select design elements can be adjusted",
                     "Background and primary decorative elements are fixed to maintain the original design"
                 };
-                if (includeAgeInstructions) {
-                    String[] extra = new String[]{
-                        "Click on the balloon number element",
-                        "Delete the existing number and add a new number from Canva Elements (Search: \u201cgold number balloon\u201d)"
-                    };
-                    String[] combined = new String[editDetails.length + extra.length];
-                    System.arraycopy(editDetails, 0, combined, 0, editDetails.length);
-                    System.arraycopy(extra, 0, combined, editDetails.length, extra.length);
-                    editDetails = combined;
-                }
                 for (String note : editDetails) {
                     stepY = drawWrapped(cs, "• " + note, MARGIN + 10f, stepY, contentW - 10f, PDType1Font.HELVETICA, 11f, 14f);
                 }
-                stepY -= GAP;
+                // Conditionally add the Note about balloon number editing below Editing Details
+                if (includeAgeInstructions) {
+                    String balloonNote = "Note: To edit the age (Balloon numbers), click on the balloon number element. Delete the existing number and add a new number from Canva Elements (Search: \"gold number balloon\").";
+                    stepY -= 8f;
+                    stepY = drawWrapped(cs, balloonNote, MARGIN + 10f, stepY, contentW - 10f, PDType1Font.HELVETICA_OBLIQUE, 11f, 15f);
+                    stepY -= GAP;
+                }
                 drawDivider(cs, MARGIN, stepY - 6f, mb3.getWidth() - MARGIN * 2);
                 stepY -= GAP * 2; // spacing before optional RSVP Instructions
                 // RSVP Instructions (Invite Suite) moved here for better readability

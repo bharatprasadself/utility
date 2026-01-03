@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '@/services/axiosConfig';
 import { Box, Typography, Alert, FormControl, InputLabel, Select, MenuItem, Button, TextField, Stack, Grid, Paper } from '@mui/material';
@@ -62,38 +60,21 @@ export default function TemplateDescription() {
   function getPreviewBody() {
     let body = templateBody || '';
     // Dynamically generate WHAT YOU WILL RECEIVE section
-    let whatYouReceive = '';
-    if (buyerPdfType === 'Invite Suite') {
-      whatYouReceive =
-        '• Editable {{eventType}} Invitation – Canva Template\n' +
-        '• RSVP Card – Canva Template\n' +
-        '• Details Card – Canva Template\n' +
-        '• Buyer PDF with Canva access link & instructions';
-    } else if (buyerPdfType === 'Mobile & Print' || buyerPdfType === 'Print & Mobile') {
-      whatYouReceive =
-        '• Editable {{eventType}} Invitation – Canva Template\n' +
-        '• Mobile Version – Canva Template\n' +
-        '• Buyer PDF with Canva access link & instructions';
-    } else {
-      whatYouReceive =
-        '• Editable {{eventType}} Invitation – Canva Template\n' +
-        '• Buyer PDF with Canva access link & instructions';
-    }
-    const additional = [
-      '* Click on the balloon number element',
-      '* Delete the existing number and add a new number from Canva Elements',
-      '   (Search: “gold number balloon”)'
-    ].join('\n');
+    const note = '\n\nNote: To edit the age (Balloon numbers), click on the balloon number element. Delete the existing number and add a new number from Canva Elements (Search: “gold number balloon”).';
+    const shouldShowNote = eventType === 'Birthday';
     if (/EDITING DETAILS/.test(body)) {
       body = body.replace(/(EDITING DETAILS[\s\S]*?)(-{10,}|$)/, (match: any, detailsSection: string, afterSection: string) => {
-        if (!detailsSection.includes('balloon number element')) {
-          return `${detailsSection.trim()}\n${additional}\n${afterSection}`;
+        if (shouldShowNote && !detailsSection.includes('Note: To edit the age')) {
+          return `${detailsSection.trim()}${note}\n${afterSection}`;
+        } else if (!shouldShowNote && detailsSection.includes('Note: To edit the age')) {
+          // Remove the note if present and not a birthday template
+          return detailsSection.replace(/\n+Note: To edit the age \(Balloon numbers\)[^\n]*\n?/g, '') + `\n${afterSection}`;
         }
         return match;
       });
     } else {
       // If not present, append the section at the end
-      body = `${body}\n\nEDITING DETAILS\n* All text is fully editable\n* Select design elements can be adjusted\n* Background and primary decorative elements are fixed to maintain the original design\n${additional}`;
+      body = `${body}\n\nEDITING DETAILS\n* All text is fully editable\n* Select design elements can be adjusted\n* Background and primary decorative elements are fixed to maintain the original design${shouldShowNote ? note : ''}`;
     }
     function getRegionDisplay(region: string) {
       return region === "India" ? "Indian celebrations" : "worldwide use";
