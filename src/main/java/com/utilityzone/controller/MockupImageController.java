@@ -132,7 +132,7 @@ public class MockupImageController {
             placeHeight = 1300;
             // Example: version-specific adjustment
             if (version != null && version.equalsIgnoreCase("V2")) {
-                placeX -= 375; // tweak for V2
+                placeX -= 376; // tweak for V2
                 placeY -= 164; // tweak for V2
                 placeWidth += 80; // tweak for V2
                 placeHeight += 148; // tweak for V2
