@@ -108,11 +108,12 @@ public class MockupImageController {
     }
 
     @PostMapping(value = "/merge", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-        public ResponseEntity<byte[]> mergeProductImage(
-            @RequestParam("mockup") MultipartFile mockupFile,
-            @RequestParam("product") MultipartFile productFile,
-            @RequestParam(value = "mockupType", required = false) String mockupType
-        ) throws IOException {
+    public ResponseEntity<byte[]> mergeProductImage(
+        @RequestParam("mockup") MultipartFile mockupFile,
+        @RequestParam("product") MultipartFile productFile,
+        @RequestParam(value = "mockupType", required = false) String mockupType,
+        @RequestParam(value = "version", required = false) String version
+    ) throws IOException {
         final int OUTPUT_WIDTH = 2000;
         final int OUTPUT_HEIGHT = 2000;
 
@@ -122,15 +123,31 @@ public class MockupImageController {
         int placeWidth = 1032;
         int placeHeight = 1452;
 
-        // If mobile, use different region (example values, adjust as needed)
+        // Example: adjust region based on version if needed
+        // (Extend this logic as needed for different versions)
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
             placeX = 650;
             placeY = 284;
             placeWidth = 710;
             placeHeight = 1300;
+            // Example: version-specific adjustment
+            if (version != null && version.equalsIgnoreCase("V2")) {
+                placeX += 10; // Example tweak for V2
+            }
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             placeX = 514;
             placeY = 256;
+            if (version != null && version.equalsIgnoreCase("V2")) {
+                placeY += 10; // Example tweak for V2
+            }
+        } else {
+            // primary
+            if (version != null && version.equalsIgnoreCase("V2")) {
+                placeX -= 290; // tweak for V2
+                placeY -= 155; // tweak for V2
+                placeWidth += 74; // tweak for V2
+                placeHeight += 20; // tweak for V2
+            }
         }
 
         BufferedImage mockup = ImageIO.read(mockupFile.getInputStream());
@@ -153,6 +170,7 @@ public class MockupImageController {
         } else {
             roundedProduct = processPrintMockup(product, placeWidth, placeHeight);
         }
+        // Optionally, version can be used in the above logic for further customization
 
         int targetW = roundedProduct.getWidth();
         int targetH = roundedProduct.getHeight();

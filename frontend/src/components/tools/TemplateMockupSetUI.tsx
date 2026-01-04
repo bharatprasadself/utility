@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem } from '@mui/material';
 import axios, { API_BASE_URL } from '@/services/axiosConfig';
 
+
 const TemplateMockupSetUI: React.FC = () => {
 
   // For adding a new mockup when list is empty
@@ -52,10 +53,24 @@ const TemplateMockupSetUI: React.FC = () => {
     // Fetch master mockups on mount
     useEffect(() => {
       axios.get('/api/master-mockups').then(res => {
-        // Flatten all mockup names into a single array
-        const allNames = [...(res.data.primary || []), ...(res.data.mobile || [])];
+        let allNames: string[] = [];
+        if (Array.isArray(res.data)) {
+          allNames = res.data.filter((v: any) => typeof v === 'string');
+        } else if (typeof res.data === 'object' && res.data !== null) {
+          Object.values(res.data).forEach(val => {
+            if (Array.isArray(val)) {
+              allNames.push(...val.filter((v: any) => typeof v === 'string'));
+            }
+          });
+        }
+        // Remove duplicates and falsy values
+        allNames = Array.from(new Set(allNames)).filter(Boolean);
         setMasterMockups(allNames);
         if (allNames.length > 0) setSelectedMockup(allNames[0]);
+        else setSelectedMockup(null);
+      }).catch(() => {
+        setMasterMockups([]);
+        setSelectedMockup(null);
       });
     }, []);
   const [productFile, setProductFile] = useState<File | null>(null);
@@ -102,6 +117,13 @@ const TemplateMockupSetUI: React.FC = () => {
       if (nameLc.includes('mobile')) mockupType = 'mobile';
       else if (nameLc.includes('secondary')) mockupType = 'secondary';
       formData.append('mockupType', mockupType);
+      // Extract version from file name (e.g., V1, V2, V3)
+      let version = 'V1';
+      const versionMatch = selectedMockup.match(/v\d+/i);
+      if (versionMatch) {
+        version = versionMatch[0].toUpperCase();
+      }
+      formData.append('version', version);
       // Store for download filename
       setMergedMockupType(mockupType);
       const res = await axios.post('/api/mockup-image/merge', formData, {
@@ -183,8 +205,10 @@ const TemplateMockupSetUI: React.FC = () => {
           </Select>
         </Box>
 
-        {/* Product upload */}
 
+
+
+        {/* Product upload */}
         <Box mb={2}>
           <Button variant="outlined" component="label" sx={{ mb: 2 }}>
             Select Product Image
