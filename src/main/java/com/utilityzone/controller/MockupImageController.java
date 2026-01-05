@@ -132,10 +132,10 @@ public class MockupImageController {
             placeHeight = 1300;
             // Example: version-specific adjustment
             if (version != null && version.equalsIgnoreCase("V2")) {
-                placeX -= 376; // tweak for V2
-                placeY -= 164; // tweak for V2
-                placeWidth += 80; // tweak for V2
-                placeHeight += 148; // tweak for V2
+                placeX -= 416; // tweak for V2
+                placeY += 70; // tweak for V2
+                placeWidth -= 28; // tweak for V2
+                placeHeight -= 54; // tweak for V2
             }
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             placeX = 514;
@@ -146,10 +146,10 @@ public class MockupImageController {
         } else {
             // primary
             if (version != null && version.equalsIgnoreCase("V2")) {
-                placeX -= 290; // tweak for V2
-                placeY -= 155; // tweak for V2
-                placeWidth += 74; // tweak for V2
-                placeHeight += 20; // tweak for V2
+                placeX -= 280; // tweak for V2
+                placeY += 30; // tweak for V2
+                placeWidth -= 42; // tweak for V2
+                placeHeight -= 124; // tweak for V2
             }
         }
 
