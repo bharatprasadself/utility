@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import java.net.MalformedURLException;
@@ -82,7 +83,7 @@ public class MockupTemplateController {
             if (!Files.exists(dir)) Files.createDirectories(dir);
             // Save with original cleaned name only
             Path target = dir.resolve(cleaned);
-            Files.copy(file.getInputStream(), target);
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             return ResponseEntity.ok("Uploaded successfully");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload: " + e.getMessage());
