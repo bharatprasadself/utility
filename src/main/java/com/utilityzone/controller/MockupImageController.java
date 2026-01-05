@@ -89,10 +89,10 @@ public class MockupImageController {
         gProd.dispose();
 
         int radius;
-        if (version != null && version.equalsIgnoreCase("V2")) {
-            radius = Math.min(targetW, targetH) / 9; // More pronounced arc for V2
+        if (version != null && version.equalsIgnoreCase("V3")) {
+            radius = Math.min(targetW, targetH) / 12; // More pronounced arc for V3
         } else {
-            radius = Math.min(targetW, targetH) / 8;
+            radius = Math.min(targetW, targetH) / 9;
         }
         BufferedImage roundedProduct = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = roundedProduct.createGraphics();
@@ -132,13 +132,13 @@ public class MockupImageController {
         // (Extend this logic as needed for different versions)
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
             placeX = 650;
-            placeY = 284;
+            placeY = 286;
             placeWidth = 709;
             placeHeight = 1300;
             // Example: version-specific adjustment
             if (version != null && version.equalsIgnoreCase("V2")) {
                 placeX -= 413; // tweak for V2
-                placeY += 70; // tweak for V2
+                placeY += 68; // tweak for V2
                 placeWidth -= 32; // tweak for V2
                 placeHeight -= 54; // tweak for V2
             }
