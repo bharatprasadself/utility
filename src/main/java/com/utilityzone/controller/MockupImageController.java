@@ -1,10 +1,12 @@
 package com.utilityzone.controller;
 
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -113,7 +115,7 @@ public class MockupImageController {
     }
 
     @PostMapping(value = "/merge", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<byte[]> mergeProductImage(
+    public ResponseEntity<StreamingResponseBody> mergeProductImage(
         @RequestParam("mockup") MultipartFile mockupFile,
         @RequestParam("product") MultipartFile productFile,
         @RequestParam(value = "mockupType", required = false) String mockupType,
@@ -129,47 +131,41 @@ public class MockupImageController {
         int placeHeight = 1452;
 
         // Example: adjust region based on version if needed
-        // (Extend this logic as needed for different versions)
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
             placeX = 650;
             placeY = 286;
             placeWidth = 709;
             placeHeight = 1300;
-            // Example: version-specific adjustment
             if (version != null && version.equalsIgnoreCase("V2")) {
-                placeX -= 413; // tweak for V2
-                placeY += 68; // tweak for V2
-                placeWidth -= 32; // tweak for V2
-                placeHeight -= 54; // tweak for V2
+                placeX -= 413;
+                placeY += 68;
+                placeWidth -= 32;
+                placeHeight -= 54;
             }
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             placeX = 514;
             placeY = 256;
             if (version != null && version.equalsIgnoreCase("V2")) {
-                placeY += 10; // Example tweak for V2
+                placeY += 10;
             }
         } else {
-            // primary
             if (version != null && version.equalsIgnoreCase("V2")) {
-                placeX -= 280; // tweak for V2
-                placeY += 30; // tweak for V2
-                placeWidth -= 42; // tweak for V2
-                placeHeight -= 124; // tweak for V2
+                placeX -= 280;
+                placeY += 30;
+                placeWidth -= 42;
+                placeHeight -= 124;
             }
         }
 
         BufferedImage mockup = ImageIO.read(mockupFile.getInputStream());
         BufferedImage product = ImageIO.read(productFile.getInputStream());
 
-        // Resize mockup to 2000x2000 if needed
         Image scaledMockup = mockup.getScaledInstance(OUTPUT_WIDTH, OUTPUT_HEIGHT, Image.SCALE_SMOOTH);
         BufferedImage resizedMockup = new BufferedImage(OUTPUT_WIDTH, OUTPUT_HEIGHT, BufferedImage.TYPE_INT_ARGB);
         Graphics2D gMockup = resizedMockup.createGraphics();
         gMockup.drawImage(scaledMockup, 0, 0, null);
         gMockup.dispose();
 
-
-        // Use extracted methods for mockup image processing
         BufferedImage roundedProduct;
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
             roundedProduct = processMobileMockup(product, placeWidth, placeHeight, version);
@@ -178,13 +174,11 @@ public class MockupImageController {
         } else {
             roundedProduct = processPrintMockup(product, placeWidth, placeHeight);
         }
-        // Optionally, version can be used in the above logic for further customization
 
         int targetW = roundedProduct.getWidth();
         int targetH = roundedProduct.getHeight();
         int offsetX = placeX + (placeWidth - targetW) / 2;
         int offsetY = placeY;
-        
 
         BufferedImage combined = new BufferedImage(OUTPUT_WIDTH, OUTPUT_HEIGHT, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = combined.createGraphics();
@@ -192,12 +186,21 @@ public class MockupImageController {
         g.drawImage(roundedProduct, offsetX, offsetY, null);
         g.dispose();
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(combined, "png", baos);
-        byte[] imageBytes = baos.toByteArray();
+        // Explicitly nullify large objects after use
+        mockup = null;
+        product = null;
+        scaledMockup = null;
+        resizedMockup = null;
+        roundedProduct = null;
+
+        StreamingResponseBody stream = outputStream -> {
+            ImageIO.write(combined, "png", outputStream);
+            // Explicitly nullify combined after streaming
+            combined.flush();
+        };
 
         return ResponseEntity.status(HttpStatus.OK)
             .contentType(MediaType.IMAGE_PNG)
-            .body(imageBytes);
-        }
+            .body(stream);
+    }
 }

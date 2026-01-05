@@ -5,6 +5,7 @@ import com.utilityzone.service.TemplateService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -160,7 +161,7 @@ public class TemplateController {
     }
 
     @GetMapping("/api/canva-templates/mockups/{file}")
-    public ResponseEntity<?> getMockup(@PathVariable("file") String fileName,
+    public ResponseEntity<StreamingResponseBody> getMockup(@PathVariable("file") String fileName,
                                             @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) throws IOException {
         Path path = service.getMockupDir().resolve(fileName);
         if (!Files.exists(path)) {
@@ -169,7 +170,7 @@ public class TemplateController {
             return ResponseEntity.ok()
                     .contentType(MediaType.IMAGE_PNG)
                     .header("Cache-Control", "public, max-age=300")
-                    .body(png);
+                    .body(outputStream -> outputStream.write(png));
         }
         String eTag = "\"" + fileName + '-' + Files.size(path) + "\"";
         if (ifNoneMatch != null && ifNoneMatch.equals(eTag)) {
@@ -178,13 +179,21 @@ public class TemplateController {
                     .eTag(eTag)
                     .build();
         }
-        byte[] bytes = Files.readAllBytes(path);
         MediaType mt = service.detectMediaType(path);
+        StreamingResponseBody stream = outputStream -> {
+            try (java.io.InputStream in = Files.newInputStream(path)) {
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = in.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, len);
+                }
+            }
+        };
         return ResponseEntity.ok()
                 .contentType(mt)
                 .header("Cache-Control", "public, max-age=86400, immutable")
                 .eTag(eTag)
-                .body(bytes);
+                .body(stream);
     }
 
     private byte[] generatePlaceholder(String text, int width, int height) throws IOException {
