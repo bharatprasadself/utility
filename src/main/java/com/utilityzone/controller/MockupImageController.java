@@ -150,9 +150,9 @@ public class MockupImageController {
             }
         } else {
             if (version != null && version.equalsIgnoreCase("V2")) {
-                placeX -= 280;
-                placeY += 30;
-                placeWidth -= 42;
+                placeX -= 282;
+                placeY += 28;
+                placeWidth -= 40;
                 placeHeight -= 124;
             }
         }
