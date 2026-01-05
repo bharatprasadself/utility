@@ -73,7 +73,7 @@ public class MockupImageController {
     }
 
     // Mobile mockup: apply rounded top corners
-    private BufferedImage processMobileMockup(BufferedImage product, int placeWidth, int placeHeight) {
+    private BufferedImage processMobileMockup(BufferedImage product, int placeWidth, int placeHeight, String version) {
         int prodW = product.getWidth();
         int prodH = product.getHeight();
         int targetW = Math.min(placeWidth, prodW);
@@ -88,7 +88,12 @@ public class MockupImageController {
         gProd.drawImage(scaledProduct, 0, 0, null);
         gProd.dispose();
 
-        int radius = Math.min(targetW, targetH) / 8;
+        int radius;
+        if (version != null && version.equalsIgnoreCase("V2")) {
+            radius = Math.min(targetW, targetH) / 9; // More pronounced arc for V2
+        } else {
+            radius = Math.min(targetW, targetH) / 8;
+        }
         BufferedImage roundedProduct = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = roundedProduct.createGraphics();
         g2.setComposite(AlphaComposite.Clear);
@@ -128,13 +133,13 @@ public class MockupImageController {
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
             placeX = 650;
             placeY = 284;
-            placeWidth = 710;
+            placeWidth = 709;
             placeHeight = 1300;
             // Example: version-specific adjustment
             if (version != null && version.equalsIgnoreCase("V2")) {
-                placeX -= 416; // tweak for V2
+                placeX -= 413; // tweak for V2
                 placeY += 70; // tweak for V2
-                placeWidth -= 28; // tweak for V2
+                placeWidth -= 32; // tweak for V2
                 placeHeight -= 54; // tweak for V2
             }
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
@@ -167,7 +172,7 @@ public class MockupImageController {
         // Use extracted methods for mockup image processing
         BufferedImage roundedProduct;
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
-            roundedProduct = processMobileMockup(product, placeWidth, placeHeight);
+            roundedProduct = processMobileMockup(product, placeWidth, placeHeight, version);
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             roundedProduct = processSecondaryMockup(product);
         } else {
