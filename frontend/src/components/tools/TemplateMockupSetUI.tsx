@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem } from '@mui/material';
+import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import axios, { API_BASE_URL } from '@/services/axiosConfig';
 
 
@@ -78,6 +79,8 @@ const TemplateMockupSetUI: React.FC = () => {
   const [selectedMockupUrl, setSelectedMockupUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // New: Style selection
+  const [selectedStyle, setSelectedStyle] = useState<string>('wedding');
 
   // Load selected mockup image when dropdown changes
   useEffect(() => {
@@ -124,6 +127,8 @@ const TemplateMockupSetUI: React.FC = () => {
         version = versionMatch[0].toUpperCase();
       }
       formData.append('version', version);
+      // Add style parameter from dropdown
+      formData.append('style', selectedStyle);
       // Store for download filename
       setMergedMockupType(mockupType);
       const res = await axios.post('/api/mockup-image/merge', formData, {
@@ -184,6 +189,22 @@ const TemplateMockupSetUI: React.FC = () => {
         bgcolor="#fff"
         mb={{ xs: 3, md: 0 }}
       >
+                {/* Style selection dropdown */}
+                <Box mb={2}>
+                  <FormControl fullWidth>
+                    <InputLabel id="style-select-label">Select Event Style</InputLabel>
+                    <Select
+                      labelId="style-select-label"
+                      value={selectedStyle}
+                      label="Select Event Style"
+                      onChange={e => setSelectedStyle(e.target.value as string)}
+                    >
+                      <MenuItem value="wedding">Wedding (V1)</MenuItem>
+                      <MenuItem value="birthday">Birthday (V2)</MenuItem>
+                      <MenuItem value="anniversary">Anniversary (V3)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
         <Typography variant="h5" gutterBottom>
           Mockup Image Merger
         </Typography>

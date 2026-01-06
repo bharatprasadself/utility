@@ -119,10 +119,21 @@ public class MockupImageController {
         @RequestParam("mockup") MultipartFile mockupFile,
         @RequestParam("product") MultipartFile productFile,
         @RequestParam(value = "mockupType", required = false) String mockupType,
-        @RequestParam(value = "version", required = false) String version
+        @RequestParam(value = "style", required = false) String style
     ) throws IOException {
         final int OUTPUT_WIDTH = 2000;
         final int OUTPUT_HEIGHT = 2000;
+
+        // Extract mockupType from file name if not provided
+        if (mockupType == null || mockupType.isBlank()) {
+            String nameLc = mockupFile.getOriginalFilename() != null ? mockupFile.getOriginalFilename().toLowerCase() : "";
+            if (nameLc.contains("mobile")) mockupType = "mobile";
+            else if (nameLc.contains("secondary")) mockupType = "secondary";
+            else mockupType = "primary";
+        }
+
+        // Use style directly for all logic (no version mapping)
+        String styleValue = (style != null) ? style.toLowerCase() : "wedding";
 
         // Default: print mockup region
         int placeX = 485;
@@ -130,13 +141,13 @@ public class MockupImageController {
         int placeWidth = 1032;
         int placeHeight = 1452;
 
-        // Example: adjust region based on version if needed
+        // Adjust region based on style if needed
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
             placeX = 650;
             placeY = 286;
             placeWidth = 709;
             placeHeight = 1300;
-            if (version != null && version.equalsIgnoreCase("V2")) {
+            if (styleValue.equals("birthday")) {
                 placeX -= 413;
                 placeY += 68;
                 placeWidth -= 32;
@@ -145,11 +156,11 @@ public class MockupImageController {
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             placeX = 514;
             placeY = 256;
-            if (version != null && version.equalsIgnoreCase("V2")) {
+            if (styleValue.equals("birthday")) {
                 placeY += 10;
             }
         } else {
-            if (version != null && version.equalsIgnoreCase("V2")) {
+            if (styleValue.equals("birthday")) {
                 placeX -= 282;
                 placeY += 28;
                 placeWidth -= 40;
@@ -168,7 +179,9 @@ public class MockupImageController {
 
         BufferedImage roundedProduct;
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
-            roundedProduct = processMobileMockup(product, placeWidth, placeHeight, version);
+            // For mobile, if style is 'anniversary', use more pronounced arc
+            String arcStyle = styleValue.equals("anniversary") ? "V3" : "V1";
+            roundedProduct = processMobileMockup(product, placeWidth, placeHeight, arcStyle);
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             roundedProduct = processSecondaryMockup(product);
         } else {
