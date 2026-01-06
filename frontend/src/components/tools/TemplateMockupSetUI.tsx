@@ -189,14 +189,15 @@ const TemplateMockupSetUI: React.FC = () => {
         bgcolor="#fff"
         mb={{ xs: 3, md: 0 }}
       >
+      <Typography variant="h5" gutterBottom>
+          Mockup Image Merger
+        </Typography>
                 {/* Style selection dropdown */}
                 <Box mb={2}>
+                  <Typography variant="subtitle1">Select Event Style</Typography>
                   <FormControl fullWidth>
-                    <InputLabel id="style-select-label">Select Event Style</InputLabel>
                     <Select
-                      labelId="style-select-label"
                       value={selectedStyle}
-                      label="Select Event Style"
                       onChange={e => setSelectedStyle(e.target.value as string)}
                     >
                       <MenuItem value="wedding">Wedding (V1)</MenuItem>
@@ -205,13 +206,11 @@ const TemplateMockupSetUI: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Box>
-        <Typography variant="h5" gutterBottom>
-          Mockup Image Merger
-        </Typography>
+        
 
         {/* Dropdown */}
         <Box mb={2}>
-          <Typography variant="subtitle1">Select Master Mockup</Typography>
+          <Typography variant="subtitle1">Select Master Mockup</Typography>          
           <Select
             fullWidth
             value={selectedMockup || ''}
