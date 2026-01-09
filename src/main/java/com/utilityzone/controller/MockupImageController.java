@@ -179,7 +179,6 @@ public class MockupImageController {
 
         BufferedImage roundedProduct;
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
-            // For mobile, if style is 'anniversary', use more pronounced arc
             String arcStyle = styleValue.equals("anniversary") ? "V3" : "V1";
             roundedProduct = processMobileMockup(product, placeWidth, placeHeight, arcStyle);
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
@@ -199,16 +198,18 @@ public class MockupImageController {
         g.drawImage(roundedProduct, offsetX, offsetY, null);
         g.dispose();
 
-        // Explicitly nullify large objects after use
+        // Explicitly flush and nullify large objects after use
+        if (mockup != null) mockup.flush();
         mockup = null;
+        if (product != null) product.flush();
         product = null;
-        scaledMockup = null;
+        if (resizedMockup != null) resizedMockup.flush();
         resizedMockup = null;
+        if (roundedProduct != null) roundedProduct.flush();
         roundedProduct = null;
 
         StreamingResponseBody stream = outputStream -> {
             ImageIO.write(combined, "png", outputStream);
-            // Explicitly nullify combined after streaming
             combined.flush();
         };
 

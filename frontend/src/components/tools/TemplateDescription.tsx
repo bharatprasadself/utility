@@ -57,34 +57,51 @@ export default function TemplateDescription() {
       .replace(/\{\{buyerPdfType\}\}/g, buyerPdfType);
   }
 
+  // Common sections for all templates
+
+  function getRegionDisplay(region: string) {
+    return region === "India" ? "Indian celebrations" : "worldwide use";
+  }
+
   function getPreviewBody() {
     let body = templateBody || '';
-    // Dynamically generate WHAT YOU WILL RECEIVE section
-    const note = '\n\nNote: To edit the age (Balloon numbers), click on the balloon number element. Delete the existing number and add a new number from Canva Elements (Search: “gold number balloon”).';
-    const shouldShowNote = eventType === 'Birthday';
-    if (/EDITING DETAILS/.test(body)) {
-      body = body.replace(/(EDITING DETAILS[\s\S]*?)(-{10,}|$)/, (match: any, detailsSection: string, afterSection: string) => {
-        if (shouldShowNote && !detailsSection.includes('Note: To edit the age')) {
-          return `${detailsSection.trim()}${note}\n${afterSection}`;
-        } else if (!shouldShowNote && detailsSection.includes('Note: To edit the age')) {
-          // Remove the note if present and not a birthday template
-          return detailsSection.replace(/\n+Note: To edit the age \(Balloon numbers\)[^\n]*\n?/g, '') + `\n${afterSection}`;
+    let result = body.trim();
+
+    // Append the common part from the master template if not already present
+    const masterTemplate = templates.find(t => t.name === 'Master_Invitation_Description_Template');
+    if (masterTemplate && masterTemplate.description && !result.includes(masterTemplate.description.trim())) {
+      // Add a blank line if needed
+      if (result.length > 0 && !/\n\s*$/.test(result)) {
+        result += '\n';
+      }
+      result += '\n' + masterTemplate.description.trim();
+    }
+
+    // For Birthday style, ensure the age editing note is present in the Editing Details section
+    if (eventType === 'Birthday') {
+      // Use '➡️ NOTE:' for better visibility in plain text
+      const ageNoteRaw = '➡️ NOTE: To edit the age (Balloon numbers), click on the balloon number element. Delete the existing number and add a new number from Canva Elements (Search: “gold number balloon”).';
+      const ageNote = ageNoteRaw;
+      // Match 'Editing Details' (any case), allow any bullet (*, -, •), allow \r\n or \n, and allow leading spaces
+      const editingDetailsRegex = /(EDITING DETAILS|Editing Details)\s*\r?\n((?:[ \t]*[\*\-•].*\r?\n?)+)/i;
+      result = result.replace(editingDetailsRegex, (_, heading, bullets) => {
+        if (/Note: To edit the age/i.test(bullets)) {
+          return heading + '\n' + bullets;
         }
-        return match;
+        // Ensure a blank line between bullets and age note
+        let bulletsWithBreak = bullets.replace(/(\r?\n)?$/, '\n');
+        if (!/\n\s*\n$/.test(bulletsWithBreak)) {
+          bulletsWithBreak = bulletsWithBreak.replace(/(\r?\n)$/, '\n\n');
+        }
+        return heading + '\n' + bulletsWithBreak + ageNote + '\n';
       });
-    } else {
-      // If not present, append the section at the end
-      body = `${body}\n\nEDITING DETAILS\n* All text is fully editable\n* Select design elements can be adjusted\n* Background and primary decorative elements are fixed to maintain the original design${shouldShowNote ? note : ''}`;
     }
-    function getRegionDisplay(region: string) {
-      return region === "India" ? "Indian celebrations" : "worldwide use";
-    }
-    body = body.replace(/\{\{eventType\}\}/g, eventType)
+    result = result.replace(/\{\{eventType\}\}/g, eventType)
       .replace(/\{\{style\}\}/g, style)
       .replace(/\{\{audience\}\}/g, audience)
       .replace(/\{\{buyerPdfType\}\}/g, buyerPdfType)
       .replace(/\{\{region\}\}/g, getRegionDisplay(region));
-    return body;
+    return result;
   }
 
   // Fetch all template descriptions
