@@ -268,7 +268,10 @@ public class TemplateService {
             Path logoFile = getBrandingLogoFileIfExists();
             if (logoFile != null && Files.exists(logoFile)) {
                 BufferedImage logoImg = ImageIO.read(logoFile.toFile());
-                if (logoImg != null) logo = LosslessFactory.createFromImage(doc, logoImg);
+                if (logoImg != null) {
+                    logo = LosslessFactory.createFromImage(doc, logoImg);
+                    logoImg.flush();
+                }
             }
             // Load mockups
             PDImageXObject mockup = loadImageByUrl(doc, t.getMockupUrl());
@@ -448,12 +451,17 @@ public class TemplateService {
                             p2.getAnnotations().add(qrLink);
 
                             // Defer QR label until after URL wrapping to avoid overlap
+                            qr.flush();
+
                             String qrLabel = "Scan to open";
                             qrLabelX1 = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
                             qrLabelDefaultY1 = qrY - 15f;
                             qrDrawn1 = true;
                         }
-                    } catch (Exception ignore) {}
+
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
 
                     // Invisible link row below the button (keep annotation only for clean layout)
                     float urlStartY = btnY - 12f;
@@ -481,9 +489,11 @@ public class TemplateService {
 
                     // Advance y below the wrapped URL for cleaner spacing
                     y = (urlStartY - 12f) - GAP * 2;
+
                 } else {
                     drawButton(cs, MARGIN, btnY, btnW, BUTTON_H, "Print template (link needed)");
                 }
+
 
                 // If no link rendered, continue from button position
                 if (printLink == null || !printLink.startsWith("http")) {
@@ -1186,7 +1196,9 @@ public class TemplateService {
         try (java.io.InputStream in = Files.newInputStream(p)) {
             BufferedImage img = ImageIO.read(in);
             if (img == null) return null;
-            return LosslessFactory.createFromImage(doc, img);
+            PDImageXObject xObj = LosslessFactory.createFromImage(doc, img);
+            img.flush();
+            return xObj;
         }
     }
 
