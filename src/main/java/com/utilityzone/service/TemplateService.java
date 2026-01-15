@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -41,6 +42,20 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 
 @Service
 public class TemplateService {
+    @Value("${template.description.default:NextStepLabs digital invite}")
+    private String defaultTemplateDescription;
+
+    @Value("${template.license.heading:License & Support Information}")
+    private String licenseHeading;
+
+    @Value("${template.license.terms-title:License Terms:}")
+    private String licenseTermsTitle;
+
+    @Value("${template.license.terms:Personal Use License: You may use this template for your personal projects, events, and non-commercial purposes. Resale, redistribution, or sharing of the template files is strictly prohibited.}")
+    private String licenseTerms;
+
+    @Value("${template.license.commercial-note:A commercial/resale license is available separately—please message me for details.}")
+    private String licenseCommercialNote;
         // Cache next default title for 1 minute to avoid repeated DB scans
         private volatile String cachedDefaultTitle = null;
         private volatile long cachedDefaultTitleTime = 0;
@@ -842,23 +857,23 @@ public class TemplateService {
                 float y = mb4.getHeight() - MARGIN - GAP;
                 
                 // Main heading - centered for better visual impact
-                String mainHeading = "License & Support Information";
-                float headingX = (mb4.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(mainHeading) / 1000f * HEAD_MD)) / 2f;
-                drawText(cs, mainHeading, headingX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
+                float headingX = (mb4.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(licenseHeading) / 1000f * HEAD_MD)) / 2f;
+                drawText(cs, licenseHeading, headingX, y, PDType1Font.HELVETICA_BOLD, HEAD_MD);
                 float lineY4 = y - HEAD_MD - 6f;
                 drawDivider(cs, MARGIN, lineY4, mb4.getWidth() - MARGIN * 2);
                 y = lineY4 - GAP * 4; // extra spacing below divider
-                
+
                 // License section with better formatting and indentation
-                drawText(cs, "License Terms:", MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
+                drawText(cs, licenseTermsTitle, MARGIN, y, PDType1Font.HELVETICA_BOLD, 15f);
                 y -= 25f; // Increased spacing
-                y = drawWrapped(cs,
-                    "Personal Use License: You may use this template for your personal projects, events, and non-commercial purposes. " +
-                    "Resale, redistribution, or sharing of the template files is strictly prohibited.",
-                    MARGIN + 15f, y, mb4.getWidth() - MARGIN*2 - 15f, PDType1Font.HELVETICA, BODY, LINE_BODY);
+                // Split licenseTerms on \n to avoid passing newlines to PDFBox (which causes U+000A error)
+                String[] licenseLines = licenseTerms.split("\\n");
+                for (String line : licenseLines) {
+                    y = drawWrapped(cs, line.trim(), MARGIN + 15f, y, mb4.getWidth() - MARGIN*2 - 15f, PDType1Font.HELVETICA, BODY, LINE_BODY);
+                }
                 // Additional license note (commercial/resale)
                 y = drawWrapped(cs,
-                    "A commercial/resale license is available separately—please message me for details.",
+                    licenseCommercialNote,
                     MARGIN + 15f, y, mb4.getWidth() - MARGIN*2 - 15f, PDType1Font.HELVETICA, BODY, LINE_BODY);
                 y -= GAP * 3; // More spacing between sections
                 
@@ -924,7 +939,7 @@ public class TemplateService {
         if (t.getPublicDescription() != null && !t.getPublicDescription().isBlank()) {
             return t.getPublicDescription().trim();
         }
-        String base = "NextStepLabs digital invite";
+        String base = defaultTemplateDescription;
         boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
         boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
         boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
@@ -968,10 +983,24 @@ public class TemplateService {
                 .replace("\u2022", "*") // replace bullet with asterisk
                 .replace("×", "x") // replace multiplication sign
                 .replace("→", "->"); // replace any remaining arrows
+        // Remove or replace any non-WinAnsi (non-ASCII, non-ISO-8859-1) characters
+        StringBuilder filtered = new StringBuilder();
+        for (char c : safe.toCharArray()) {
+            if (c >= 32 && c <= 126) { // printable ASCII
+                filtered.append(c);
+            } else if (c >= 160 && c <= 255) { // printable ISO-8859-1 (WinAnsi)
+                filtered.append(c);
+            } else if (c == '\n' || c == '\r') {
+                // skip newlines (should be handled by wrapping)
+            } else {
+                // skip or replace with '?'
+                filtered.append('?');
+            }
+        }
         cs.beginText();
         cs.setFont(font, size);
         cs.newLineAtOffset(x, y);
-        cs.showText(safe);
+        cs.showText(filtered.toString());
         cs.endText();
     }
 
@@ -1093,7 +1122,28 @@ public class TemplateService {
     }
 
     private float drawWrapped(PDPageContentStream cs, String text, float x, float topY, float maxWidth, PDType1Font font, float size, float lineHeight) throws IOException {
-        String[] words = text.split(" ");
+        // Sanitize unsupported glyphs for Type1 fonts (Helvetica cannot encode certain Unicode)
+        String safe = text
+                .replace("\u2192", "->")
+                .replace("\u2013", "-")
+                .replace("\u2014", "-")
+                .replace("\u2022", "*") // replace bullet with asterisk
+                .replace("×", "x") // replace multiplication sign
+                .replace("→", "->"); // replace any remaining arrows
+        StringBuilder filtered = new StringBuilder();
+        for (char c : safe.toCharArray()) {
+            if (c >= 32 && c <= 126) { // printable ASCII
+                filtered.append(c);
+            } else if (c >= 160 && c <= 255) { // printable ISO-8859-1 (WinAnsi)
+                filtered.append(c);
+            } else if (c == '\n' || c == '\r') {
+                // skip newlines (should be handled by wrapping)
+            } else {
+                // skip or replace with '?'
+                filtered.append('?');
+            }
+        }
+        String[] words = filtered.toString().split(" ");
         StringBuilder line = new StringBuilder();
         float y = topY;
         for (String w : words) {
