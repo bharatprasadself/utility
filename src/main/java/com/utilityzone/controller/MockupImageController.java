@@ -1,6 +1,7 @@
 package com.utilityzone.controller;
 
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +12,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 @RestController
@@ -126,7 +126,8 @@ public class MockupImageController {
 
         // Extract mockupType from file name if not provided
         if (mockupType == null || mockupType.isBlank()) {
-            String nameLc = mockupFile.getOriginalFilename() != null ? mockupFile.getOriginalFilename().toLowerCase() : "";
+            String origName = mockupFile.getOriginalFilename();
+            String nameLc = origName == null ? "" : origName.toLowerCase();
             if (nameLc.contains("mobile")) mockupType = "mobile";
             else if (nameLc.contains("secondary")) mockupType = "secondary";
             else mockupType = "primary";
@@ -188,7 +189,6 @@ public class MockupImageController {
         }
 
         int targetW = roundedProduct.getWidth();
-        int targetH = roundedProduct.getHeight();
         int offsetX = placeX + (placeWidth - targetW) / 2;
         int offsetY = placeY;
 
@@ -213,8 +213,76 @@ public class MockupImageController {
             combined.flush();
         };
 
+        // Build filename per convention: BaseName_{Role}_V{Variant}_{Index}.png
+        String baseName = deriveBaseNameFromMockupFilename(mockupFile.getOriginalFilename());
+        String roleLabel = roleLabelFromMockupType(mockupType);
+        String indexLabel = extractIndexFromProductFilename(productFile.getOriginalFilename());
+        String variantLabel = deriveVersionFromMockupFilename(mockupFile.getOriginalFilename());
+        boolean omitRole = baseContainsRoleToken(baseName, roleLabel);
+        String finalName = omitRole
+            ? String.format("%s_%s_%s.png", baseName, variantLabel, indexLabel)
+            : String.format("%s_%s_%s_%s.png", baseName, roleLabel, variantLabel, indexLabel);
+
         return ResponseEntity.status(HttpStatus.OK)
-            .contentType(MediaType.IMAGE_PNG)
+            .contentType(MediaType.parseMediaType("image/png"))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + finalName + "\"")
             .body(stream);
+    }
+
+    private boolean baseContainsRoleToken(String baseName, String roleLabel) {
+        if (baseName == null || roleLabel == null) return false;
+        String[] tokens = baseName.split("_");
+        for (String t : tokens) {
+            if (t.equalsIgnoreCase(roleLabel)) return true;
+        }
+        return false;
+    }
+
+    private String deriveVersionFromMockupFilename(String filename) {
+        String fallback = "V1";
+        if (filename == null || filename.isBlank()) return fallback;
+        String noExt = filename.contains(".") ? filename.substring(0, filename.lastIndexOf('.')) : filename;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)(V\\d+)").matcher(noExt);
+        if (m.find()) return m.group(1).toUpperCase();
+        return fallback;
+    }
+
+    private String roleLabelFromMockupType(String mockupType) {
+        if (mockupType == null) return "Primary";
+        String mt = mockupType.trim().toLowerCase();
+        if (mt.equals("mobile")) return "Mobile";
+        if (mt.equals("secondary")) return "Secondary";
+        return "Primary";
+    }
+
+    private String sanitizeForFile(String s) {
+        if (s == null) return "Mockup_Image";
+        String r = s.trim().replace(' ', '_');
+        r = r.replaceAll("[^A-Za-z0-9_\\-]", "");
+        return r.isBlank() ? "Mockup_Image" : r;
+    }
+
+    private String deriveBaseNameFromMockupFilename(String filename) {
+        if (filename == null || filename.isBlank()) return "Mockup_Image";
+        String name = filename;
+        // strip extension
+        String noExt = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : name;
+        // remove trailing _P## or _M##
+        String stripped = noExt.replaceAll("_(?:[PM])\\d+$", "");
+        // also remove trailing _V# to avoid duplicate version in final name
+        stripped = stripped.replaceAll("_V\\d+$", "");
+        if (stripped.isBlank()) stripped = noExt;
+        return sanitizeForFile(stripped);
+    }
+
+    private String extractIndexFromProductFilename(String filename) {
+        String fallback = "01";
+        if (filename == null || filename.isBlank()) return fallback;
+        String noExt = filename.contains(".") ? filename.substring(0, filename.lastIndexOf('.')) : filename;
+        String digits = noExt.replaceAll("^.*?(\\d+)$", "$1");
+        if (digits != null && digits.matches("\\d+")) {
+            return digits.length() == 1 ? "0" + digits : digits;
+        }
+        return fallback;
     }
 }

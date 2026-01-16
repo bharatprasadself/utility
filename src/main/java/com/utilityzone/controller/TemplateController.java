@@ -2,6 +2,7 @@ package com.utilityzone.controller;
 
 import com.utilityzone.model.Template;
 import com.utilityzone.service.TemplateService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,6 +31,9 @@ import org.slf4j.LoggerFactory;
 public class TemplateController {
     private static final Logger logger = LoggerFactory.getLogger(TemplateController.class);
     private final TemplateService service;
+
+    @Value("${mockup.master.dir:data/uploads/mockup/master}")
+    private String masterDirConfig;
 
     public TemplateController(TemplateService service) {
         this.service = service;
@@ -72,7 +77,7 @@ public class TemplateController {
                     boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
                     boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
                     boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
-                    if (hasRsvp || hasDetail) typeLabel = "Invite Suit";
+                    if (hasRsvp || hasDetail) typeLabel = "Invite Suite";
                     else if (hasPrint && hasMobile) typeLabel = "Mobile + Print";
                     else if (hasPrint && !hasMobile) typeLabel = "Only Print";
                     else typeLabel = "Mobile + Print"; // fallback
@@ -145,19 +150,122 @@ public class TemplateController {
 
     @PostMapping(value = "/api/admin/canva-templates/upload-mockup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<Map<String, String>> uploadMockup(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<Map<String, String>> uploadMockup(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "baseName", required = false) String baseName,
+            @RequestParam(value = "role", required = false) String role,
+            @RequestParam(value = "variant", required = false) String variant,
+            @RequestParam(value = "index", required = false) String index
+    ) throws IOException {
         logger.info("Upload mockup called. File name: {}, size: {} bytes", file.getOriginalFilename(), file.getSize());
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Empty file"));
         }
+
+        // Defaults per convention
         String original = file.getOriginalFilename();
-        String cleaned = StringUtils.cleanPath(original != null ? original : "mockup");
-        String ext = cleaned.contains(".") ? cleaned.substring(cleaned.lastIndexOf('.')) : "";
-        String storedName = UUID.randomUUID() + ext;
+        String cleanedOriginal = StringUtils.cleanPath(original != null ? original : "mockup");
+        String ext = cleanedOriginal.contains(".") ? cleanedOriginal.substring(cleanedOriginal.lastIndexOf('.')) : "";
+
+        String safeBase;
+        if (baseName != null && !baseName.isBlank()) {
+            safeBase = sanitizeForFile(baseName);
+        } else {
+            // Try to derive base name from master mockups directory
+            safeBase = sanitizeForFile(deriveBaseNameFromMaster(role));
+        }
+        String safeRole = sanitizeForFile(role != null && !role.isBlank() ? role : "Primary");
+        String safeVariant = sanitizeForFile(variant != null && !variant.isBlank() ? variant : "V1");
+        String idx = index;
+        if (idx == null || idx.isBlank()) {
+            // Try to extract trailing digits from original file name before extension
+            String namePart = cleanedOriginal.replace(ext, "");
+            String digits = namePart.replaceAll("^.*?(\\d+)$", "$1");
+            if (digits != null && digits.matches("\\d+")) {
+                idx = digits;
+            } else {
+                idx = "01"; // default index
+            }
+        }
+        // Normalize index to at least 2 digits
+        String safeIndex = idx.length() == 1 ? "0" + idx : idx;
+
+        String storedName = String.format("%s_%s_%s_%s%s", safeBase, safeRole, safeVariant, safeIndex, ext);
+
+        // Ensure uniqueness: if a file with same name exists, append a short UUID suffix
         Path target = service.getMockupDir().resolve(storedName);
+        if (Files.exists(target)) {
+            String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+            storedName = String.format("%s_%s_%s_%s_%s%s", safeBase, safeRole, safeVariant, safeIndex, uniqueSuffix, ext);
+            target = service.getMockupDir().resolve(storedName);
+        }
+
         Files.copy(file.getInputStream(), target);
         String publicUrl = "/api/canva-templates/mockups/" + storedName;
         return ResponseEntity.ok(Map.of("url", publicUrl));
+    }
+
+    private String sanitizeForFile(String s) {
+        if (s == null) return "";
+        // Replace spaces with underscores and keep only [A-Za-z0-9_-]
+        String r = s.trim().replace(' ', '_');
+        r = r.replaceAll("[^A-Za-z0-9_\\-]", "");
+        return r;
+    }
+
+    private String deriveBaseNameFromMaster(String role) {
+        // Default fallback
+        String fallback = "Mockup_Image";
+        try {
+            Path dir = Paths.get(masterDirConfig);
+            if (!Files.exists(dir) || !Files.isDirectory(dir)) {
+                return fallback;
+            }
+            // Determine preferred suffix based on role
+            String desiredSuffix = null;
+            if (role != null) {
+                String r = role.toLowerCase();
+                if (r.contains("mobile")) desiredSuffix = "_M"; // mobile
+                else if (r.contains("primary") || r.contains("main") || r.contains("desktop")) desiredSuffix = "_P"; // primary
+            }
+            // Scan files to find a candidate
+            try (var stream = Files.list(dir)) {
+                List<Path> files = stream.filter(Files::isRegularFile).collect(Collectors.toList());
+                // Prefer matching suffix; else take first valid file
+                Path candidate = null;
+                for (Path p : files) {
+                    String name = p.getFileName().toString();
+                    String base = stripSuffixAndExt(name);
+                    if (base != null) {
+                        if (desiredSuffix != null) {
+                            if (name.contains(desiredSuffix)) { candidate = p; break; }
+                        } else {
+                            candidate = p; // first valid
+                        }
+                    }
+                }
+                if (candidate == null && !files.isEmpty()) {
+                    candidate = files.get(0);
+                }
+                if (candidate != null) {
+                    String name = candidate.getFileName().toString();
+                    String base = stripSuffixAndExt(name);
+                    if (base != null && !base.isBlank()) return base;
+                }
+            }
+        } catch (Exception ignored) {}
+        return fallback;
+    }
+
+    private String stripSuffixAndExt(String fileName) {
+        // Remove extension
+        String noExt = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
+        // Expect pattern like Something_P01 or Something_M01; strip trailing _[PM]\d+
+        String stripped = noExt.replaceAll("_(?:[PM])\\d+$", "");
+        if (!stripped.equals(noExt)) return stripped;
+        // Fallback: if contains 'mobile' or 'primary' words, try removing them
+        String alt = noExt.replaceAll("(?i)_mobile$", "").replaceAll("(?i)_primary$", "");
+        return alt;
     }
 
     @GetMapping("/api/canva-templates/mockups/{file}")
