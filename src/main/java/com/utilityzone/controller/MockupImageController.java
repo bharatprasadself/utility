@@ -217,11 +217,12 @@ public class MockupImageController {
         String baseName = deriveBaseNameFromMockupFilename(mockupFile.getOriginalFilename());
         String roleLabel = roleLabelFromMockupType(mockupType);
         String indexLabel = extractIndexFromProductFilename(productFile.getOriginalFilename());
+        String indexWithPrefix = "NSL" + indexLabel;
         String variantLabel = deriveVersionFromMockupFilename(mockupFile.getOriginalFilename());
         boolean omitRole = baseContainsRoleToken(baseName, roleLabel);
         String finalName = omitRole
-            ? String.format("%s_%s_%s.png", baseName, variantLabel, indexLabel)
-            : String.format("%s_%s_%s_%s.png", baseName, roleLabel, variantLabel, indexLabel);
+            ? String.format("%s_%s_%s.png", baseName, variantLabel, indexWithPrefix)
+            : String.format("%s_%s_%s_%s.png", baseName, roleLabel, variantLabel, indexWithPrefix);
 
         return ResponseEntity.status(HttpStatus.OK)
             .contentType(MediaType.parseMediaType("image/png"))

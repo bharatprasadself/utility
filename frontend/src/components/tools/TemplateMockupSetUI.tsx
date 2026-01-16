@@ -150,9 +150,10 @@ const TemplateMockupSetUI: React.FC = () => {
       const roleLabel = roleLabelFromType(derivedMockupType);
       const variantLabel = (version || 'V1').toUpperCase();
       const indexLabel = extractIndexFromProduct(productFile.name);
+      const nsIndex = `NSL${indexLabel}`;
       const computedName = baseContainsRoleToken(base, roleLabel)
-        ? `${base}_${variantLabel}_${indexLabel}.png`
-        : `${base}_${roleLabel}_${variantLabel}_${indexLabel}.png`;
+        ? `${base}_${variantLabel}_${nsIndex}.png`
+        : `${base}_${roleLabel}_${variantLabel}_${nsIndex}.png`;
       setDownloadName(serverName || computedName);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to merge images.');
