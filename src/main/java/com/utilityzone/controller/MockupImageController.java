@@ -17,10 +17,9 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/api/mockup-image")
 public class MockupImageController {
-        // Secondary mockup: placeholder logic, can be customized
+        // Secondary mockup: placeholder logic, original behavior
         private BufferedImage processSecondaryMockup(BufferedImage product) {
-            // Use default print mockup region
-            
+            // Use fixed secondary placement dimensions
             int placeWidth = 880;
             int placeHeight = 1240;
             int prodW = product.getWidth();
@@ -180,7 +179,8 @@ public class MockupImageController {
 
         BufferedImage roundedProduct;
         if (mockupType != null && mockupType.equalsIgnoreCase("mobile")) {
-            String arcStyle = styleValue.equals("anniversary") ? "V3" : "V1";
+            // Use Vn extracted from master mockup filename for mobile rounded-corner processing
+            String arcStyle = deriveVersionFromMockupFilename(mockupFile.getOriginalFilename());
             roundedProduct = processMobileMockup(product, placeWidth, placeHeight, arcStyle);
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             roundedProduct = processSecondaryMockup(product);

@@ -6,6 +6,9 @@ import axios, { API_BASE_URL } from '@/services/axiosConfig';
 
 const TemplateMockupSetUI: React.FC = () => {
 
+  // New: Style selection (used for upload and listing)
+  const [selectedStyle, setSelectedStyle] = useState<string>('wedding');
+
   // For adding a new mockup when list is empty
   const [newMockupFile, setNewMockupFile] = useState<File | null>(null);
   const [addingNew, setAddingNew] = useState(false);
@@ -23,6 +26,8 @@ const TemplateMockupSetUI: React.FC = () => {
       if (nameLc.includes('mobile')) mockupType = 'mobile';
       else if (nameLc.includes('secondary')) mockupType = 'secondary';
       formData.append('mockupType', mockupType);
+      // Include event style to segregate storage by style on backend
+      formData.append('style', selectedStyle);
       try {
         await axios.post('/api/mockup-upload/master', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -53,7 +58,7 @@ const TemplateMockupSetUI: React.FC = () => {
   const [selectedMockup, setSelectedMockup] = useState<string | null>(null);
     // Fetch master mockups on mount
     useEffect(() => {
-      axios.get('/api/master-mockups').then(res => {
+      axios.get('/api/master-mockups', { params: { style: selectedStyle } }).then(res => {
         let allNames: string[] = [];
         if (Array.isArray(res.data)) {
           allNames = res.data.filter((v: any) => typeof v === 'string');
@@ -73,14 +78,12 @@ const TemplateMockupSetUI: React.FC = () => {
         setMasterMockups([]);
         setSelectedMockup(null);
       });
-    }, []);
+    }, [selectedStyle]);
   const [productFile, setProductFile] = useState<File | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [selectedMockupUrl, setSelectedMockupUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // New: Style selection
-  const [selectedStyle, setSelectedStyle] = useState<string>('wedding');
 
   // Load selected mockup image when dropdown changes
   useEffect(() => {

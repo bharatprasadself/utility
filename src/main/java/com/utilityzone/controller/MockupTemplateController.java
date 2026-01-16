@@ -11,8 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.net.MalformedURLException;
 import java.io.File;
 import java.util.*;
@@ -28,22 +27,48 @@ public class MockupTemplateController {
     private String masterDirConfig;
 
     @GetMapping("/api/master-mockups/{filename}")
-    public ResponseEntity<Resource> getMasterMockup(@PathVariable("filename") String filename) {
+    public ResponseEntity<StreamingResponseBody> getMasterMockup(@PathVariable("filename") String filename) {
+        if (filename == null || filename.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
         logger.info("getMasterMockup called with filename: {}", filename);
         logger.info("masterDirConfig: {}", masterDirConfig);
         try {
-            Path file = Paths.get(masterDirConfig).resolve(filename).normalize();
-            logger.info("[DEBUG] Looking for file: {} Exists: {}", file.toAbsolutePath(), Files.exists(file));
-            Resource resource = new UrlResource(file.toUri());
-            if (!resource.exists() || !resource.isReadable()) {
-                logger.warn("File not found or unreadable: {}", file.toAbsolutePath());
+            // First try in the root
+            Path base = Paths.get(masterDirConfig);
+            Path file = base.resolve(filename).normalize();
+            if (!Files.exists(file) || !Files.isRegularFile(file)) {
+                // Fallback: search in immediate subdirectories (style folders)
+                File baseDir = base.toFile();
+                File[] children = baseDir.listFiles();
+                if (children != null) {
+                    for (File child : children) {
+                        if (child.isDirectory()) {
+                            Path candidate = child.toPath().resolve(filename).normalize();
+                            if (Files.exists(candidate) && Files.isRegularFile(candidate)) {
+                                String contentType = Files.probeContentType(candidate);
+                                StreamingResponseBody srb = os -> {
+                                    Files.copy(candidate, os);
+                                };
+                                return ResponseEntity.ok()
+                                    .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
+                                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                                    .body(srb);
+                            }
+                        }
+                    }
+                }
+                logger.warn("File not found across styles: {}", filename);
                 return ResponseEntity.notFound().build();
             }
             String contentType = Files.probeContentType(file);
+            StreamingResponseBody srb = os -> {
+                Files.copy(file, os);
+            };
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                    .body(resource);
+                    .body(srb);
         } catch (MalformedURLException e) {
             logger.error("MalformedURLException for file: {}", filename, e);
             return ResponseEntity.notFound().build();
@@ -53,40 +78,121 @@ public class MockupTemplateController {
         }
     }
 
+    @GetMapping("/api/master-mockups/{style}/{filename}")
+    public ResponseEntity<StreamingResponseBody> getMasterMockupByStyle(@PathVariable("style") String style, @PathVariable("filename") String filename) {
+        if (filename == null || filename.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        String normalized = normalizeStyle(style);
+        try {
+            Path file = Paths.get(masterDirConfig).resolve(normalized).resolve(filename).normalize();
+            if (!Files.exists(file) || !Files.isRegularFile(file)) {
+                return ResponseEntity.notFound().build();
+            }
+            String contentType = Files.probeContentType(file);
+            StreamingResponseBody srb = os -> {
+                Files.copy(file, os);
+            };
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(srb);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @RequestMapping(value = "/api/master-mockups", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, List<String>>> listMasterMockups() {
+    public ResponseEntity<Map<String, List<String>>> listMasterMockups(@RequestParam(value = "style", required = false) String style) {
         File baseDir = new File(masterDirConfig);
         Map<String, List<String>> result = new HashMap<>();
         result.put("primary", new ArrayList<>());
         result.put("mobile", new ArrayList<>());
-        if (baseDir.exists() && baseDir.isDirectory()) {
-            for (File file : Objects.requireNonNull(baseDir.listFiles())) {
-                if (file.isFile()) {
-                    String name = file.getName().toLowerCase();
-                    if (name.contains("mobile")) {
-                        result.get("mobile").add(file.getName());
-                    } else {
-                        result.get("primary").add(file.getName());
+
+        if (!baseDir.exists() || !baseDir.isDirectory()) {
+            return ResponseEntity.ok(result);
+        }
+
+        // If style specified, only scan that subfolder; else scan root + all style folders
+        if (style != null && !style.isBlank()) {
+            String normalized = normalizeStyle(style);
+            File styleDir = new File(baseDir, normalized);
+            if (styleDir.exists() && styleDir.isDirectory()) {
+                File[] files = styleDir.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        if (f.isFile()) {
+                            String name = f.getName().toLowerCase();
+                            if (name.contains("mobile")) {
+                                result.get("mobile").add(f.getName());
+                            } else {
+                                result.get("primary").add(f.getName());
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            File[] children = baseDir.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    if (child.isFile()) {
+                        String name = child.getName().toLowerCase();
+                        if (name.contains("mobile")) {
+                            result.get("mobile").add(child.getName());
+                        } else {
+                            result.get("primary").add(child.getName());
+                        }
+                    } else if (child.isDirectory()) {
+                        File[] inner = child.listFiles();
+                        if (inner != null) {
+                            for (File f : inner) {
+                                if (f.isFile()) {
+                                    String name = f.getName().toLowerCase();
+                                    if (name.contains("mobile")) {
+                                        result.get("mobile").add(f.getName());
+                                    } else {
+                                        result.get("primary").add(f.getName());
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+
         return ResponseEntity.ok(result);
     }
 
     @PostMapping(value = "/api/mockup-upload/master", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadMasterMockup(@RequestParam("file") MultipartFile file, @RequestParam(value = "mockupType", required = false) String mockupType) {
+    public ResponseEntity<String> uploadMasterMockup(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "mockupType", required = false) String mockupType,
+            @RequestParam(value = "style", required = false) String style) {
         try {
             String original = file.getOriginalFilename();
             String cleaned = StringUtils.cleanPath(original != null ? original : "mockup");
-            Path dir = Paths.get("data/uploads/mockup/master");
+            String normalizedStyle = normalizeStyle(style);
+            Path base = Paths.get(masterDirConfig);
+            Path dir = base.resolve(normalizedStyle);
             if (!Files.exists(dir)) Files.createDirectories(dir);
-            // Save with original cleaned name only
             Path target = dir.resolve(cleaned);
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             return ResponseEntity.ok("Uploaded successfully");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload: " + e.getMessage());
+        }
+    }
+
+    private String normalizeStyle(String style) {
+        if (style == null) return "wedding";
+        String s = style.trim().toLowerCase();
+        switch (s) {
+            case "birthday": return "birthday";
+            case "anniversary": return "anniversary";
+            case "wedding":
+            default: return "wedding";
         }
     }
 }
