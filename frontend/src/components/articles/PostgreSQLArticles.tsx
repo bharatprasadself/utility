@@ -269,7 +269,7 @@ find $BACKUP_DIR -type f -mtime +7 -delete
 function PostgreSQLArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
-  const [articles, setArticles] = useState<Article[]>(staticArticles);
+  const [articles, setArticles] = useState<Article[]>([]);
   // Removed unused loading state to clean up warnings
   // const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -281,15 +281,13 @@ function PostgreSQLArticles() {
       console.log('🔍 Fetching articles in category: POSTGRESQL');
       const response = await ArticleService.getArticlesByCategory(ArticleCategory.POSTGRESQL);
       console.log(`✅ Successfully fetched ${response.data?.length || 0} articles in category POSTGRESQL`);
-      if (response.data && response.data.length > 0) {
-        setArticles(response.data);
-      } else {
-        console.log('No articles returned from API, using static content');
-        setArticles(staticArticles);
-      }
+      const list = Array.isArray(response.data) ? response.data : [];
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(list.length === 0 && showStatic ? staticArticles : list);
     } catch (e) {
-      console.log('No articles returned from API, using static content');
-      setArticles(staticArticles);
+      console.error('Failed to load PostgreSQL articles:', e);
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(showStatic ? staticArticles : []);
     } finally {
       // no-op
     }

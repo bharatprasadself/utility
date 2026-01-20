@@ -70,7 +70,10 @@ public class ArticleController {
                 log.info("Cache MISS: articlesByCategory[{}]", category);
             }
         }
-        return articleService.getArticlesByCategory(category);
+        log.info("Fetching articles for category param: {}", category);
+        List<Article> result = articleService.getArticlesByCategory(category);
+        log.info("Returning {} published articles for {}", (result != null ? result.size() : 0), category);
+        return result;
     }
 
     @GetMapping("/tag/{tag}")

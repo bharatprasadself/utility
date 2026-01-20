@@ -5,14 +5,14 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export default function TemplateDescription() {
   // State variables
-  const [buyerPdfType, setBuyerPdfType] = useState('Print Only');
+  const [buyerPdfType, setBuyerPdfType] = useState('Mobile & Print');
   const buyerPdfTypes = ['Print Only', 'Mobile & Print', 'Invite Suite'];
   const leftPaperRef = useRef<HTMLDivElement>(null);
   const rightPaperRef = useRef<HTMLDivElement>(null);
   const [eventType, setEventType] = useState('Wedding');
   const [style, setStyle] = useState('Traditional');
   const [audience, setAudience] = useState('All');
-  const [region, setRegion] = useState('India');
+  const [region, setRegion] = useState('Other Countries');
   // Multi-master mockup state
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<number|null>(null);

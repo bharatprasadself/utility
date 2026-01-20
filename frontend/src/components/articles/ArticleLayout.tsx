@@ -31,6 +31,7 @@ import Advertisement from '../Advertisement';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
 import { ArticleService } from '../../services/article';
+import { computeReadTime } from '../../utils/readTime';
 
 interface ArticleLayoutProps {
   title: string;
@@ -371,12 +372,8 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
         }
         setContentInput(body || text);
         setImportedFileName(file.name);
-        // Estimate read time from body
-        const words = (body || text).trim().split(/\s+/).filter(Boolean).length;
-        if (!readTimeInput) {
-          const mins = Math.max(1, Math.ceil(words / 200));
-          setReadTimeInput(`${mins} min read`);
-        }
+        // Compute read time primarily
+        setReadTimeInput(computeReadTime(body || text));
       };
       reader.readAsText(file);
     } finally {
@@ -419,7 +416,8 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
         title: titleInput.trim(),
         content: contentInput,
         tags: tagsInput.length ? tagsInput : getDefaultTagsForCategory(categoryValue),
-        readTime: readTimeInput || '5 min read',
+        // Use computed read-time primarily; allow admin override if they changed readTimeInput
+        readTime: (readTimeInput && readTimeInput.trim()) || computeReadTime(contentInput),
         category: categoryValue,
         status
       } as const;
@@ -576,6 +574,36 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
             </Alert>
           )}
         </Box>
+        {/* Empty-state when there are no articles to show */}
+        {displayedArticles.length === 0 && (
+          <Box sx={{ my: 2 }}>
+            <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
+              No articles found for this category.
+            </Alert>
+            {isAdmin && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  setEditArticleId(null);
+                  setTitleInput('');
+                  setContentInput('');
+                  setTagsInput(defaultTags);
+                  setReadTimeInput('');
+                  setError('');
+                  setImportedFileName('');
+                  setOpen(true);
+                }}
+                startIcon={<EditIcon />}
+                sx={{ borderRadius: 2, boxShadow: 2, textTransform: 'none' }}
+              >
+                Create First Article
+              </Button>
+            )}
+          </Box>
+        )}
+
+        {/* Articles list */}
         <Stack spacing={2}>
           {displayedArticles.map((article) => (
             <Card key={article.id} sx={{
@@ -598,11 +626,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 'medium' }}>
                     {article.category}
                   </Typography>
-                  {article.readTime && (
-                    <Typography variant="body2" color="text.secondary">
-                      • {article.readTime}
-                    </Typography>
-                  )}
+                  <Typography variant="body2" color="text.secondary">
+                    • {article.readTime || computeReadTime(article.content)}
+                  </Typography>
                   {isAdmin && (
                     <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
                       <Button
@@ -972,6 +998,26 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   }
                 }}
               />
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => {
+                    // Recompute using current content, including code when enabled
+                    const recomputed = computeReadTime(contentInput);
+                    setReadTimeInput(recomputed);
+                  }}
+                >
+                  Recompute Read Time (include code if enabled)
+                </Button>
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => setReadTimeInput('')}
+                >
+                  Clear
+                </Button>
+              </Box>
               {/* Admin Published/Drafts toggle lives in header; no toggle inside dialog */}
               <Box>
                 <TextField

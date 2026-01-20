@@ -53,7 +53,7 @@ function SpringBootArticles() {
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   console.log('Is admin in SpringBootArticles:', isAdmin);
   
-  const [articles, setArticles] = useState<Article[]>(staticArticles);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,16 +62,13 @@ function SpringBootArticles() {
       console.log('Loading Spring Boot articles...');
       const response = await ArticleService.getArticlesByCategory(ArticleCategory.SPRING_BOOT);
       console.log('Spring Boot articles response:', response);
-      if (response.data && response.data.length > 0) {
-        setArticles(response.data);
-      } else {
-        console.log('No Spring Boot articles found, using static content');
-        setArticles(staticArticles);
-      }
+      const list = Array.isArray(response.data) ? response.data : [];
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(list.length === 0 && showStatic ? staticArticles : list);
     } catch (error) {
       console.error('Failed to load Spring Boot articles:', error);
-      console.log('Using static Spring Boot content due to error');
-      setArticles(staticArticles);
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(showStatic ? staticArticles : []);
     }
   };
   

@@ -283,7 +283,7 @@ export function Counter() {
 function ReactArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
-  const [articles, setArticles] = useState<Article[]>(staticArticles);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -292,16 +292,13 @@ function ReactArticles() {
       console.log('Loading React articles...');
       const response = await ArticleService.getArticlesByCategory(ArticleCategory.REACT);
       console.log('React articles response:', response);
-      if (response.data && response.data.length > 0) {
-        setArticles(response.data);
-      } else {
-        console.log('No React articles found, using static content');
-        setArticles(staticArticles);
-      }
+      const list = Array.isArray(response.data) ? response.data : [];
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(list.length === 0 && showStatic ? staticArticles : list);
     } catch (error) {
       console.error('Failed to load React articles:', error);
-      console.log('Using static React content due to error');
-      setArticles(staticArticles);
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(showStatic ? staticArticles : []);
     }
   };
 

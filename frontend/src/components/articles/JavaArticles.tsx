@@ -52,7 +52,7 @@ Spring Boot makes it simple to build production-ready REST services. This articl
 function JavaArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
-  const [articles, setArticles] = useState<Article[]>(staticArticles);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,15 +61,13 @@ function JavaArticles() {
       console.log('Loading Java articles...');
       const response = await ArticleService.getArticlesByCategory(ArticleCategory.JAVA);
       console.log('Java articles response:', response);
-      if (response.data && response.data.length > 0) {
-        setArticles(response.data);
-      } else {
-        console.log('No Java articles found, using static content');
-        setArticles(staticArticles);
-      }
+      const list = Array.isArray(response.data) ? response.data : [];
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(list.length === 0 && showStatic ? staticArticles : list);
     } catch (error) {
       console.error('Failed to load Java articles:', error);
-      setArticles(staticArticles);
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(showStatic ? staticArticles : []);
     }
   };
 

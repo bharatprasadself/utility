@@ -21,15 +21,16 @@ import remarkGfm from 'remark-gfm';
 import Advertisement from './Advertisement';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import blogService from '../services/blog';
 import type { Blog, BlogRequest } from '../services/blog';
 import { useAuth } from '../contexts/AuthContext';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import ClearIcon from '@mui/icons-material/Clear';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { computeReadTime } from '../utils/readTime';
 
-const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
+const MarkdownPreviewBase: React.FC<{ content: string }> = ({ content }) => {
     // Clean up common inline HTML artifacts from pasted content
     const cleaned = content
         .replace(/<span[^>]*style=["'][^"']*display\s*:\s*none[^"']*["'][^>]*>.*?<\/span>/gis, '')
@@ -143,6 +144,8 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
     </Box>
     );
 };
+
+const MarkdownPreview = memo(MarkdownPreviewBase);
 
 
 
@@ -442,6 +445,9 @@ export default function BlogList() {
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         • {new Date(blog.publishDate).toLocaleDateString()}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        • {computeReadTime(blog.content)}
                                     </Typography>
                                     {blog.updatedAt !== blog.createdAt && (
                                         <Typography variant="body2" sx={{ color: 'warning.main', fontSize: '0.8rem' }}>
