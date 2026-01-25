@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -19,6 +19,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import type { Article } from '../types/Article';
 import { useAuth } from '../contexts/AuthContext';
 import { useArticles } from '../contexts/ArticleContext';
+import { computeReadTime } from '../utils/readTime';
 
 export const ArticleDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,39 +35,29 @@ export const ArticleDetail: React.FC = () => {
 
   const { getArticleById } = useArticles();
 
-  useEffect(() => {
-    console.log('ArticleDetail mounted with ID:', id);
-    loadArticle();
-  }, [id]);
-
-  const loadArticle = async () => {
+  const loadArticle = useCallback(async () => {
     if (!id) {
-      console.log('No article ID provided');
       return;
     }
     
     try {
       setLoading(true);
-      console.log('Fetching article with ID:', id);
-      
-  // Determine if we're on a static route (kept for future use)
-  // const isStaticRoute = window.location.pathname.includes('/static/');
-      
       const foundArticle = await getArticleById(id);
       if (foundArticle) {
-        console.log('Article found:', foundArticle);
         setArticle(foundArticle);
       } else {
-        console.log('Article not found');
         setError('Article not found');
       }
     } catch (err) {
-      console.error('Error loading article:', err);
       setError('Failed to load article. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, getArticleById]);
+
+  useEffect(() => {
+    loadArticle();
+  }, [loadArticle]);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -135,7 +126,7 @@ export const ArticleDetail: React.FC = () => {
                 {article.createdAt ? new Date(article.createdAt).toLocaleDateString() : ''}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                • {article.readTime}
+                • {article.readTime || computeReadTime(article.content)}
               </Typography>
               <Chip label={article.category} color="primary" size="small" />
             </Box>
@@ -182,75 +173,80 @@ export const ArticleDetail: React.FC = () => {
 };
 
 // Reusable markdown renderer with heading size constraints and optional H1 removal
-const MarkdownContent: React.FC<{ content: string; hideLeadingH1?: boolean }> = ({ content, hideLeadingH1 = false }) => {
-  let processed = hideLeadingH1 ? content.replace(/^\s*#\s+.*\n?/, '') : content;
-  // Strip common inline HTML artifacts from pasted content (hidden spans, centered divs)
-  processed = processed
-    .replace(/<span[^>]*style=["'][^"']*display\s*:\s*none[^"']*["'][^>]*>.*?<\/span>/gis, '')
-    .replace(/<div[^>]*align=["']center["'][^>]*>.*?<\/div>/gis, '');
+const MarkdownContentBase: React.FC<{ content: string; hideLeadingH1?: boolean }> = ({ content, hideLeadingH1 = false }) => {
+  const processed = useMemo(() => {
+    let t = hideLeadingH1 ? content.replace(/^\s*#\s+.*\n?/, '') : content;
+    // Strip common inline HTML artifacts from pasted content (hidden spans, centered divs)
+    t = t
+      .replace(/<span[^>]*style=["'][^"']*display\s*:\s*none[^"']*["'][^>]*>.*?<\/span>/gis, '')
+      .replace(/<div[^>]*align=["']center["'][^>]*>.*?<\/div>/gis, '');
+    return t;
+  }, [content, hideLeadingH1]);
+
+  const components = useMemo(() => ({
+    h1: (props: any) => (
+      <Typography component="h1" variant="h4" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
+        {props.children}
+      </Typography>
+    ),
+    h2: (props: any) => (
+      <Typography component="h2" variant="h5" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
+        {props.children}
+      </Typography>
+    ),
+    h3: (props: any) => (
+      <Typography component="h3" variant="h6" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
+        {props.children}
+      </Typography>
+    ),
+    h4: (props: any) => (
+      <Typography component="h4" variant="subtitle1" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
+        {props.children}
+      </Typography>
+    ),
+    h5: (props: any) => (
+      <Typography component="h5" variant="subtitle2" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
+        {props.children}
+      </Typography>
+    ),
+    h6: (props: any) => (
+      <Typography component="h6" variant="body1" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
+        {props.children}
+      </Typography>
+    ),
+    p: (props: any) => (
+      <Typography component="p" variant="body1" sx={{ mb: 2, lineHeight: 1.7 }}>
+        {props.children}
+      </Typography>
+    ),
+    table: (props: any) => (
+      <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', my: 2 }}>
+        {props.children}
+      </Box>
+    ),
+    thead: (props: any) => <Box component="thead">{props.children}</Box>,
+    tbody: (props: any) => <Box component="tbody">{props.children}</Box>,
+    tr: (props: any) => <Box component="tr">{props.children}</Box>,
+    th: (props: any) => (
+      <Box component="th" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', bgcolor: 'grey.100', fontWeight: 600 }}>
+        {props.children}
+      </Box>
+    ),
+    td: (props: any) => (
+      <Box component="td" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' }}>
+        {props.children}
+      </Box>
+    )
+  }), []);
+
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        h1: (props: any) => (
-          <Typography component="h1" variant="h4" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
-            {props.children}
-          </Typography>
-        ),
-        h2: (props: any) => (
-          <Typography component="h2" variant="h5" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
-            {props.children}
-          </Typography>
-        ),
-        h3: (props: any) => (
-          <Typography component="h3" variant="h6" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 700 }}>
-            {props.children}
-          </Typography>
-        ),
-        h4: (props: any) => (
-          <Typography component="h4" variant="subtitle1" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
-            {props.children}
-          </Typography>
-        ),
-        h5: (props: any) => (
-          <Typography component="h5" variant="subtitle2" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
-            {props.children}
-          </Typography>
-        ),
-        h6: (props: any) => (
-          <Typography component="h6" variant="body1" sx={{ mt: 3, mb: 2, color: 'primary.main', fontWeight: 600 }}>
-            {props.children}
-          </Typography>
-        ),
-        p: (props: any) => (
-          <Typography component="p" variant="body1" sx={{ mb: 2, lineHeight: 1.7 }}>
-            {props.children}
-          </Typography>
-        ),
-        table: (props: any) => (
-          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', my: 2 }}>
-            {props.children}
-          </Box>
-        ),
-        thead: (props: any) => <Box component="thead">{props.children}</Box>,
-        tbody: (props: any) => <Box component="tbody">{props.children}</Box>,
-        tr: (props: any) => <Box component="tr">{props.children}</Box>,
-        th: (props: any) => (
-          <Box component="th" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', bgcolor: 'grey.100', fontWeight: 600 }}>
-            {props.children}
-          </Box>
-        ),
-        td: (props: any) => (
-          <Box component="td" sx={{ border: '1px solid', borderColor: 'grey.300', p: 1, textAlign: 'left', verticalAlign: 'top' }}>
-            {props.children}
-          </Box>
-        )
-      }}
-    >
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
       {processed}
     </ReactMarkdown>
   );
 };
+
+const MarkdownContent = React.memo(MarkdownContentBase);
 
 // Remove footnote references/definitions for short snippets where definitions are not present
 function stripFootnotes(text: string): string {

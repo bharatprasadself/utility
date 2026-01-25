@@ -75,9 +75,9 @@ const CanvaTemplates = () => {
       let mockupUrl = '';
       let secondaryMockupUrl = '';
       let mobileMockupUrl = '';
-      if (mockup) mockupUrl = await uploadMockup(mockup);
-      if (secondaryMockup) secondaryMockupUrl = await uploadMockup(secondaryMockup);
-      if (mobileMockup) mobileMockupUrl = await uploadMockup(mobileMockup);
+      if (mockup) mockupUrl = await uploadMockup(mockup, 'Primary');
+      if (secondaryMockup) secondaryMockupUrl = await uploadMockup(secondaryMockup, 'Secondary');
+      if (mobileMockup) mobileMockupUrl = await uploadMockup(mobileMockup, 'Mobile');
       // Compose payload for PDF generation
       const payload: any = {
         title,

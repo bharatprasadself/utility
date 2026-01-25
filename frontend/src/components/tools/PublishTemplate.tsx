@@ -1,4 +1,4 @@
-import { MenuItem, Select, InputLabel, FormControl, IconButton, Tooltip } from '@mui/material';
+import { MenuItem, Select, InputLabel, FormControl, IconButton, Tooltip, Checkbox, FormControlLabel, Divider } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { SelectChangeEvent } from '@mui/material';
@@ -10,6 +10,10 @@ import { listTemplates, publishTemplate, generateBuyerPdf } from '../../services
 import type { Template } from '../../services/templates';
 
 export default function PublishTemplate() {
+  // State for selected template (radio selection)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  // Per-template age/balloon instructions toggle
+  const [includeAgeInstructionsById, setIncludeAgeInstructionsById] = useState<Record<number, boolean>>({});
   const { isAdmin } = useAuth();
   const admin = isAdmin();
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -283,7 +287,8 @@ export default function PublishTemplate() {
       const serverType = row ? normalizePdfType((row as any).buyerPdfType as string | undefined) : undefined;
       const selected = pdfTypeById[id];
       const effectiveType = (selected || serverType || 'print-mobile') as 'print-mobile' | 'print-only' | 'invite-suite';
-      const url = await generateBuyerPdf(id, effectiveType);
+      const includeAgeInstructions = !!includeAgeInstructionsById[id];
+      const url = await generateBuyerPdf(id, effectiveType, includeAgeInstructions);
       setSuccess('Buyer PDF generated successfully.');
       // Open the PDF in a new browser tab
       if (url) {
@@ -322,7 +327,7 @@ export default function PublishTemplate() {
                     fullWidth
                   />
                 </Grid>
-                {/* Buyer PDF Type in its own grid row */}
+                {/* Buyer PDF Type in its own grid row (no global age/balloon checkbox) */}
                 <Grid item xs={12}>
                   <FormControl fullWidth>
                     <InputLabel id="create-pdf-type">Buyer PDF Type</InputLabel>
@@ -530,74 +535,114 @@ export default function PublishTemplate() {
       {pdfError && <Alert severity="error" sx={{ mb: 2 }}>{pdfError}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       {loading ? <CircularProgress /> : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} variant="outlined" sx={{ border: 1, borderColor: 'divider', borderRadius: 2 }}>
+          {/* Action bar above the table header */}
+          <Box sx={{ width: '100%', p: 2, pb: 1 }}>
+            <Grid container alignItems="center" justifyContent="flex-end" spacing={2}>
+              <Grid item>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedTemplateId !== null ? !!includeAgeInstructionsById[selectedTemplateId] : false}
+                      onChange={e => {
+                        if (selectedTemplateId !== null) {
+                          setIncludeAgeInstructionsById(prev => ({ ...prev, [selectedTemplateId]: e.target.checked }));
+                        }
+                      }}
+                      color="primary"
+                      disabled={selectedTemplateId == null}
+                    />
+                  }
+                  label="Age/balloon instructions"
+                  sx={{ mr: 1, mb: 0 }}
+                />
+              </Grid>
+              <Grid item>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  disabled={!!generatingPdfId || selectedTemplateId == null}
+                  onClick={() => { if (selectedTemplateId !== null) handleGeneratePdf(selectedTemplateId); }}
+                  sx={{ borderRadius: 2, textTransform: 'none', px: 2, minWidth: 110 }}
+                >
+                  {selectedTemplateId !== null && generatingPdfId === selectedTemplateId ? <CircularProgress size={20} /> : 'Buyer PDF'}
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  disabled={!!publishingId || selectedTemplateId == null}
+                  onClick={() => { if (selectedTemplateId !== null) handlePublish(selectedTemplateId); }}
+                  sx={{ borderRadius: 2, textTransform: 'none', px: 2, minWidth: 90 }}
+                >
+                  {selectedTemplateId !== null && publishingId === selectedTemplateId ? <CircularProgress size={20} /> : 'Publish'}
+                </Button>
+              </Grid>
+              <Grid item>
+                <Tooltip title="Edit">
+                  <span>
+                    <IconButton
+                      color="info"
+                      onClick={() => {
+                        if (selectedTemplateId !== null) {
+                          const tmpl = templates.find(t => t.id === selectedTemplateId);
+                          if (tmpl) startEdit(tmpl);
+                        }
+                      }}
+                      disabled={loading || selectedTemplateId == null}
+                      size="medium"
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Grid>
+              <Grid item>
+                <Tooltip title="Delete">
+                  <span>
+                    <IconButton
+                      color="error"
+                      onClick={() => { if (selectedTemplateId !== null) handleDelete(selectedTemplateId); }}
+                      disabled={loading || selectedTemplateId == null}
+                      size="medium"
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Grid>
+            </Grid>
+          </Box>
+          <Divider sx={{ mb: 1 }} />
+          <Table sx={{ minWidth: 650, borderCollapse: 'separate', borderSpacing: 0 }}>
             <TableHead>
               <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Mockup</TableCell>
-                <TableCell>Status</TableCell>
+                <TableCell sx={{ borderRight: 1, borderColor: 'divider' }}></TableCell>
+                <TableCell sx={{ borderRight: 1, borderColor: 'divider' }}>Title</TableCell>
+                <TableCell sx={{ borderRight: 1, borderColor: 'divider' }}>Mockup</TableCell>
+                <TableCell sx={{ borderRight: 1, borderColor: 'divider' }}>Status</TableCell>
                 <TableCell>PDF Type</TableCell>
-                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {templates.map((t: Template) => (
-                <TableRow key={t.id}>
-                  <TableCell>{t.title}</TableCell>
-                  <TableCell>{t.mockupUrl ? <a href={resolveUrl(t.mockupUrl)} target="_blank" rel="noopener noreferrer">View</a> : '-'}</TableCell>
-                  <TableCell>{t.status === 'published' ? 'Published' : 'Draft'}</TableCell>
-                  <TableCell>
-                    {(t as any).buyerPdfType || '-'}
+                <TableRow key={t.id} selected={selectedTemplateId === t.id}>
+                  <TableCell sx={{ borderRight: 1, borderColor: 'divider' }}>
+                    <input
+                      type="radio"
+                      name="selectedTemplate"
+                      checked={selectedTemplateId === t.id}
+                      onChange={() => setSelectedTemplateId(t.id)}
+                      style={{ accentColor: '#1976d2' }}
+                    />
                   </TableCell>
-                  <TableCell sx={{ py: 2 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                        <Button
-                          variant="contained"
-                          color="secondary"
-                          disabled={!!generatingPdfId}
-                          onClick={() => handleGeneratePdf(t.id)}
-                        sx={{ borderRadius: 2, textTransform: 'none', px: 2 }}
-                        >
-                          {generatingPdfId === t.id ? <CircularProgress size={20} /> : 'Buyer PDF'}
-                        </Button>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          disabled={!!publishingId}
-                          onClick={() => handlePublish(t.id)}
-                          sx={{ borderRadius: 2, textTransform: 'none', px: 2 }}
-                        >
-                          {publishingId === t.id ? <CircularProgress size={20} /> : 'Publish'}
-                        </Button>
-                        <Tooltip title="Edit">
-                          <span>
-                            <IconButton
-                              color="info"
-                              onClick={() => startEdit(t)}
-                              disabled={loading}
-                              size="medium"
-                              sx={{ borderRadius: 2 }}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <span>
-                            <IconButton
-                              color="error"
-                              onClick={() => handleDelete(t.id)}
-                              disabled={loading}
-                              size="medium"
-                              sx={{ borderRadius: 2 }}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                    </Stack>
-                  </TableCell>
+                  <TableCell sx={{ borderRight: 1, borderColor: 'divider' }}>{t.title}</TableCell>
+                  <TableCell sx={{ borderRight: 1, borderColor: 'divider' }}>{t.mockupUrl ? <a href={resolveUrl(t.mockupUrl)} target="_blank" rel="noopener noreferrer">View</a> : '-'}</TableCell>
+                  <TableCell sx={{ borderRight: 1, borderColor: 'divider' }}>{t.status === 'published' ? 'Published' : 'Draft'}</TableCell>
+                  <TableCell>{(t as any).buyerPdfType || '-'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

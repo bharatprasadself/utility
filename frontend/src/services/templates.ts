@@ -28,9 +28,20 @@ export const listTemplates = async (): Promise<Template[]> => {
   return res.data;
 };
 
-export const uploadMockup = async (file: File): Promise<string> => {
+export const uploadMockup = async (
+  file: File,
+  role?: 'Primary' | 'Secondary' | 'Mobile',
+  baseName = 'Mockup_Image',
+  variant = 'V1',
+  index?: string
+): Promise<string> => {
   const form = new FormData();
   form.append('file', file);
+  const idx = index ?? extractTrailingDigits(file.name) ?? '01';
+  if (role) form.append('role', role);
+  if (baseName) form.append('baseName', baseName);
+  if (variant) form.append('variant', variant);
+  if (idx) form.append('index', idx);
   const res = await axiosInstance.post<{ url: string }>(
     '/api/admin/canva-templates/upload-mockup',
     form,
@@ -42,17 +53,24 @@ export const uploadMockup = async (file: File): Promise<string> => {
   return res.data.url;
 };
 
+const extractTrailingDigits = (name: string): string | null => {
+  const dot = name.lastIndexOf('.');
+  const base = dot >= 0 ? name.substring(0, dot) : name;
+  const m = base.match(/(\d+)$/);
+  return m ? m[1] : null;
+};
+
 export const createTemplate = async (payload: { title: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }): Promise<Template> => {
   const res = await axiosInstance.post<Template>('/api/admin/canva-templates', payload);
   return res.data;
 };
 
-export const generateBuyerPdf = async (templateId: number, pdfType: BuyerPdfType): Promise<string> => {
+export const generateBuyerPdf = async (templateId: number, pdfType: BuyerPdfType, includeAgeInstructions?: boolean): Promise<string> => {
   const res = await axiosInstance.post<{ success: boolean; buyerPdfUrl: string }>(
     '/api/admin/canva-templates/generate-buyer-pdf',
     null,
     {
-      params: { templateId, pdfType },
+      params: { templateId, pdfType, includeAgeInstructions },
       // PDF generation can take longer with large images; extend timeout for this request
       timeout: 60000
     }

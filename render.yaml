@@ -31,3 +31,9 @@ services:
           name: utility-zone
           type: web
           property: url
+      - key: VITE_READ_INCLUDE_CODE
+        value: "true"
+      - key: VITE_READ_WPM
+        value: "200"
+      - key: VITE_READ_WPM_CODE
+        value: "120"
