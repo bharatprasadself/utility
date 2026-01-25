@@ -16,30 +16,47 @@ public class TemplateDescriptionController {
         this.service = service;
     }
 
-    // Get the single master template
-    @GetMapping("/master")
-    public ResponseEntity<TemplateDescription> getMasterTemplate() {
-        List<TemplateDescription> all = service.findAll();
-        if (!all.isEmpty()) {
-            return ResponseEntity.ok(all.get(0));
-        }
-        return ResponseEntity.notFound().build();
+    // List all template descriptions
+    @GetMapping("")
+    public List<TemplateDescription> listAll() {
+        return service.findAll();
     }
 
-    // Update the master template (body and title)
-    @PutMapping("/master")
-    public ResponseEntity<TemplateDescription> updateMasterTemplate(@RequestBody TemplateDescription updated) {
-        List<TemplateDescription> all = service.findAll();
-        if (!all.isEmpty()) {
-            TemplateDescription existing = all.get(0);
-            existing.setName(updated.getName());
-            existing.setTitle(updated.getTitle());
-            existing.setDescription(updated.getDescription());
-            return ResponseEntity.ok(service.save(existing));
+    // Get a template description by ID
+    @GetMapping("/{id}")
+    public ResponseEntity<TemplateDescription> getById(@PathVariable Long id) {
+        return service.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // Create a new template description
+    @PostMapping("")
+    public TemplateDescription create(@RequestBody TemplateDescription templateDescription) {
+        return service.save(templateDescription);
+    }
+
+    // Update a template description by ID
+    @PutMapping("/{id}")
+    public ResponseEntity<TemplateDescription> update(@PathVariable Long id, @RequestBody TemplateDescription updated) {
+        return service.findById(id)
+                .map(existing -> {
+                    existing.setName(updated.getName());
+                    existing.setTitle(updated.getTitle());
+                    existing.setDescription(updated.getDescription());
+                    return ResponseEntity.ok(service.save(existing));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // Delete a template description by ID
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        if (service.findById(id).isPresent()) {
+            service.delete(id);
+            return ResponseEntity.noContent().build();
         } else {
-            // If no template exists, create one
-            TemplateDescription created = service.save(updated);
-            return ResponseEntity.ok(created);
+            return ResponseEntity.notFound().build();
         }
     }
 }

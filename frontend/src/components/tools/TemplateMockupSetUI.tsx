@@ -1,8 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem } from '@mui/material';
+import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem, FormControl } from '@mui/material';
 import axios, { API_BASE_URL } from '@/services/axiosConfig';
 
+
 const TemplateMockupSetUI: React.FC = () => {
+
+  // New: Style selection (used for upload and listing)
+  const [selectedStyle, setSelectedStyle] = useState<string>('wedding');
 
   // For adding a new mockup when list is empty
   const [newMockupFile, setNewMockupFile] = useState<File | null>(null);
@@ -21,6 +26,8 @@ const TemplateMockupSetUI: React.FC = () => {
       if (nameLc.includes('mobile')) mockupType = 'mobile';
       else if (nameLc.includes('secondary')) mockupType = 'secondary';
       formData.append('mockupType', mockupType);
+      // Include event style to segregate storage by style on backend
+      formData.append('style', selectedStyle);
       try {
         await axios.post('/api/mockup-upload/master', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -51,13 +58,27 @@ const TemplateMockupSetUI: React.FC = () => {
   const [selectedMockup, setSelectedMockup] = useState<string | null>(null);
     // Fetch master mockups on mount
     useEffect(() => {
-      axios.get('/api/master-mockups').then(res => {
-        // Flatten all mockup names into a single array
-        const allNames = [...(res.data.primary || []), ...(res.data.mobile || [])];
+      axios.get('/api/master-mockups', { params: { style: selectedStyle } }).then(res => {
+        let allNames: string[] = [];
+        if (Array.isArray(res.data)) {
+          allNames = res.data.filter((v: any) => typeof v === 'string');
+        } else if (typeof res.data === 'object' && res.data !== null) {
+          Object.values(res.data).forEach(val => {
+            if (Array.isArray(val)) {
+              allNames.push(...val.filter((v: any) => typeof v === 'string'));
+            }
+          });
+        }
+        // Remove duplicates and falsy values
+        allNames = Array.from(new Set(allNames)).filter(Boolean);
         setMasterMockups(allNames);
         if (allNames.length > 0) setSelectedMockup(allNames[0]);
+        else setSelectedMockup(null);
+      }).catch(() => {
+        setMasterMockups([]);
+        setSelectedMockup(null);
       });
-    }, []);
+    }, [selectedStyle]);
   const [productFile, setProductFile] = useState<File | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [selectedMockupUrl, setSelectedMockupUrl] = useState<string | null>(null);
@@ -97,13 +118,21 @@ const TemplateMockupSetUI: React.FC = () => {
       formData.append('mockup', mockupBlob, selectedMockup);
       formData.append('product', productFile);
       // Add mockupType for backend logic (dynamic: mobile, secondary, or primary)
-      let mockupType = 'primary';
-      const nameLc = selectedMockup.toLowerCase();
-      if (nameLc.includes('mobile')) mockupType = 'mobile';
-      else if (nameLc.includes('secondary')) mockupType = 'secondary';
-      formData.append('mockupType', mockupType);
+      let derivedMockupType = 'primary';
+      const selectedMockupLc = selectedMockup.toLowerCase();
+      if (selectedMockupLc.includes('mobile')) derivedMockupType = 'mobile';
+      else if (selectedMockupLc.includes('secondary')) derivedMockupType = 'secondary';
+      formData.append('mockupType', derivedMockupType);
+      // Extract version from master mockup filename (e.g., V1, V2, V3). Do not send to backend.
+      let version = 'V1';
+      const versionMatch = selectedMockup.match(/v\d+/i);
+      if (versionMatch) {
+        version = versionMatch[0].toUpperCase();
+      }
+      // Add style parameter from dropdown
+      formData.append('style', selectedStyle);
       // Store for download filename
-      setMergedMockupType(mockupType);
+      setMergedMockupType(derivedMockupType);
       const res = await axios.post('/api/mockup-image/merge', formData, {
         responseType: 'blob',
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -111,6 +140,24 @@ const TemplateMockupSetUI: React.FC = () => {
       const blob = new Blob([res.data], { type: 'image/png' });
       const url = window.URL.createObjectURL(blob);
       setResultUrl(url);
+
+      // Try to read filename from Content-Disposition; else compute locally
+      const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
+      let serverName: string | null = null;
+      if (cd) {
+        const match = cd.match(/filename="?([^";]+)"?/i);
+        if (match && match[1]) serverName = match[1];
+      }
+
+      const base = deriveBaseNameFromMockup(selectedMockup);
+      const roleLabel = roleLabelFromType(derivedMockupType);
+      const variantLabel = (version || 'V1').toUpperCase();
+      const indexLabel = extractIndexFromProduct(productFile.name);
+      const nsIndex = `NSL${indexLabel}`;
+      const computedName = baseContainsRoleToken(base, roleLabel)
+        ? `${base}_${variantLabel}_${nsIndex}.png`
+        : `${base}_${roleLabel}_${variantLabel}_${nsIndex}.png`;
+      setDownloadName(serverName || computedName);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to merge images.');
     } finally {
@@ -120,8 +167,10 @@ const TemplateMockupSetUI: React.FC = () => {
 
   const handleDownload = () => {
     if (!resultUrl) return;
-    let fileType = mergedMockupType || 'primary';
-    let fileName = 'Mockup_Image_' + fileType.charAt(0).toUpperCase() + fileType.slice(1) + '.png';
+    let fileName = downloadName || (() => {
+      const type = mergedMockupType || 'primary';
+      return 'Mockup_Image_' + type.charAt(0).toUpperCase() + type.slice(1) + '.png';
+    })();
     const a = document.createElement('a');
     a.href = resultUrl;
     a.download = fileName;
@@ -142,6 +191,39 @@ const TemplateMockupSetUI: React.FC = () => {
   };
   // Track merged mockup type for download filename
   const [mergedMockupType, setMergedMockupType] = useState<string>('primary');
+  const [downloadName, setDownloadName] = useState<string | null>(null);
+
+  function sanitizeForFile(s: string | null | undefined): string {
+    const fallback = 'Mockup_Image';
+    if (!s) return fallback;
+    const r = s.trim().replace(/\s+/g, '_').replace(/[^A-Za-z0-9_\-]/g, '');
+    return r.length ? r : fallback;
+  }
+  function deriveBaseNameFromMockup(name: string): string {
+    const noExt = name.includes('.') ? name.substring(0, name.lastIndexOf('.')) : name;
+    let stripped = noExt.replace(/_(?:[PM])\d+$/i, '');
+    stripped = stripped.replace(/_V\d+$/i, '');
+    return sanitizeForFile(stripped || noExt);
+  }
+  function roleLabelFromType(mockupType: string): string {
+    const mt = (mockupType || '').toLowerCase();
+    if (mt === 'mobile') return 'Mobile';
+    if (mt === 'secondary') return 'Secondary';
+    return 'Primary';
+  }
+  function baseContainsRoleToken(base: string, roleLabel: string): boolean {
+    if (!base || !roleLabel) return false;
+    return base.split('_').some(t => t.toLowerCase() === roleLabel.toLowerCase());
+  }
+  function extractIndexFromProduct(filename: string): string {
+    const noExt = filename && filename.includes('.') ? filename.substring(0, filename.lastIndexOf('.')) : (filename || '');
+    const m = noExt.match(/(\d+)$/);
+    if (m && m[1]) {
+      const d = m[1];
+      return d.length === 1 ? '0' + d : d;
+    }
+    return '01';
+  }
 
     return (
   <Box
@@ -162,13 +244,28 @@ const TemplateMockupSetUI: React.FC = () => {
         bgcolor="#fff"
         mb={{ xs: 3, md: 0 }}
       >
-        <Typography variant="h5" gutterBottom>
+      <Typography variant="h5" gutterBottom>
           Mockup Image Merger
         </Typography>
+                {/* Style selection dropdown */}
+                <Box mb={2}>
+                  <Typography variant="subtitle1">Select Event Style</Typography>
+                  <FormControl fullWidth>
+                    <Select
+                      value={selectedStyle}
+                      onChange={e => setSelectedStyle(e.target.value as string)}
+                    >
+                      <MenuItem value="wedding">Wedding</MenuItem>
+                      <MenuItem value="birthday">Birthday</MenuItem>
+                      <MenuItem value="anniversary">Anniversary</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+        
 
         {/* Dropdown */}
         <Box mb={2}>
-          <Typography variant="subtitle1">Select Master Mockup</Typography>
+          <Typography variant="subtitle1">Select Master Mockup</Typography>          
           <Select
             fullWidth
             value={selectedMockup || ''}
@@ -183,8 +280,10 @@ const TemplateMockupSetUI: React.FC = () => {
           </Select>
         </Box>
 
-        {/* Product upload */}
 
+
+
+        {/* Product upload */}
         <Box mb={2}>
           <Button variant="outlined" component="label" sx={{ mb: 2 }}>
             Select Product Image

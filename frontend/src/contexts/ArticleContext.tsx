@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useRef } from 'react';
 import { ArticleService } from '../services/article';
 import type { Article } from '../types/Article';
 import { ArticleCategory } from '../types/Article';
@@ -90,33 +90,56 @@ public class HelloController {
   // Add more articles as needed
 ];
 
+// Precompute a fast lookup map for static articles to avoid repeated scans
+const staticArticleMap: Map<string, Article> = new Map(staticArticles.map(a => [a.id, a]));
+
 export const ArticleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isStaticArticle = (id: string) => {
-    return staticArticles.some(article => article.id === id);
-  };
+  // Simple in-memory cache for dynamic articles to prevent redundant network calls
+  const dynamicCacheRef = useRef<Map<string, Article>>(new Map());
+  // Track in-flight requests to deduplicate concurrent fetches for the same ID
+  const inflightRef = useRef<Map<string, Promise<Article | undefined>>>(new Map());
+
+  const isStaticArticle = (id: string) => staticArticleMap.has(id);
 
   const getDynamicArticleById = async (id: string) => {
-    try {
-      const response = await ArticleService.getArticleById(id);
-      console.log('Found dynamic article:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching dynamic article:', error);
-      return undefined;
-    }
+    // Return from cache if present
+    const cached = dynamicCacheRef.current.get(id);
+    if (cached) return cached;
+
+    // Deduplicate concurrent requests
+    const existing = inflightRef.current.get(id);
+    if (existing) return existing;
+
+    const p = ArticleService.getArticleById(id)
+      .then((response) => {
+        const article = response.data;
+        if (article) {
+          dynamicCacheRef.current.set(id, article);
+        }
+        return article;
+      })
+      .catch((error) => {
+        // Log in development only to reduce noise in production
+        if ((import.meta as any)?.env?.DEV) {
+          // eslint-disable-next-line no-console
+          console.error('Error fetching dynamic article:', error);
+        }
+        return undefined;
+      })
+      .finally(() => {
+        inflightRef.current.delete(id);
+      });
+
+    inflightRef.current.set(id, p);
+    return p;
   };
 
   const getArticleById = async (id: string) => {
-    console.log('Getting article by ID:', id);
-    
-    // Try static articles first
-    const staticArticle = staticArticles.find(article => article.id === id);
-    if (staticArticle) {
-      console.log('Found static article:', staticArticle);
-      return staticArticle;
-    }
+    // Try static map first for O(1) lookup
+    const staticArticle = staticArticleMap.get(id);
+    if (staticArticle) return staticArticle;
 
-    // Fall back to dynamic articles
+    // Fall back to dynamic article with caching/deduplication
     return getDynamicArticleById(id);
   };
 

@@ -11,7 +11,7 @@ import Navigation from './components/Navigation';
 import { AuthProvider } from './contexts/AuthContext';
 import ReactArticles from './components/articles/ReactArticles';
 import SpringBootArticles from './components/articles/SpringBootArticles';
-// import PostgreSQLArticles from './components/articles/PostgreSQLArticles';
+import PostgreSQLArticles from './components/articles/PostgreSQLArticles';
 import DockerArticles from './components/articles/DockerArticles';
 import JavaArticles from './components/articles/JavaArticles';
 import MicroservicesArticles from './components/articles/MicroservicesArticles';
@@ -63,6 +63,7 @@ function App() {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/articles/spring-boot/*" element={<SpringBootArticles />} />
                     <Route path="/articles/react/*" element={<ReactArticles />} />
+                    <Route path="/articles/postgresql/*" element={<PostgreSQLArticles />} />
                     <Route path="/articles/docker/*" element={<DockerArticles />} />
                     <Route path="/articles/microservices/*" element={<MicroservicesArticles />} />
                     <Route path="/articles/java/*" element={<JavaArticles />} />

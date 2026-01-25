@@ -6,16 +6,17 @@ import type { BlogRequest } from '../services/blog';
 import BlogEditorDialog from './BlogEditorDialog';
 import type { Theme } from '@mui/material/styles';
 import type { SxProps } from '@mui/system';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import blogService from '../services/blog';
 // Use centralized Blog type; extend locally with optional timestamps for UI comparison
 import type { Blog } from '../types/Blog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Advertisement from './Advertisement';
+import { computeReadTime } from '../utils/readTime';
 
 // Lightweight markdown preview styling (subset of BlogList's richer styling)
-const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
+const MarkdownPreviewBase: React.FC<{ content: string }> = ({ content }) => {
   const cleaned = content
     .replace(/<span[^>]*style=["'][^"']*display\s*:\s*none[^"']*["'][^>]*>.*?<\/span>/gis, '')
     .replace(/<div[^>]*align=["']center["'][^>]*>.*?<\/div>/gis, '');
@@ -64,6 +65,8 @@ const MarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
     </Box>
   );
 };
+
+const MarkdownPreview = memo(MarkdownPreviewBase);
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -244,6 +247,9 @@ const Blogs = () => {
                     • {formatDate(((blog as any).publishDate || (blog as any).createdAt) as string)}
                   </Typography>
                 )}
+                <Typography variant="body2" color="text.secondary">
+                  • {computeReadTime(blog.content)}
+                </Typography>
                 {/* Updated timestamp only when it's newer than the published/created date. */}
                 {(() => {
                   const updatedAt = (blog as any).updatedAt as string | undefined;

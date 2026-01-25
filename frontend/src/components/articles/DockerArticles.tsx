@@ -131,7 +131,7 @@ docker run --user 1000:1000 my-app
 function DockerArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
-  const [articles, setArticles] = useState<Article[]>(staticArticles);
+  const [articles, setArticles] = useState<Article[]>([]);
   // Removed unused loading state to clean up warnings
   // const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -143,16 +143,13 @@ function DockerArticles() {
       console.log('Loading Docker articles...');
       const response = await ArticleService.getArticlesByCategory(ArticleCategory.DOCKER);
       console.log('Docker articles response:', response);
-      if (response.data && response.data.length > 0) {
-        setArticles(response.data);
-      } else {
-        console.log('No articles found, using static content');
-        setArticles(staticArticles);
-      }
+      const list = Array.isArray(response.data) ? response.data : [];
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(list.length === 0 && showStatic ? staticArticles : list);
     } catch (error) {
       console.error('Failed to load Docker articles:', error);
-      console.log('Using static content due to error');
-      setArticles(staticArticles);
+      const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
+      setArticles(showStatic ? staticArticles : []);
     } finally {
       // no-op
     }
