@@ -48,7 +48,7 @@ public class Article {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "header")
+    @Column(name = "group_name")
     private String header;
 
     @PrePersist

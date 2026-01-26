@@ -31,9 +31,9 @@ import java.sql.ResultSet;
 
      @EventListener(ApplicationReadyEvent.class)
      public void onReady() {
-         try (Connection conn = dataSource.getConnection()) {
-            // Ensure articles.header column exists when DDL auto is disabled (safe to run repeatedly)
-            ensureArticlesHeaderColumn(conn);
+        try (Connection conn = dataSource.getConnection()) {
+           // Ensure articles.group_name column exists (safe to run repeatedly)
+            ensureArticlesGroupNameColumn(conn);
          } catch (SQLException e) {
              log.warn("Schema migration runner encountered an error: {}", e.getMessage());
          }
@@ -156,18 +156,31 @@ import java.sql.ResultSet;
         }
     }
 
-    private void ensureArticlesHeaderColumn(Connection conn) {
+    private void ensureArticlesGroupNameColumn(Connection conn) {
         try {
-            if (!columnExists(conn, null, null, "ARTICLES", "HEADER")) {
-                log.info("Adding ARTICLES.HEADER column...");
-                try (Statement st = conn.createStatement()) {
-                    st.executeUpdate("ALTER TABLE articles ADD COLUMN header VARCHAR(255)");
-                    // No backfill needed; existing rows will have NULL until set by admin
-                }
-                log.info("ARTICLES.HEADER column added.");
+            // If group_name already exists, nothing to do
+            if (columnExists(conn, null, null, "ARTICLES", "GROUP_NAME")) {
+                return;
             }
+
+            // If an old 'header' column exists, prefer renaming it to 'group_name'
+            if (columnExists(conn, null, null, "ARTICLES", "HEADER")) {
+                log.info("Renaming ARTICLES.HEADER -> ARTICLES.GROUP_NAME...");
+                try (Statement st = conn.createStatement()) {
+                    st.executeUpdate("ALTER TABLE articles RENAME COLUMN header TO group_name");
+                }
+                log.info("ARTICLES.HEADER renamed to GROUP_NAME.");
+                return;
+            }
+
+            // Otherwise create the new column
+            log.info("Adding ARTICLES.GROUP_NAME column...");
+            try (Statement st = conn.createStatement()) {
+                st.executeUpdate("ALTER TABLE articles ADD COLUMN group_name VARCHAR(255)");
+            }
+            log.info("ARTICLES.GROUP_NAME column added.");
         } catch (SQLException e) {
-            log.warn("Failed to ensure ARTICLES.HEADER column: {}", e.getMessage());
+            log.warn("Failed to ensure ARTICLES.GROUP_NAME column: {}", e.getMessage());
         }
     }
 
