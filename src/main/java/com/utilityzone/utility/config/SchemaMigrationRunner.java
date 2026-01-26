@@ -6,10 +6,12 @@
  import org.springframework.context.event.EventListener;
  import org.springframework.stereotype.Component;
 
- import javax.sql.DataSource;
- import java.sql.Connection;
- import java.sql.SQLException;
- import java.sql.Statement;
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 
 // /**
 //  * Lightweight safeguard to align schema changes when DDL auto is disabled.
@@ -30,14 +32,8 @@
      @EventListener(ApplicationReadyEvent.class)
      public void onReady() {
          try (Connection conn = dataSource.getConnection()) {
-//             dropTemplateDescriptionsTable(conn);
-//             ensureCanvaTemplatesTable(conn);
-//             ensureCanvaTemplatesStatusColumn(conn);
-//             ensureBlogsStatusColumn(conn);
-//             ensureArticlesStatusAndPublishDate(conn);
-//             ensureUsersEmailColumn(conn);
-//             ensurePasswordResetTokenTable(conn);
-//             ensureTemplatesTable(conn);
+            // Ensure articles.header column exists when DDL auto is disabled (safe to run repeatedly)
+            ensureArticlesHeaderColumn(conn);
          } catch (SQLException e) {
              log.warn("Schema migration runner encountered an error: {}", e.getMessage());
          }
@@ -153,12 +149,27 @@
 //         }
 //     }
 
-//     private boolean columnExists(Connection conn, String catalog, String schemaPattern, String tableName, String columnName) throws SQLException {
-//         DatabaseMetaData meta = conn.getMetaData();
-//         try (ResultSet rs = meta.getColumns(catalog, schemaPattern, tableName, columnName)) {
-//             return rs.next();
-//         }
-//     }
+    private boolean columnExists(Connection conn, String catalog, String schemaPattern, String tableName, String columnName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getColumns(catalog, schemaPattern, tableName, columnName)) {
+            return rs.next();
+        }
+    }
+
+    private void ensureArticlesHeaderColumn(Connection conn) {
+        try {
+            if (!columnExists(conn, null, null, "ARTICLES", "HEADER")) {
+                log.info("Adding ARTICLES.HEADER column...");
+                try (Statement st = conn.createStatement()) {
+                    st.executeUpdate("ALTER TABLE articles ADD COLUMN header VARCHAR(255)");
+                    // No backfill needed; existing rows will have NULL until set by admin
+                }
+                log.info("ARTICLES.HEADER column added.");
+            }
+        } catch (SQLException e) {
+            log.warn("Failed to ensure ARTICLES.HEADER column: {}", e.getMessage());
+        }
+    }
 
 //     private boolean tableExists(Connection conn, String tableName) throws SQLException {
 //         DatabaseMetaData meta = conn.getMetaData();

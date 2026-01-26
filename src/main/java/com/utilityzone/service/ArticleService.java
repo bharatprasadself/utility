@@ -85,6 +85,8 @@ public class ArticleService {
                     existingArticle.setPublishDate(null);
                 }
             }
+            // Update header/group if provided
+            existingArticle.setHeader(articleDetails.getHeader());
             return articleRepository.save(existingArticle);
         }
         return null;
