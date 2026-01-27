@@ -61,12 +61,18 @@ public class ArticleService {
 
     @org.springframework.transaction.annotation.Transactional
     public void reorderGroups(java.util.List<String> orderedNames) {
-        int order = 0;
+        int pos = 0;
         for (String name : orderedNames) {
-            com.utilityzone.model.ArticleGroup g = articleGroupRepository.findByName(name).orElseGet(() -> new com.utilityzone.model.ArticleGroup(name, order));
-            g.setDisplayOrder(order);
+            java.util.Optional<com.utilityzone.model.ArticleGroup> existing = articleGroupRepository.findByName(name);
+            com.utilityzone.model.ArticleGroup g;
+            if (existing.isPresent()) {
+                g = existing.get();
+            } else {
+                g = new com.utilityzone.model.ArticleGroup(name, pos);
+            }
+            g.setDisplayOrder(pos);
             articleGroupRepository.save(g);
-            order++;
+            pos++;
         }
     }
 
