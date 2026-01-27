@@ -1,6 +1,6 @@
 package com.utilityzone.model;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "article_groups")
