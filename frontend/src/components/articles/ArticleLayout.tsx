@@ -224,6 +224,9 @@ interface ArticleCardProps {
   setConfirmDelete: (id: string) => void;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
+  onDragStart?: (e: React.DragEvent, id: string) => void;
+  onDrop?: (e: React.DragEvent, id: string) => void;
+  onDragOver?: (e: React.DragEvent) => void;
 }
 
 const ArticleCard: React.FC<ArticleCardProps> = ({
@@ -235,8 +238,13 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
   setConfirmDelete,
   selected = false,
   onToggleSelect
+  , onDragStart, onDrop, onDragOver
 }) => (
   <Card
+    draggable={isAdmin}
+    onDragStart={(e) => onDragStart && onDragStart(e, article.id)}
+    onDrop={(e) => onDrop && onDrop(e, article.id)}
+    onDragOver={(e) => onDragOver && onDragOver(e)}
     sx={{
       borderRadius: 2,
       boxShadow: 1,
@@ -629,6 +637,48 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     });
   };
 
+  // Drag & Drop handlers for admin reordering
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    try {
+      e.dataTransfer.setData('text/plain', id);
+      e.dataTransfer.effectAllowed = 'move';
+    } catch (err) {
+      // old browsers may throw; ignore
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const persistReorder = async (newOrder: Article[]) => {
+    try {
+      const ids = newOrder.map(a => a.id);
+      await ArticleService.reorderArticles(ids);
+    } catch (err: any) {
+      console.error('Failed to persist article order', err);
+      setError(err?.message || 'Failed to save new article order');
+    }
+  };
+
+  const handleDropOnArticle = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (!draggedId || draggedId === targetId) return;
+    setDisplayedArticles(prev => {
+      const arr = [...prev];
+      const from = arr.findIndex(a => a.id === draggedId);
+      const to = arr.findIndex(a => a.id === targetId);
+      if (from === -1 || to === -1) return prev;
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
+      // Persist in background
+      persistReorder(arr);
+      return arr;
+    });
+  };
+
   // Removed generic handleSubmit; we now always save via explicit Draft/Publish buttons
 
   const handleSubmitWithStatus = async (status: 'DRAFT' | 'PUBLISHED') => {
@@ -929,6 +979,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                             setConfirmDelete={setConfirmDelete}
                             selected={selectedArticlesSet.has(article.id)}
                             onToggleSelect={toggleSelectArticle}
+                            onDragStart={handleDragStart}
+                            onDrop={handleDropOnArticle}
+                            onDragOver={handleDragOver}
                           />
                         ))}
                       </Stack>
@@ -953,6 +1006,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                         setConfirmDelete={setConfirmDelete}
                         selected={selectedArticlesSet.has(article.id)}
                         onToggleSelect={toggleSelectArticle}
+                        onDragStart={handleDragStart}
+                        onDrop={handleDropOnArticle}
+                        onDragOver={handleDragOver}
                       />
                     ))}
                   </Stack>

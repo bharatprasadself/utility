@@ -177,4 +177,16 @@ export const ArticleService = {
       throw error;
     }
   }
+,
+  reorderArticles: async (orderedIds: string[]): Promise<AxiosResponse<void>> => {
+    console.log('🔀 Persisting reordered articles', orderedIds);
+    try {
+      const response = await api.post(`${BASE_URL}/reorder`, orderedIds);
+      console.log('✅ Reorder persisted');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to persist reorder:', error);
+      throw error;
+    }
+  }
 };
