@@ -224,9 +224,6 @@ interface ArticleCardProps {
   setConfirmDelete: (id: string) => void;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
-  onDragStart?: (e: React.DragEvent, id: string) => void;
-  onDrop?: (e: React.DragEvent, id: string) => void;
-  onDragOver?: (e: React.DragEvent) => void;
 }
 
 const ArticleCard: React.FC<ArticleCardProps> = ({
@@ -238,13 +235,8 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
   setConfirmDelete,
   selected = false,
   onToggleSelect
-  , onDragStart, onDrop, onDragOver
 }) => (
   <Card
-    draggable={isAdmin}
-    onDragStart={(e) => onDragStart && onDragStart(e, article.id)}
-    onDrop={(e) => onDrop && onDrop(e, article.id)}
-    onDragOver={(e) => onDragOver && onDragOver(e)}
     sx={{
       borderRadius: 2,
       boxShadow: 1,
@@ -506,6 +498,56 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     });
   };
 
+  // Group ordering state (admin can reorder groups)
+  const [groupOrder, setGroupOrder] = useState<string[]>([]);
+
+  // Load persisted group order from backend (public endpoint)
+  React.useEffect(() => {
+    let mounted = true;
+    const loadGroupOrder = async () => {
+      try {
+        const resp = await ArticleService.getArticleGroups();
+        if (mounted && Array.isArray(resp.data)) setGroupOrder(resp.data);
+      } catch (e) {
+        // ignore; fall back to alphabetical
+      }
+    };
+    loadGroupOrder();
+    return () => { mounted = false; };
+  }, []);
+
+  // Compute sorted group names using persisted order, append any unseen groups
+  const computeSortedGroupNames = (groupsObj: Record<string, Article[]>) => {
+    const known = new Set(Object.keys(groupsObj));
+    const ordered: string[] = [];
+    // Add groups in saved order if they exist in current groups
+    groupOrder.forEach(g => { if (known.has(g)) { ordered.push(g); known.delete(g); } });
+    // Append remaining groups (alphabetical)
+    const remaining = Array.from(known).sort();
+    return ordered.concat(remaining);
+  };
+
+  // Drag handlers for group-level reordering
+  const handleGroupDragStart = (e: React.DragEvent, groupName: string) => {
+    try { e.dataTransfer.setData('text/plain', groupName); e.dataTransfer.effectAllowed = 'move'; } catch {}
+  };
+
+  const handleGroupDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+
+  const handleGroupDrop = async (e: React.DragEvent, targetGroup: string) => {
+    e.preventDefault();
+    const dragged = e.dataTransfer.getData('text/plain');
+    if (!dragged || dragged === targetGroup) return;
+    setGroupOrder(prev => {
+      const arr = [...prev.filter(p => p !== dragged)];
+      const idx = arr.indexOf(targetGroup);
+      if (idx === -1) arr.push(dragged); else arr.splice(idx, 0, dragged);
+      // persist in background
+      ArticleService.reorderGroups(arr).catch(err => console.error('Failed to persist group order', err));
+      return arr;
+    });
+  };
+
   // Keep displayed list in sync with incoming props only when viewing published
   React.useEffect(() => {
     if (!viewDrafts) {
@@ -637,47 +679,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     });
   };
 
-  // Drag & Drop handlers for admin reordering
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    try {
-      e.dataTransfer.setData('text/plain', id);
-      e.dataTransfer.effectAllowed = 'move';
-    } catch (err) {
-      // old browsers may throw; ignore
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const persistReorder = async (newOrder: Article[]) => {
-    try {
-      const ids = newOrder.map(a => a.id);
-      await ArticleService.reorderArticles(ids);
-    } catch (err: any) {
-      console.error('Failed to persist article order', err);
-      setError(err?.message || 'Failed to save new article order');
-    }
-  };
-
-  const handleDropOnArticle = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData('text/plain');
-    if (!draggedId || draggedId === targetId) return;
-    setDisplayedArticles(prev => {
-      const arr = [...prev];
-      const from = arr.findIndex(a => a.id === draggedId);
-      const to = arr.findIndex(a => a.id === targetId);
-      if (from === -1 || to === -1) return prev;
-      const [item] = arr.splice(from, 1);
-      arr.splice(to, 0, item);
-      // Persist in background
-      persistReorder(arr);
-      return arr;
-    });
-  };
+  // Article-level drag handlers removed — using group-level dragging now
 
   // Removed generic handleSubmit; we now always save via explicit Draft/Publish buttons
 
@@ -919,7 +921,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
         <Box>
           {(() => {
             const { groups, ungrouped } = groupArticlesByTag(displayedArticles);
-            const sortedGroupNames = Object.keys(groups).sort();
+            const sortedGroupNames = computeSortedGroupNames(groups);
 
             return (
               <Stack spacing={2}>
@@ -938,6 +940,10 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     }}
                   >
                     <AccordionSummary
+                      draggable={isAdmin}
+                      onDragStart={(e) => isAdmin && handleGroupDragStart(e, groupName)}
+                      onDragOver={(e) => isAdmin && handleGroupDragOver(e)}
+                      onDrop={(e) => isAdmin && handleGroupDrop(e, groupName)}
                       expandIcon={<ExpandMoreIcon />}
                       sx={{
                         p: 0,
@@ -979,9 +985,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                             setConfirmDelete={setConfirmDelete}
                             selected={selectedArticlesSet.has(article.id)}
                             onToggleSelect={toggleSelectArticle}
-                            onDragStart={handleDragStart}
-                            onDrop={handleDropOnArticle}
-                            onDragOver={handleDragOver}
                           />
                         ))}
                       </Stack>
@@ -995,7 +998,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 2, mb: 0, color: '#2c3e50' }}>
                       Other Articles
                     </Typography>
-                    {ungrouped.map((article) => (
+                      {ungrouped.map((article) => (
                       <ArticleCard
                         key={article.id}
                         article={article}
@@ -1006,9 +1009,6 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                         setConfirmDelete={setConfirmDelete}
                         selected={selectedArticlesSet.has(article.id)}
                         onToggleSelect={toggleSelectArticle}
-                        onDragStart={handleDragStart}
-                        onDrop={handleDropOnArticle}
-                        onDragOver={handleDragOver}
                       />
                     ))}
                   </Stack>

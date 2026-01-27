@@ -189,4 +189,28 @@ export const ArticleService = {
       throw error;
     }
   }
+,
+  getArticleGroups: async (): Promise<AxiosResponse<string[]>> => {
+    console.log('🔍 Fetching article group order');
+    try {
+      const response = await publicApi.get(`${BASE_URL}/groups`);
+      console.log('✅ Fetched group order', response.data);
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to fetch group order:', error);
+      throw error;
+    }
+  },
+
+  reorderGroups: async (orderedGroupNames: string[]): Promise<AxiosResponse<void>> => {
+    console.log('🔀 Persisting reordered groups', orderedGroupNames);
+    try {
+      const response = await api.post(`${BASE_URL}/groups/reorder`, orderedGroupNames);
+      console.log('✅ Group reorder persisted');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to persist group reorder:', error);
+      throw error;
+    }
+  }
 };
