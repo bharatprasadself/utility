@@ -34,6 +34,8 @@ import java.sql.ResultSet;
         try (Connection conn = dataSource.getConnection()) {
            // Ensure articles.group_name column exists (safe to run repeatedly)
             ensureArticlesGroupNameColumn(conn);
+           // Ensure article_groups table exists to persist admin group ordering
+           ensureArticleGroupsTable(conn);
          } catch (SQLException e) {
              log.warn("Schema migration runner encountered an error: {}", e.getMessage());
          }
@@ -153,6 +155,16 @@ import java.sql.ResultSet;
         DatabaseMetaData meta = conn.getMetaData();
         try (ResultSet rs = meta.getColumns(catalog, schemaPattern, tableName, columnName)) {
             return rs.next();
+        }
+    }
+
+    private void ensureArticleGroupsTable(Connection conn) {
+        try (Statement st = conn.createStatement()) {
+            // create table if it doesn't exist
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS article_groups (id BIGSERIAL PRIMARY KEY, name VARCHAR(255) UNIQUE NOT NULL, display_order INTEGER)");
+            log.info("Ensured article_groups table exists.");
+        } catch (SQLException e) {
+            log.warn("Failed to ensure article_groups table: {}", e.getMessage());
         }
     }
 

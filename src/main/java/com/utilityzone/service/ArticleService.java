@@ -21,6 +21,9 @@ public class ArticleService {
     @Autowired
     private ArticleRepository articleRepository;
 
+    @Autowired
+    private com.utilityzone.repository.ArticleGroupRepository articleGroupRepository;
+
     @Cacheable(value = "articles")
     public List<Article> getAllArticles() {
         // Public list: only published articles, oldest first for deterministic chronological order
@@ -47,6 +50,24 @@ public class ArticleService {
     public List<Article> getDraftArticles() {
         // Admin view: all drafts, newest first for convenience
         return articleRepository.findAllByStatusOrderByCreatedAtDescIdDesc(PublicationStatus.DRAFT);
+    }
+
+    public java.util.List<String> getGroupOrder() {
+        java.util.List<com.utilityzone.model.ArticleGroup> groups = articleGroupRepository.findAll(org.springframework.data.domain.Sort.by("displayOrder"));
+        java.util.List<String> names = new java.util.ArrayList<>();
+        for (com.utilityzone.model.ArticleGroup g : groups) names.add(g.getName());
+        return names;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void reorderGroups(java.util.List<String> orderedNames) {
+        int order = 0;
+        for (String name : orderedNames) {
+            com.utilityzone.model.ArticleGroup g = articleGroupRepository.findByName(name).orElseGet(() -> new com.utilityzone.model.ArticleGroup(name, order));
+            g.setDisplayOrder(order);
+            articleGroupRepository.save(g);
+            order++;
+        }
     }
 
     @Caching(evict = {

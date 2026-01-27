@@ -90,6 +90,18 @@ public class ArticleController {
         return articleService.getArticlesByTag(tag);
     }
 
+    @GetMapping("/groups")
+    public ResponseEntity<java.util.List<String>> getArticleGroups() {
+        return ResponseEntity.ok(articleService.getGroupOrder());
+    }
+
+    @PostMapping("/groups/reorder")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Void> reorderArticleGroups(@RequestBody java.util.List<String> orderedGroupNames) {
+        articleService.reorderGroups(orderedGroupNames);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public Article createArticle(@RequestBody Article article) {
