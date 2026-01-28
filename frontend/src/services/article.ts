@@ -213,4 +213,16 @@ export const ArticleService = {
       throw error;
     }
   }
+,
+  renameGroup: async (oldName: string, newName: string): Promise<AxiosResponse<void>> => {
+    console.log(`✏️ Renaming group from "${oldName}" to "${newName}"`);
+    try {
+      const response = await api.post(`${BASE_URL}/groups/rename`, { oldName, newName });
+      console.log('✅ Group rename persisted');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to rename group:', error);
+      throw error;
+    }
+  }
 };

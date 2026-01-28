@@ -76,6 +76,33 @@ public class ArticleService {
         }
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public void renameGroup(String oldName, String newName) {
+        if (oldName == null || newName == null) return;
+        oldName = oldName.trim();
+        newName = newName.trim();
+        if (oldName.equals(newName)) return;
+
+        // ensure we don't collide with an existing group
+        java.util.Optional<com.utilityzone.model.ArticleGroup> existingNew = articleGroupRepository.findByName(newName);
+        if (existingNew.isPresent()) {
+            throw new IllegalArgumentException("A group with the new name already exists");
+        }
+
+        java.util.Optional<com.utilityzone.model.ArticleGroup> existingOld = articleGroupRepository.findByName(oldName);
+        if (existingOld.isPresent()) {
+            com.utilityzone.model.ArticleGroup g = existingOld.get();
+            g.setName(newName);
+            articleGroupRepository.save(g);
+        } else {
+            // If there was no group record, create one to capture the new name
+            articleGroupRepository.save(new com.utilityzone.model.ArticleGroup(newName, 0));
+        }
+
+        // Update articles that referenced the old group name
+        articleRepository.updateHeaderForName(oldName, newName);
+    }
+
     @Caching(evict = {
         @CacheEvict(value = "articles", allEntries = true),
         @CacheEvict(value = "articlesByCategory", allEntries = true),

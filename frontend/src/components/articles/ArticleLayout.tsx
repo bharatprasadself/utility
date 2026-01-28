@@ -505,6 +505,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
 
   // Group ordering state (admin can reorder groups)
   const [groupOrder, setGroupOrder] = useState<string[]>([]);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameOldName, setRenameOldName] = useState('');
+  const [renameNewName, setRenameNewName] = useState('');
 
   // Load persisted group order from backend (public endpoint)
   React.useEffect(() => {
@@ -990,6 +993,17 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                           {groupName}
                         </Typography>
                         {/* Removed group count chip for cleaner header display */}
+                        {isAdmin && (
+                          <Box sx={{ ml: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); setRenameOldName(groupName); setRenameNewName(groupName); setRenameDialogOpen(true); }}
+                              aria-label={`Rename ${groupName}`}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        )}
                       </Box>
                     </AccordionSummary>
                     <AccordionDetails sx={{ p: 0, bgcolor: 'background.paper' }}>
@@ -1581,6 +1595,37 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setFindOpen(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+        {/* Rename Group Dialog */}
+        <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Rename Group</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField label="Current" value={renameOldName} disabled fullWidth />
+              <TextField label="New name" value={renameNewName} onChange={(e) => setRenameNewName(e.target.value)} fullWidth />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                try {
+                  await ArticleService.renameGroup(renameOldName, renameNewName);
+                  // update local UI: replace headers in displayed articles
+                  setDisplayedArticles(prev => prev.map(a => ({ ...a, header: a.header === renameOldName ? renameNewName : a.header })));
+                  // update persisted group order if present
+                  setGroupOrder(prev => prev.map(g => (g === renameOldName ? renameNewName : g)));
+                } catch (err: any) {
+                  setError(err?.message || 'Failed to rename group');
+                } finally {
+                  setRenameDialogOpen(false);
+                }
+              }}
+            >
+              Rename
+            </Button>
           </DialogActions>
         </Dialog>
         <Dialog

@@ -102,6 +102,15 @@ public class ArticleController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/groups/rename")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Void> renameArticleGroup(@RequestBody java.util.Map<String, String> payload) {
+        String oldName = payload.get("oldName");
+        String newName = payload.get("newName");
+        articleService.renameGroup(oldName, newName);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public Article createArticle(@RequestBody Article article) {
