@@ -1613,10 +1613,24 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
               onClick={async () => {
                 try {
                   await ArticleService.renameGroup(renameOldName, renameNewName);
-                  // update local UI: replace headers in displayed articles
-                  setDisplayedArticles(prev => prev.map(a => ({ ...a, header: a.header === renameOldName ? renameNewName : a.header })));
-                  // update persisted group order if present
-                  setGroupOrder(prev => prev.map(g => (g === renameOldName ? renameNewName : g)));
+                  // Refresh persisted group order from backend
+                  try {
+                    const resp = await ArticleService.getArticleGroups();
+                    if (Array.isArray(resp.data)) setGroupOrder(resp.data);
+                  } catch (e) {
+                    // ignore
+                  }
+                  // Reload articles for current view so headers reflect persisted change
+                  try {
+                    if (isAdmin && viewDrafts) {
+                      await loadDrafts();
+                    } else {
+                      await loadPublished();
+                    }
+                  } catch (e) {
+                    // fallback: update local UI immediately
+                    setDisplayedArticles(prev => prev.map(a => ({ ...a, header: a.header === renameOldName ? renameNewName : a.header })));
+                  }
                 } catch (err: any) {
                   setError(err?.message || 'Failed to rename group');
                 } finally {
