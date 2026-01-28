@@ -102,7 +102,13 @@ public class ArticleService {
                 g.setName(newName);
                 articleGroupRepository.save(g);
             } else {
-                articleGroupRepository.save(new com.utilityzone.model.ArticleGroup(newName, 0));
+                // create new group with displayOrder = max(displayOrder) + 1
+                java.util.List<com.utilityzone.model.ArticleGroup> allGroups = articleGroupRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "displayOrder"));
+                int nextOrder = 0;
+                if (!allGroups.isEmpty()) {
+                    try { nextOrder = allGroups.get(0).getDisplayOrder() + 1; } catch (Exception ignored) {}
+                }
+                articleGroupRepository.save(new com.utilityzone.model.ArticleGroup(newName, nextOrder));
             }
             // Update articles that referenced the old group name
             articleRepository.updateHeaderForName(oldName, newName);
