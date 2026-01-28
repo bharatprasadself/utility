@@ -425,7 +425,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   // Track which articles have their content expanded
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
   // Track which tag groups are expanded (for organizing articles by tags)
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Group input for create/edit dialog
   const [headerInput, setHeaderInput] = useState<string>('');
@@ -490,9 +490,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     return { groups, ungrouped };
   };
 
-  // Toggle group collapse state
+  // Toggle group expanded state
   const toggleGroupCollapse = (groupName: string) => {
-    setCollapsedGroups(prevState => {
+    setExpandedGroups(prevState => {
       const newState = new Set(prevState);
       if (newState.has(groupName)) {
         newState.delete(groupName);
@@ -949,7 +949,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                 {sortedGroupNames.map((groupName) => (
                   <Accordion
                     key={groupName}
-                    defaultExpanded={!collapsedGroups.has(groupName)}
+                    expanded={expandedGroups.has(groupName)}
                     onChange={() => toggleGroupCollapse(groupName)}
                     sx={{
                       borderRadius: 2,
