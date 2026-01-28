@@ -31,6 +31,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import SearchIcon from '@mui/icons-material/Search';
 import Advertisement from '../Advertisement';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
@@ -417,6 +418,10 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importedFileName, setImportedFileName] = useState<string>('');
   const contentTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [matchCount, setMatchCount] = useState<number | null>(null);
   // Track which articles have their content expanded
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
   // Track which tag groups are expanded (for organizing articles by tags)
@@ -664,6 +669,21 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       // allow re-selecting the same file
       e.target.value = '';
     }
+  };
+
+  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const countMatches = () => {
+    if (!findText) { setMatchCount(0); return; }
+    const re = new RegExp(escapeRegExp(findText), 'g');
+    const matches = contentInput.match(re);
+    setMatchCount(matches ? matches.length : 0);
+  };
+  const replaceAll = () => {
+    if (!findText) return;
+    const re = new RegExp(escapeRegExp(findText), 'g');
+    const newContent = contentInput.replace(re, replaceText);
+    setContentInput(newContent);
+    countMatches();
   };
   
   // Toggle content expansion for an article
@@ -1409,6 +1429,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   >
                     Numbered List
                   </Button>
+                  <Button size="small" startIcon={<SearchIcon />} onClick={() => { setFindOpen(true); setMatchCount(null); }}>
+                    Find / Replace
+                  </Button>
                 </Stack>
                 <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
                   Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB limit)' : overSoft ? ' (getting large)' : ''}
@@ -1537,6 +1560,27 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                 </Button>
               </>
             )}
+          </DialogActions>
+        </Dialog>
+        {/* Find / Replace Dialog */}
+        <Dialog open={findOpen} onClose={() => setFindOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Find & Replace</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField label="Find" value={findText} onChange={e => setFindText(e.target.value)} fullWidth autoFocus />
+              <TextField label="Replace With" value={replaceText} onChange={e => setReplaceText(e.target.value)} fullWidth />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button variant="outlined" size="small" onClick={countMatches} disabled={!findText}>Count</Button>
+                <Button variant="contained" size="small" color="primary" onClick={replaceAll} disabled={!findText}>Replace All</Button>
+                {matchCount !== null && (
+                  <Typography variant="caption" color="text.secondary">Matches: {matchCount}</Typography>
+                )}
+              </Stack>
+              <Typography variant="caption" color="text.secondary">Simple literal matching (case-sensitive). Use consistent casing for best results.</Typography>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setFindOpen(false)}>Close</Button>
           </DialogActions>
         </Dialog>
         <Dialog
