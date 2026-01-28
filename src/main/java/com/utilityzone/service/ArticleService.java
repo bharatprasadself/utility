@@ -82,25 +82,31 @@ public class ArticleService {
         oldName = oldName.trim();
         newName = newName.trim();
         if (oldName.equals(newName)) return;
-
-        // ensure we don't collide with an existing group
+        // If a group with the target name already exists, merge old into new.
         java.util.Optional<com.utilityzone.model.ArticleGroup> existingNew = articleGroupRepository.findByName(newName);
-        if (existingNew.isPresent()) {
-            throw new IllegalArgumentException("A group with the new name already exists");
-        }
-
         java.util.Optional<com.utilityzone.model.ArticleGroup> existingOld = articleGroupRepository.findByName(oldName);
-        if (existingOld.isPresent()) {
-            com.utilityzone.model.ArticleGroup g = existingOld.get();
-            g.setName(newName);
-            articleGroupRepository.save(g);
-        } else {
-            // If there was no group record, create one to capture the new name
-            articleGroupRepository.save(new com.utilityzone.model.ArticleGroup(newName, 0));
-        }
 
-        // Update articles that referenced the old group name
-        articleRepository.updateHeaderForName(oldName, newName);
+        if (existingNew.isPresent()) {
+            // Update articles to reference the existing new group name
+            articleRepository.updateHeaderForName(oldName, newName);
+            // Remove the old group record if present
+            existingOld.ifPresent(g -> {
+                try {
+                    articleGroupRepository.delete(g);
+                } catch (Exception ignored) {}
+            });
+        } else {
+            // No collision: rename the old group record if present, otherwise create a new record
+            if (existingOld.isPresent()) {
+                com.utilityzone.model.ArticleGroup g = existingOld.get();
+                g.setName(newName);
+                articleGroupRepository.save(g);
+            } else {
+                articleGroupRepository.save(new com.utilityzone.model.ArticleGroup(newName, 0));
+            }
+            // Update articles that referenced the old group name
+            articleRepository.updateHeaderForName(oldName, newName);
+        }
     }
 
     @Caching(evict = {
