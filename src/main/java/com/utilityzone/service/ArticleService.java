@@ -77,6 +77,12 @@ public class ArticleService {
     }
 
     @org.springframework.transaction.annotation.Transactional
+    @org.springframework.cache.annotation.Caching(evict = {
+        @org.springframework.cache.annotation.CacheEvict(value = "articles", allEntries = true),
+        @org.springframework.cache.annotation.CacheEvict(value = "articlesByCategory", allEntries = true),
+        @org.springframework.cache.annotation.CacheEvict(value = "articlesByTag", allEntries = true),
+        @org.springframework.cache.annotation.CacheEvict(value = "articleById", allEntries = true)
+    })
     public void renameGroup(String oldName, String newName) {
         if (oldName == null || newName == null) return;
         oldName = oldName.trim();
