@@ -47,7 +47,7 @@ export const uploadMockup = async (
     form,
     {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 60000 // 60 seconds for large uploads
+      timeout: 120000 // 120 seconds for large uploads
     }
   );
   return res.data.url;
