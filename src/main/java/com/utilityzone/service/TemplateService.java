@@ -342,10 +342,12 @@ public class TemplateService {
                     y = drawWrappedCentered(cs, title, pageW / 2f, y, maxTitleWidth, PDType1Font.HELVETICA_BOLD, HEAD_MD, titleLineHeight, 2);
                     y -= GAP * 2;
                 }
-                float mockupW = Math.min(400f, pageW - MARGIN * 2);
-                float mockupH = 280f;
+                // Enlarge primary mockup modestly while keeping room for "What's Included"
+                float mockupW = Math.min(500f, pageW - MARGIN * 2);
+                float mockupH = 320f;
                 float mockupX = (pageW - mockupW) / 2f;
-                float mockupY = pageH * 0.35f;
+                float topBlockY = y - GAP; // place mockup just below the title area
+                float mockupY = topBlockY - mockupH;
                 drawImageOrPlaceholder(cs, mockup, mockupX, mockupY, mockupW, mockupH, "Main mockup");
 
                 // Example: use pdfType to control PDF content (expand as needed)
@@ -357,7 +359,8 @@ public class TemplateService {
                     // Add secondary mockup or extra content for wedding set
                     // ...
                 }
-                float includeStartY = mockupY - 36f; // more space below mockup for better look
+                // Position "What's Included" with sensible spacing under the mockup
+                float includeStartY = mockupY - 52f;
                 if (includeStartY > MARGIN + 100f) { // ensure space above footer
                     // Left-align to the primary mockup's left edge (do not go beyond it)
                     float leftEdge = Math.max(MARGIN, mockupX);
@@ -799,11 +802,12 @@ public class TemplateService {
                 }
                 // Secondary mockup preview: show on page 2 when available (exclude Invite Suite; it has dedicated previews page)
                 if ((type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.PRINT_ONLY) && secondaryMockup != null) {
-                    // Place the secondary preview even when space is tighter; avoid overlap with footer
-                    float secW = Math.min(400f, pageW - MARGIN * 2);
-                    float secH = 280f;
+                    // Readjust size: reduce slightly to prevent overflow
+                    float maxWidth = pageW - MARGIN * 2;
+                    float secW = Math.min(maxWidth, Math.max(520f, mb2.getWidth() * 0.72f));
+                    float secH = Math.min(mb2.getHeight() * 0.42f, 360f);
                     float secX = (mb2.getWidth() - secW) / 2f;
-                    float targetY = y - secH - 20f;
+                    float targetY = y - secH - GAP * 2;
                     // Ensure it doesn't dip into the footer area; lift if necessary
                     float minY = MARGIN + 80f;
                     float secY = Math.max(minY, targetY);
@@ -890,11 +894,13 @@ public class TemplateService {
                 // Mobile mockup - only for PRINT_MOBILE on page 3 (Invite Suite shows on page 2)
                 if (type == com.utilityzone.model.PdfType.PRINT_MOBILE) {
                     stepY -= GAP;
-                    float mobileW = Math.min(400f, contentW);
-                    float mobileH = 280f;
+                    // Readjust size: reduce slightly to prevent overflow
+                    float maxContentW = contentW;
+                    float mobileW = Math.min(maxContentW, Math.max(500f, mb3.getWidth() * 0.60f));
+                    float mobileH = Math.min(mb3.getHeight() * 0.42f, 340f);
                     float mobileX = (mb3.getWidth() - mobileW) / 2f; // Center horizontally
-                    float mobileY = stepY - mobileH - 20f;
-                    if (mobileY > MARGIN + 60f) {
+                    float mobileY = stepY - mobileH - GAP * 2;
+                    if (mobileY > MARGIN + 70f) {
                         if (mobileMockup != null) {
                             drawImageOrPlaceholder(cs, mobileMockup, mobileX, mobileY, mobileW, mobileH, "");
                         } else {
@@ -903,10 +909,10 @@ public class TemplateService {
                         drawText(cs, "Mobile Preview", mobileX, mobileY - 15f, PDType1Font.HELVETICA_OBLIQUE, 10f);
                     } else {
                         // Tight space: render a smaller preview lifted above the footer
-                        float smallH = 220f;
-                        float smallW = Math.min(360f, contentW);
+                        float smallH = Math.min(280f, mobileH);
+                        float smallW = Math.min(mobileW, Math.max(420f, mb3.getWidth() * 0.52f));
                         float smallX = (mb3.getWidth() - smallW) / 2f;
-                        float smallY = MARGIN + 70f;
+                        float smallY = MARGIN + 75f;
                         if (mobileMockup != null) {
                             drawImageOrPlaceholder(cs, mobileMockup, smallX, smallY, smallW, smallH, "");
                         } else {
