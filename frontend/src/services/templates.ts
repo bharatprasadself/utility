@@ -14,6 +14,7 @@ export interface Template {
   secondaryMockupUrl?: string;
   rsvpCanvaUseCopyUrl?: string;
   detailCardCanvaUseCopyUrl?: string;
+  thankYouCardCanvaUseCopyUrl?: string;
   mobileMockupUrl?: string;
   buyerPdfUrl?: string;
   etsyListingUrl?: string;
@@ -60,7 +61,7 @@ const extractTrailingDigits = (name: string): string | null => {
   return m ? m[1] : null;
 };
 
-export const createTemplate = async (payload: { title: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }): Promise<Template> => {
+export const createTemplate = async (payload: { title: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; thankYouCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }): Promise<Template> => {
   const res = await axiosInstance.post<Template>('/api/admin/canva-templates', payload);
   return res.data;
 };
@@ -101,7 +102,7 @@ export const listPublicTemplates = async (): Promise<PublicTemplate[]> => {
 
 export const updateTemplate = async (
   id: number,
-  payload: { title?: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; buyerPdfUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }
+  payload: { title?: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; thankYouCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; buyerPdfUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }
 ): Promise<Template> => {
   const res = await axiosInstance.put<Template>(`/api/admin/canva-templates/${id}`, payload);
   return res.data;

@@ -17,6 +17,30 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/api/mockup-image")
 public class MockupImageController {
+
+        // Detail/RSVP mockup: fixed 4x6 inch size (e.g., 1200x1800 px at 300 DPI)
+        private BufferedImage processDetailOrRsvpMockup(BufferedImage product) {
+            final int WIDTH = 1200; // 4 inches * 300 DPI
+            final int HEIGHT = 1800; // 6 inches * 300 DPI
+            int prodW = product.getWidth();
+            int prodH = product.getHeight();
+            // Scale to fit within 4x6, preserving aspect ratio
+            double scale = Math.min((double)WIDTH/prodW, (double)HEIGHT/prodH);
+            int targetW = (int)(prodW * scale);
+            int targetH = (int)(prodH * scale);
+            Image scaledProduct = product.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH);
+            BufferedImage productScaled = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = productScaled.createGraphics();
+            g.setComposite(AlphaComposite.Clear);
+            g.fillRect(0, 0, WIDTH, HEIGHT);
+            g.setComposite(AlphaComposite.SrcOver);
+            // Center the image
+            int x = (WIDTH - targetW) / 2;
+            int y = (HEIGHT - targetH) / 2;
+            g.drawImage(scaledProduct, x, y, null);
+            g.dispose();
+            return productScaled;
+        }
         // Secondary mockup: placeholder logic, original behavior
         private BufferedImage processSecondaryMockup(BufferedImage product) {
             // Use fixed secondary placement dimensions
@@ -129,6 +153,8 @@ public class MockupImageController {
             String nameLc = origName == null ? "" : origName.toLowerCase();
             if (nameLc.contains("mobile")) mockupType = "mobile";
             else if (nameLc.contains("secondary")) mockupType = "secondary";
+            else if (nameLc.contains("detail")) mockupType = "detail";
+            else if (nameLc.contains("rsvp")) mockupType = "rsvp";
             else mockupType = "primary";
         }
 
@@ -184,6 +210,8 @@ public class MockupImageController {
             roundedProduct = processMobileMockup(product, placeWidth, placeHeight, arcStyle);
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             roundedProduct = processSecondaryMockup(product);
+        } else if (mockupType != null && (mockupType.equalsIgnoreCase("detail") || mockupType.equalsIgnoreCase("rsvp"))) {
+            roundedProduct = processDetailOrRsvpMockup(product);
         } else {
             roundedProduct = processPrintMockup(product, placeWidth, placeHeight);
         }

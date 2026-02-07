@@ -104,6 +104,7 @@ public class TemplateService {
         if (changes.getMobileCanvaUseCopyUrl() != null) existing.setMobileCanvaUseCopyUrl(changes.getMobileCanvaUseCopyUrl());
         if (changes.getRsvpCanvaUseCopyUrl() != null) existing.setRsvpCanvaUseCopyUrl(changes.getRsvpCanvaUseCopyUrl());
         if (changes.getDetailCardCanvaUseCopyUrl() != null) existing.setDetailCardCanvaUseCopyUrl(changes.getDetailCardCanvaUseCopyUrl());
+        if (changes.getThankYouCardCanvaUseCopyUrl() != null) existing.setThankYouCardCanvaUseCopyUrl(changes.getThankYouCardCanvaUseCopyUrl());
         if (changes.getMockupUrl() != null) existing.setMockupUrl(changes.getMockupUrl());
         if (changes.getEtsyListingUrl() != null) existing.setEtsyListingUrl(changes.getEtsyListingUrl());
         if (changes.getSecondaryMockupUrl() != null) existing.setSecondaryMockupUrl(changes.getSecondaryMockupUrl());
@@ -293,10 +294,8 @@ public class TemplateService {
             PDImageXObject secondaryMockup = loadImageByUrl(doc, t.getSecondaryMockupUrl());
             PDImageXObject mobileMockup = loadImageByUrl(doc, t.getMobileMockupUrl());
             try { log.info("[BuyerPDF] images: main={}, secondary={}, mobile={}", t.getMockupUrl(), t.getSecondaryMockupUrl(), t.getMobileMockupUrl()); } catch (Exception ignore) {}
-            // Safety: only allow secondary mockup for Print & Mobile and Print Only
-            if (type != com.utilityzone.model.PdfType.PRINT_MOBILE && type != com.utilityzone.model.PdfType.PRINT_ONLY) {
-                secondaryMockup = null;
-            }
+            // Allow secondary mockup for all types, including Invite Suite
+            // Previously limited to PRINT_MOBILE and PRINT_ONLY; users want secondary shown in Invite Suite as well.
 
             // Page 1
             PDPage p1 = new PDPage();
@@ -374,6 +373,7 @@ public class TemplateService {
                                 "Mobile Invitation (1080×1920 px)",
                                 "RSVP Card",
                                 "Details Card",
+                                "Thank You Card",
                                 "Editable Canva Links",
                                 "Buyer PDF Included"
                             };
@@ -403,7 +403,70 @@ public class TemplateService {
                     }
                 }
                 // Footer: divider + centered text
-                drawFooterCentered(cs, mb1, "Digital template package");
+                drawFooterCentered(cs, mb1, "Digital Template Package");
+            }
+
+            // Invite Suite: add a dedicated previews page for secondary + mobile mockups
+            if (type == com.utilityzone.model.PdfType.INVITE_SUITE && (secondaryMockup != null || mobileMockup != null)) {
+                PDPage p2a = new PDPage();
+                doc.addPage(p2a);
+                PDRectangle mb2a = p2a.getMediaBox();
+                try (PDPageContentStream cs = new PDPageContentStream(doc, p2a)) {
+                    float y2a = mb2a.getHeight() - MARGIN - GAP;
+                    String heading = "Suite Previews";
+                    float headingX = (mb2a.getWidth() - (PDType1Font.HELVETICA_BOLD.getStringWidth(heading) / 1000f * HEAD_MD)) / 2f;
+                    drawText(cs, heading, headingX, y2a, PDType1Font.HELVETICA_BOLD, HEAD_MD);
+                    float lineY = y2a - HEAD_MD - 6f;
+                    drawDivider(cs, MARGIN, lineY, mb2a.getWidth() - MARGIN * 2);
+                    y2a = lineY - GAP * 3;
+
+                    // Layout constants
+                    float topY = y2a;
+                    float bottomY = MARGIN + 80f; // keep footer/notes clear
+                    float availableH = Math.max(100f, topY - bottomY);
+                    float gapBetween = GAP * 2f;
+
+                    // 50/50 split when both previews exist; otherwise use full available height for the single preview
+                    float secH, mobH;
+                    if (secondaryMockup != null && mobileMockup != null) {
+                        float splitH = Math.max(120f, (availableH - gapBetween) / 2f);
+                        secH = splitH;
+                        mobH = splitH;
+                    } else if (secondaryMockup != null) {
+                        secH = Math.max(160f, availableH);
+                        mobH = 0f;
+                    } else {
+                        // Only mobile
+                        mobH = Math.max(180f, availableH);
+                        secH = 0f;
+                    }
+
+                    // Widths
+                    float secW = Math.min(520f, mb2a.getWidth() - MARGIN * 2);
+                    float mobW = Math.min(420f, mb2a.getWidth() - MARGIN * 2);
+
+                    // Draw secondary at top of available area
+                    float currentY = topY;
+                    if (secondaryMockup != null) {
+                        float secX = (mb2a.getWidth() - secW) / 2f;
+                        float secY = currentY - secH; // lower-left
+                        drawImageOrPlaceholder(cs, secondaryMockup, secX, secY, secW, secH, "Secondary mockup");
+                        currentY = secY - gapBetween; // move below secondary
+                    }
+
+                    // Draw mobile below secondary, ensuring it fits above bottomY
+                    if (mobileMockup != null) {
+                        float mobX = (mb2a.getWidth() - mobW) / 2f;
+                        // Cap mobile height if needed to avoid overlap with bottomY
+                        float maxMobileH = Math.max(120f, currentY - bottomY);
+                        float finalMobH = Math.min(mobH, maxMobileH);
+                        float mobY = currentY - finalMobH;
+                        drawImageOrPlaceholder(cs, mobileMockup, mobX, mobY, mobW, finalMobH, "Mobile mockup");
+                        currentY = mobY - GAP * 2f;
+                    }
+
+                    drawFooterCentered(cs, mb2a, "Digital Template Package");
+                }
             }
 
             // Page 2
@@ -603,6 +666,45 @@ public class TemplateService {
                             drawButton(cs, MARGIN, detailBtnY, btnW, BUTTON_H, "Detail card template");
                             y = detailBtnY - GAP * 2;
                         }
+
+                        // Thank You Card
+                        drawText(cs, "Thank You Card", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
+                        y -= 18f; // spacing before button
+                        String thankLink = t.getThankYouCardCanvaUseCopyUrl();
+                        float thankBtnY = y - BUTTON_H - 4f;
+                        if (thankLink != null && thankLink.startsWith("http")) {
+                            drawButtonWithLink(doc, p2, cs, MARGIN, thankBtnY, btnW, BUTTON_H, "Edit Thank You Card Template", thankLink);
+                            try {
+                                BufferedImage qr = createQrCodeImage(thankLink, 200);
+                                if (qr != null) {
+                                    PDImageXObject qrImg = LosslessFactory.createFromImage(doc, qr);
+                                    float qrSize = 100f;
+                                    float qrX = rightX + (qrAreaW - qrSize) / 2f;
+                                    float qrY = thankBtnY + (BUTTON_H - qrSize) / 2f + 15f;
+                                    cs.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                                    PDAnnotationLink qrLink = new PDAnnotationLink();
+                                    PDRectangle qrRect = new PDRectangle(qrX, qrY, qrSize, qrSize);
+                                    qrLink.setRectangle(qrRect);
+                                    PDBorderStyleDictionary qrBorder = new PDBorderStyleDictionary();
+                                    qrBorder.setWidth(0f);
+                                    qrLink.setBorderStyle(qrBorder);
+                                    qrLink.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                                    qrLink.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                                    PDActionURI qrAction = new PDActionURI();
+                                    qrAction.setURI(thankLink);
+                                    qrLink.setAction(qrAction);
+                                    p2.getAnnotations().add(qrLink);
+                                    String qrLabel = "Scan to open";
+                                    float qrLabelX = qrX + (qrSize - (PDType1Font.HELVETICA.getStringWidth(qrLabel) / 1000f * 9f)) / 2f;
+                                    float qrLabelY = qrY - 15f;
+                                    drawText(cs, qrLabel, qrLabelX, qrLabelY, PDType1Font.HELVETICA, 9f);
+                                }
+                            } catch (Exception ignore) {}
+                            y = thankBtnY - GAP * 2;
+                        } else {
+                            drawButton(cs, MARGIN, thankBtnY, btnW, BUTTON_H, "Thank you card template");
+                            y = thankBtnY - GAP * 2;
+                        }
                         // Fallthrough to render mobile section for Wedding Set below
                         break;
                 }
@@ -666,45 +768,13 @@ public class TemplateService {
                             lastQrLabelY = qrLabelY2;
                         }
 
-                        // On page 2, only Wedding Set shows a mobile preview; Print+Mobile uses secondary mockup below instead.
+                        // On page 2: for Invite Suite, previews are moved to dedicated Suite Previews page; show tip only.
                         if (type == com.utilityzone.model.PdfType.INVITE_SUITE) {
-                            if (mobileMockup != null) {
-                                float previewW = Math.min(380f, mb2.getWidth() - MARGIN * 2);
-                                float previewH = 260f;
-                                float previewY = Math.min((urlStartY2 - 16f), mBtnY) - previewH - 20f;
-                                if (previewY > MARGIN + 80f) {
-                                    // Left-aligned mobile preview
-                                    float iw = mobileMockup.getWidth();
-                                    float ih = mobileMockup.getHeight();
-                                    float scale = Math.min(previewW / iw, previewH / ih);
-                                    float dw = iw * scale;
-                                    float dh = ih * scale;
-                                    float dx = MARGIN;
-                                    float dy = previewY; // align to top of area
-                                    cs.drawImage(mobileMockup, dx, dy, dw, dh);
-                                    y = previewY - GAP * 2;
-                                } else {
-                                    // Space is tight: draw a smaller left-aligned preview above the footer
-                                    float minY = MARGIN + 80f;
-                                    float smallH = 200f;
-                                    float smallW = Math.min(360f, mb2.getWidth() - MARGIN * 2);
-                                    float iw = mobileMockup.getWidth();
-                                    float ih = mobileMockup.getHeight();
-                                    float scale = Math.min(smallW / iw, smallH / ih);
-                                    float dw = iw * scale;
-                                    float dh = ih * scale;
-                                    float dx = MARGIN;
-                                    float dy = minY;
-                                    cs.drawImage(mobileMockup, dx, dy, dw, dh);
-                                    y = minY - GAP * 2;
-                                }
-                            } else {
-                                float fallbackTipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
-                                float tipY = Float.isNaN(lastQrLabelY) ? fallbackTipY : lastQrLabelY;
-                                String tip = "Tip: If links don't open, use Adobe Acrobat Reader or scan the QR.";
-                                drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
-                                y = tipY - GAP * 2;
-                            }
+                            float fallbackTipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
+                            float tipY = Float.isNaN(lastQrLabelY) ? fallbackTipY : lastQrLabelY;
+                            String tip = "Tip: Use the Suite Previews page to view the mobile design.";
+                            drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
+                            y = tipY - GAP * 2;
                         } else {
                             // PRINT_MOBILE: do not render mobile preview on page 2; leave space for secondary below
                             float fallbackTipY = Math.min((urlStartY2 - 12f), mBtnY) - 16f;
@@ -727,7 +797,7 @@ public class TemplateService {
                     drawText(cs, tip, MARGIN, tipY, PDType1Font.HELVETICA_BOLD, 11f);
                     y = tipY - GAP * 2;
                 }
-                // Secondary mockup preview: for Print & Mobile and Print Only on page 2
+                // Secondary mockup preview: show on page 2 when available (exclude Invite Suite; it has dedicated previews page)
                 if ((type == com.utilityzone.model.PdfType.PRINT_MOBILE || type == com.utilityzone.model.PdfType.PRINT_ONLY) && secondaryMockup != null) {
                     // Place the secondary preview even when space is tighter; avoid overlap with footer
                     float secW = Math.min(400f, pageW - MARGIN * 2);
@@ -741,7 +811,7 @@ public class TemplateService {
                     y = secY - GAP * 2;
                 }
                 // Footer: divider + centered text
-                drawFooterCentered(cs, mb2, "Digital template package");
+                drawFooterCentered(cs, mb2, "Digital Template Package");
             }
 
             // Page 3
@@ -846,7 +916,7 @@ public class TemplateService {
                     }
                 }
                 // Footer: divider + centered text
-                drawFooterCentered(cs, mb3, "Digital template package");
+                drawFooterCentered(cs, mb3, "Digital Template Package");
             }
 
             // Page 4
@@ -903,7 +973,7 @@ public class TemplateService {
                 drawText(cs, thankYou, thankYouX, y, PDType1Font.HELVETICA_BOLD, 16f);
                 
                 // Footer text (always present on page 4)
-                drawFooterCentered(cs, mb4, "Digital template package");
+                drawFooterCentered(cs, mb4, "Digital Template Package");
 
                 // Powered by + Logo block positioned ABOVE the footer divider
                 if (logo != null) {
@@ -1113,9 +1183,6 @@ public class TemplateService {
             float dx = x + (w - dw) / 2f;
             float dy = y + (h - dh) / 2f;
             cs.drawImage(img, dx, dy, dw, dh);
-            cs.setStrokingColor(new Color(200,200,200));
-            cs.addRect(x, y, w, h);
-            cs.stroke();
         } else {
             drawPlaceholder(cs, x, y, w, h, placeholderLabel);
         }
