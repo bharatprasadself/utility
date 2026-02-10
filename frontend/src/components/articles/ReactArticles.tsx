@@ -102,7 +102,7 @@ npm install @mui/icons-material
 
 ### 2. Theme Setup
 \`\`\`jsx
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {

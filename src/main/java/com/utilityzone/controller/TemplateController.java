@@ -75,9 +75,10 @@ public class TemplateController {
                 } else {
                     boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
                     boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
+                    boolean hasThanks = t.getThankYouCardCanvaUseCopyUrl() != null && t.getThankYouCardCanvaUseCopyUrl().startsWith("http");
                     boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
                     boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
-                    if (hasRsvp || hasDetail) typeLabel = "Invite Suite";
+                    if (hasRsvp || hasDetail || hasThanks) typeLabel = "Invite Suite";
                     else if (hasPrint && hasMobile) typeLabel = "Mobile + Print";
                     else if (hasPrint && !hasMobile) typeLabel = "Only Print";
                     else typeLabel = "Mobile + Print"; // fallback
@@ -106,6 +107,7 @@ public class TemplateController {
         ct.setMobileMockupUrl(req.getMobileMockupUrl() == null ? null : req.getMobileMockupUrl().trim());
         ct.setRsvpCanvaUseCopyUrl(req.getRsvpCanvaUseCopyUrl() == null ? null : req.getRsvpCanvaUseCopyUrl().trim());
         ct.setDetailCardCanvaUseCopyUrl(req.getDetailCardCanvaUseCopyUrl() == null ? null : req.getDetailCardCanvaUseCopyUrl().trim());
+        ct.setThankYouCardCanvaUseCopyUrl(req.getThankYouCardCanvaUseCopyUrl() == null ? null : req.getThankYouCardCanvaUseCopyUrl().trim());
         ct.setPublicDescription(req.getPublicDescription() == null ? null : req.getPublicDescription().trim());
         // Persist preferred buyer PDF type if provided
         if (req.getBuyerPdfType() != null) {
@@ -133,6 +135,7 @@ public class TemplateController {
         changes.setMobileMockupUrl(req.getMobileMockupUrl() == null ? null : req.getMobileMockupUrl().trim());
         changes.setRsvpCanvaUseCopyUrl(req.getRsvpCanvaUseCopyUrl() == null ? null : req.getRsvpCanvaUseCopyUrl().trim());
         changes.setDetailCardCanvaUseCopyUrl(req.getDetailCardCanvaUseCopyUrl() == null ? null : req.getDetailCardCanvaUseCopyUrl().trim());
+        changes.setThankYouCardCanvaUseCopyUrl(req.getThankYouCardCanvaUseCopyUrl() == null ? null : req.getThankYouCardCanvaUseCopyUrl().trim());
         changes.setPublicDescription(req.getPublicDescription() == null ? null : req.getPublicDescription().trim());
         // do not touch buyerPdfUrl unless provided explicitly
         if (req.getBuyerPdfUrl() != null) changes.setBuyerPdfUrl(req.getBuyerPdfUrl().trim());

@@ -1,0 +1,24 @@
+
+> frontend@0.0.0 build
+> tsc -b && vite build
+
+[36mvite v4.5.14 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 1649 modules transformed.
+[1m[33m[plugin:vite:reporter][39m[22m [33m
+(!) C:/Work/vscode-workspace/utility/frontend/src/services/axiosConfig.ts is dynamically imported by C:/Work/vscode-workspace/utility/frontend/src/services/templates.ts but also statically imported by C:/Work/vscode-workspace/utility/frontend/src/components/CanvaTemplatesPublic.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/Ebooks.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishEbooks.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/TemplateDescription.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/TemplateMockupSetUI.tsx, C:/Work/vscode-workspace/utility/frontend/src/services/api.ts, C:/Work/vscode-workspace/utility/frontend/src/services/article.ts, C:/Work/vscode-workspace/utility/frontend/src/services/auth.ts, C:/Work/vscode-workspace/utility/frontend/src/services/author.ts, C:/Work/vscode-workspace/utility/frontend/src/services/blog.ts, C:/Work/vscode-workspace/utility/frontend/src/services/ebooks.ts, C:/Work/vscode-workspace/utility/frontend/src/services/fileConverter.ts, C:/Work/vscode-workspace/utility/frontend/src/services/publicApi.ts, C:/Work/vscode-workspace/utility/frontend/src/services/qrCode.ts, C:/Work/vscode-workspace/utility/frontend/src/services/templates.ts, dynamic import will not move module into another chunk.
+[39m
+[1m[33m[plugin:vite:reporter][39m[22m [33m
+(!) C:/Work/vscode-workspace/utility/frontend/src/services/templates.ts is dynamically imported by C:/Work/vscode-workspace/utility/frontend/src/components/tools/BuyerPdfTool.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/BuyerPdfTool.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/BuyerPdfTool.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx but also statically imported by C:/Work/vscode-workspace/utility/frontend/src/components/CanvaTemplatesPublic.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/BuyerPdfTool.tsx, C:/Work/vscode-workspace/utility/frontend/src/components/tools/PublishTemplate.tsx, dynamic import will not move module into another chunk.
+[39m
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                 [39m[1m[2m    0.54 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[35massets/index-c41f8a83.css  [39m[1m[2m    0.91 kB[22m[1m[22m[2m │ gzip:   0.49 kB[22m
+[2mdist/[22m[36massets/index-21d628d7.js   [39m[1m[33m1,471.27 kB[39m[22m[2m │ gzip: 434.69 kB[22m
+[33m
+(!) Some chunks are larger than 500 kBs after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 59.45s[39m

@@ -45,6 +45,10 @@ public class Template {
     @Column(name = "detail_card_canva_use_copy_url", length = 1000)
     private String detailCardCanvaUseCopyUrl;
 
+    // Thank You Card Canva template link (optional)
+    @Column(name = "thank_you_card_canva_use_copy_url", length = 1000)
+    private String thankYouCardCanvaUseCopyUrl;
+
     @Column(name = "mobile_mockup_url", length = 1000)
     private String mobileMockupUrl;
 
@@ -105,6 +109,9 @@ public class Template {
 
     public String getDetailCardCanvaUseCopyUrl() { return detailCardCanvaUseCopyUrl; }
     public void setDetailCardCanvaUseCopyUrl(String detailCardCanvaUseCopyUrl) { this.detailCardCanvaUseCopyUrl = detailCardCanvaUseCopyUrl; }
+
+    public String getThankYouCardCanvaUseCopyUrl() { return thankYouCardCanvaUseCopyUrl; }
+    public void setThankYouCardCanvaUseCopyUrl(String thankYouCardCanvaUseCopyUrl) { this.thankYouCardCanvaUseCopyUrl = thankYouCardCanvaUseCopyUrl; }
 
     public String getMobileMockupUrl() { return mobileMockupUrl; }
     public void setMobileMockupUrl(String mobileMockupUrl) { this.mobileMockupUrl = mobileMockupUrl; }

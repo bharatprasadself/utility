@@ -19,4 +19,5 @@ export interface Article {
   publishDate?: string;
   createdAt: string;
   updatedAt: string;
+  header?: string;
 }

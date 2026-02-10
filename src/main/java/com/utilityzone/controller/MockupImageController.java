@@ -1,3 +1,4 @@
+        
 package com.utilityzone.controller;
 
 
@@ -17,43 +18,120 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/api/mockup-image")
 public class MockupImageController {
-        // Secondary mockup: placeholder logic, original behavior
-        private BufferedImage processSecondaryMockup(BufferedImage product) {
-            // Use fixed secondary placement dimensions
-            int placeWidth = 880;
-            int placeHeight = 1240;
-            int prodW = product.getWidth();
-            int prodH = product.getHeight();
-            int targetW = Math.min(placeWidth, prodW);
-            int targetH = Math.min(placeHeight, prodH);
+    @PostMapping(value = "/merge-single-card", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StreamingResponseBody> mergeSingleCardMockup(
+        @RequestParam("master") MultipartFile masterMockupFile,
+        @RequestParam("card") MultipartFile cardFile,
+        @RequestParam(value = "type", required = false, defaultValue = "thankyou") String type
+    ) throws IOException {
+        // Sizes for card (same as detail/rsvp for consistency)
+        final int CARD_WIDTH = 560;
+        final int CARD_HEIGHT = 840;
+        BufferedImage masterMockup = ImageIO.read(masterMockupFile.getInputStream());
+        int outputW = masterMockup.getWidth();
+        int outputH = masterMockup.getHeight();
+        BufferedImage cardImg = processCustomMockups(ImageIO.read(cardFile.getInputStream()), CARD_WIDTH, CARD_HEIGHT);
 
-            Image scaledProduct = product.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH);
-            BufferedImage productScaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D gProd = productScaled.createGraphics();
-            gProd.setComposite(AlphaComposite.Clear);
-            gProd.fillRect(0, 0, targetW, targetH);
-            gProd.setComposite(AlphaComposite.SrcOver);
-            gProd.drawImage(scaledProduct, 0, 0, null);
-            gProd.dispose();
+        int cardX = 700;
+        int cardY = 480;
+        String baseName = "Mockup_Template_Thankyou";
+        if (type.equalsIgnoreCase("rsvp")) {            
+            baseName = "Mockup_Template_RSVP";
+        } else if (type.equalsIgnoreCase("detail")) {            
+            baseName = "Mockup_Template_Detail";
+        }
+        BufferedImage combined = new BufferedImage(outputW, outputH, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = combined.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, outputW, outputH);
+        g.drawImage(masterMockup, 0, 0, null);
+        g.drawImage(cardImg, cardX, cardY, null);
+        g.dispose();
 
-            // Tilt the image by 5 degrees without cropping
-            double angle = Math.toRadians(5); // 5 degree tilt
-            double sin = Math.abs(Math.sin(angle));
-            double cos = Math.abs(Math.cos(angle));
-            int newW = (int) Math.ceil(targetW * cos + targetH * sin);
-            int newH = (int) Math.ceil(targetH * cos + targetW * sin);
-            BufferedImage tilted = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D gTilt = tilted.createGraphics();
-            gTilt.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            gTilt.setComposite(AlphaComposite.Clear);
-            gTilt.fillRect(0, 0, newW, newH);
-            gTilt.setComposite(AlphaComposite.SrcOver);
-            // Center the image and rotate
-            gTilt.translate((newW - targetW) / 2.0, (newH - targetH) / 2.0);
-            gTilt.rotate(angle, targetW / 2.0, targetH / 2.0);
-            gTilt.drawImage(productScaled, 0, 0, null);
-            gTilt.dispose();
-            return tilted;
+        StreamingResponseBody jpgStream = outputStream -> {
+            ImageIO.write(combined, "jpg", outputStream);
+            combined.flush();
+        };
+        String variantLabel = deriveVersionFromMockupFilename(masterMockupFile.getOriginalFilename());
+        String indexLabel = extractIndexFromProductFilename(cardFile.getOriginalFilename());
+        String finalName = String.format("%s_%s_%s.jpg", baseName, variantLabel, "NSL_" + indexLabel);
+        return ResponseEntity.status(HttpStatus.OK)
+            .contentType(MediaType.parseMediaType("image/jpeg"))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + finalName + "\"")
+            .body(jpgStream);
+    }
+    @PostMapping(value = "/merge-detail-rsvp", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StreamingResponseBody> mergeDetailRsvpMockup(
+        @RequestParam("master") MultipartFile masterMockupFile,
+        @RequestParam("detail") MultipartFile detailFile,
+        @RequestParam("rsvp") MultipartFile rsvpFile
+    ) throws IOException {
+
+        // Sizes for cards
+        final int CARD_WIDTH = 560;
+        final int CARD_HEIGHT = 840;
+        // Output size (same as master mockup)
+        BufferedImage masterMockup = ImageIO.read(masterMockupFile.getInputStream());
+        int outputW = masterMockup.getWidth();
+        int outputH = masterMockup.getHeight();
+        BufferedImage detailImg = processCustomMockups(ImageIO.read(detailFile.getInputStream()), CARD_WIDTH, CARD_HEIGHT);
+        BufferedImage rsvpImg = processCustomMockups(ImageIO.read(rsvpFile.getInputStream()), CARD_WIDTH, CARD_HEIGHT);
+
+        int detailX = 460; // fixed pixel position from left
+        int detailY = 1000; // fixed pixel position from top
+        int rsvpX = 1260;   // fixed pixel position from left
+        int rsvpY = 300;   // fixed pixel position from top
+        
+        
+        // For JPEG output, use TYPE_INT_RGB and fill background white
+        BufferedImage combined = new BufferedImage(outputW, outputH, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = combined.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, outputW, outputH);
+        g.drawImage(masterMockup, 0, 0, null);
+        g.drawImage(detailImg, detailX, detailY, null);
+        g.drawImage(rsvpImg, rsvpX, rsvpY, null);
+        g.dispose();
+
+        StreamingResponseBody stream = outputStream -> {
+            ImageIO.write(combined, "png", outputStream);
+            combined.flush();
+        };
+
+        // Build filename as: Mockup_Template_Detail_RSVP_V1_NSL_04.jpg
+        String baseName = "Mockup_Template_Detail_RSVP";
+        String variantLabel = deriveVersionFromMockupFilename(masterMockupFile.getOriginalFilename());
+        String indexLabel = extractIndexFromProductFilename(detailFile.getOriginalFilename());
+        String finalName = String.format("%s_%s_%s.jpg", baseName, variantLabel, "NSL_" + indexLabel);
+        StreamingResponseBody jpgStream = outputStream -> {
+            ImageIO.write(combined, "jpg", outputStream);
+            combined.flush();
+        };
+        return ResponseEntity.status(HttpStatus.OK)
+            .contentType(MediaType.parseMediaType("image/jpeg"))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + finalName + "\"")
+            .body(jpgStream);
+    }
+
+        // Detail/RSVP mockup: custom size (e.g., 704x975 px)
+        private BufferedImage processCustomMockups(BufferedImage product, int WIDTH, int HEIGHT) {
+        int prodW = product.getWidth();
+        int prodH = product.getHeight();
+        // Scale to fit within placeholder, preserving aspect ratio, but do not upscale
+        int targetW = Math.min(WIDTH, prodW);
+        int targetH = Math.min(HEIGHT, prodH);
+        double scale = Math.min((double)targetW / prodW, (double)targetH / prodH);
+        targetW = (int) (prodW * scale);
+        targetH = (int) (prodH * scale);
+        Image scaledProduct = product.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH);
+        BufferedImage productScaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D gProd = productScaled.createGraphics();
+        gProd.setComposite(AlphaComposite.Clear);
+        gProd.fillRect(0, 0, targetW, targetH);
+        gProd.setComposite(AlphaComposite.SrcOver);
+        gProd.drawImage(scaledProduct, 0, 0, null);
+        gProd.dispose();
+        return productScaled;
         }
     // Print mockup: no rounded corners, just scale and return
     private BufferedImage processPrintMockup(BufferedImage product, int placeWidth, int placeHeight) {
@@ -113,6 +191,45 @@ public class MockupImageController {
         return roundedProduct;
     }
 
+    // Secondary mockup: placeholder logic, original behavior
+        private BufferedImage processSecondaryMockup(BufferedImage product) {
+            // Use fixed secondary placement dimensions
+            int placeWidth = 880;
+            int placeHeight = 1240;
+            int prodW = product.getWidth();
+            int prodH = product.getHeight();
+            int targetW = Math.min(placeWidth, prodW);
+            int targetH = Math.min(placeHeight, prodH);
+
+            Image scaledProduct = product.getScaledInstance(targetW, targetH, Image.SCALE_SMOOTH);
+            BufferedImage productScaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D gProd = productScaled.createGraphics();
+            gProd.setComposite(AlphaComposite.Clear);
+            gProd.fillRect(0, 0, targetW, targetH);
+            gProd.setComposite(AlphaComposite.SrcOver);
+            gProd.drawImage(scaledProduct, 0, 0, null);
+            gProd.dispose();
+
+            // Tilt the image by 5 degrees without cropping
+            double angle = Math.toRadians(5); // 5 degree tilt
+            double sin = Math.abs(Math.sin(angle));
+            double cos = Math.abs(Math.cos(angle));
+            int newW = (int) Math.ceil(targetW * cos + targetH * sin);
+            int newH = (int) Math.ceil(targetH * cos + targetW * sin);
+            BufferedImage tilted = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D gTilt = tilted.createGraphics();
+            gTilt.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            gTilt.setComposite(AlphaComposite.Clear);
+            gTilt.fillRect(0, 0, newW, newH);
+            gTilt.setComposite(AlphaComposite.SrcOver);
+            // Center the image and rotate
+            gTilt.translate((newW - targetW) / 2.0, (newH - targetH) / 2.0);
+            gTilt.rotate(angle, targetW / 2.0, targetH / 2.0);
+            gTilt.drawImage(productScaled, 0, 0, null);
+            gTilt.dispose();
+            return tilted;
+        }
+
     @PostMapping(value = "/merge", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StreamingResponseBody> mergeProductImage(
         @RequestParam("mockup") MultipartFile mockupFile,
@@ -129,6 +246,8 @@ public class MockupImageController {
             String nameLc = origName == null ? "" : origName.toLowerCase();
             if (nameLc.contains("mobile")) mockupType = "mobile";
             else if (nameLc.contains("secondary")) mockupType = "secondary";
+            else if (nameLc.contains("detail")) mockupType = "detail";
+            else if (nameLc.contains("rsvp")) mockupType = "rsvp";
             else mockupType = "primary";
         }
 
@@ -184,6 +303,8 @@ public class MockupImageController {
             roundedProduct = processMobileMockup(product, placeWidth, placeHeight, arcStyle);
         } else if (mockupType != null && mockupType.equalsIgnoreCase("secondary")) {
             roundedProduct = processSecondaryMockup(product);
+        } else if (mockupType != null && (mockupType.equalsIgnoreCase("detail") || mockupType.equalsIgnoreCase("rsvp"))) {
+            roundedProduct = processCustomMockups(product, placeWidth, placeHeight);
         } else {
             roundedProduct = processPrintMockup(product, placeWidth, placeHeight);
         }

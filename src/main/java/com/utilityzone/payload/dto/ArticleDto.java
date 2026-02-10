@@ -13,6 +13,7 @@ public class ArticleDto {
     private Set<String> tags;
     private String readTime;
     private ArticleCategory category;
+    private String header;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -71,6 +72,14 @@ public class ArticleDto {
 
     public void setCategory(ArticleCategory category) {
         this.category = category;
+    }
+
+    public String getHeader() {
+        return header;
+    }
+
+    public void setHeader(String header) {
+        this.header = header;
     }
 
     public LocalDateTime getCreatedAt() {

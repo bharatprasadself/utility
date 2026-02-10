@@ -1,5 +1,6 @@
 // import React from 'react';
-import { ThemeProvider, CssBaseline, Box, Container } from '@mui/material';
+import { CssBaseline, Box, Container } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
