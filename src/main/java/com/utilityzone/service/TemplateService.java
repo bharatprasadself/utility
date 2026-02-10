@@ -84,10 +84,14 @@ public class TemplateService {
         return repo.findAll(pageable).getContent();
     }
 
-    // Return Page object for pagination
-    public org.springframework.data.domain.Page<Template> listPaged(int page, int size) {
+    // Return Page object for pagination, with optional status filter
+    public org.springframework.data.domain.Page<Template> listPaged(int page, int size, String status) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
-        return repo.findAll(pageable);
+        if (status != null && !status.isBlank()) {
+            return repo.findByStatusIgnoreCase(status, pageable);
+        } else {
+            return repo.findAll(pageable);
+        }
     }
     @Transactional
     public Template create(@NonNull Template t) {

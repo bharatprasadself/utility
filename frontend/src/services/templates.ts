@@ -24,8 +24,21 @@ export interface Template {
   buyerPdfType?: BuyerPdfType;
 }
 
-export const listTemplates = async (page = 0, size = 10): Promise<{templates: Template[], total: number}> => {
-  const res = await axiosInstance.get<{templates: Template[], total: number}>(`/api/admin/canva-templates?page=${page}&size=${size}`);
+export const listTemplates = async (
+  page = 0,
+  size = 10,
+  status: 'all' | 'draft' | 'published' = 'all'
+): Promise<{ templates: Template[]; total: number }> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size)
+  });
+  if (status && status !== 'all') {
+    params.append('status', status);
+  }
+  const res = await axiosInstance.get<{ templates: Template[]; total: number }>(
+    `/api/admin/canva-templates?${params.toString()}`
+  );
   return res.data;
 };
 

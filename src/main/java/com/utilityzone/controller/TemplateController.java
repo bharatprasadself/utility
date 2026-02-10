@@ -45,13 +45,16 @@ public class TemplateController {
     public Map<String, Object> list(jakarta.servlet.http.HttpServletRequest request) {
         int page = 0;
         int size = 10;
+        String status = null;
         try {
             String pageStr = request.getParameter("page");
             String sizeStr = request.getParameter("size");
+            String statusStr = request.getParameter("status");
             if (pageStr != null) page = Integer.parseInt(pageStr);
             if (sizeStr != null) size = Integer.parseInt(sizeStr);
+            if (statusStr != null && !statusStr.equalsIgnoreCase("all")) status = statusStr;
         } catch (Exception ignored) {}
-        org.springframework.data.domain.Page<Template> paged = service.listPaged(page, size);
+        org.springframework.data.domain.Page<Template> paged = service.listPaged(page, size, status);
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("templates", paged.getContent());
         result.put("total", paged.getTotalElements());
@@ -69,7 +72,7 @@ public class TemplateController {
             if (pageStr != null) page = Integer.parseInt(pageStr);
             if (sizeStr != null) size = Integer.parseInt(sizeStr);
         } catch (Exception ignored) {}
-        org.springframework.data.domain.Page<Template> paged = service.listPaged(page, size);
+        org.springframework.data.domain.Page<Template> paged = service.listPaged(page, size, null);
         List<Map<String, Object>> templates = paged.getContent().stream()
             .filter(t -> "published".equalsIgnoreCase(t.getStatus()))
             .map(t -> {
