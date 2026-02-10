@@ -18,44 +18,48 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/api/mockup-image")
 public class MockupImageController {
-        @PostMapping(value = "/merge-thankyou", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-        public ResponseEntity<StreamingResponseBody> mergeThankyouMockup(
-            @RequestParam("master") MultipartFile masterMockupFile,
-            @RequestParam("thankyou") MultipartFile thankyouFile
-        ) throws IOException {
-            // Sizes for Thankyou card (same as detail/rsvp for consistency)
-            final int CARD_WIDTH = 560;
-            final int CARD_HEIGHT = 840;
-            BufferedImage masterMockup = ImageIO.read(masterMockupFile.getInputStream());
-            int outputW = masterMockup.getWidth();
-            int outputH = masterMockup.getHeight();
-            BufferedImage thankyouImg = processCustomMockups(ImageIO.read(thankyouFile.getInputStream()), CARD_WIDTH, CARD_HEIGHT);
+    @PostMapping(value = "/merge-single-card", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StreamingResponseBody> mergeSingleCardMockup(
+        @RequestParam("master") MultipartFile masterMockupFile,
+        @RequestParam("card") MultipartFile cardFile,
+        @RequestParam(value = "type", required = false, defaultValue = "thankyou") String type
+    ) throws IOException {
+        // Sizes for card (same as detail/rsvp for consistency)
+        final int CARD_WIDTH = 560;
+        final int CARD_HEIGHT = 840;
+        BufferedImage masterMockup = ImageIO.read(masterMockupFile.getInputStream());
+        int outputW = masterMockup.getWidth();
+        int outputH = masterMockup.getHeight();
+        BufferedImage cardImg = processCustomMockups(ImageIO.read(cardFile.getInputStream()), CARD_WIDTH, CARD_HEIGHT);
 
-            // Placement for Thankyou card (customize as needed)
-            int thankyouX = 700; // Example position
-            int thankyouY = 480; // Example position
-
-            BufferedImage combined = new BufferedImage(outputW, outputH, BufferedImage.TYPE_INT_RGB);
-            Graphics2D g = combined.createGraphics();
-            g.setColor(Color.WHITE);
-            g.fillRect(0, 0, outputW, outputH);
-            g.drawImage(masterMockup, 0, 0, null);
-            g.drawImage(thankyouImg, thankyouX, thankyouY, null);
-            g.dispose();
-
-            StreamingResponseBody jpgStream = outputStream -> {
-                ImageIO.write(combined, "jpg", outputStream);
-                combined.flush();
-            };
-            String baseName = "Mockup_Template_Thankyou";
-            String variantLabel = deriveVersionFromMockupFilename(masterMockupFile.getOriginalFilename());
-            String indexLabel = extractIndexFromProductFilename(thankyouFile.getOriginalFilename());
-            String finalName = String.format("%s_%s_%s.jpg", baseName, variantLabel, "NSL_" + indexLabel);
-            return ResponseEntity.status(HttpStatus.OK)
-                .contentType(MediaType.parseMediaType("image/jpeg"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + finalName + "\"")
-                .body(jpgStream);
+        int cardX = 700;
+        int cardY = 480;
+        String baseName = "Mockup_Template_Thankyou";
+        if (type.equalsIgnoreCase("rsvp")) {            
+            baseName = "Mockup_Template_RSVP";
+        } else if (type.equalsIgnoreCase("detail")) {            
+            baseName = "Mockup_Template_Detail";
         }
+        BufferedImage combined = new BufferedImage(outputW, outputH, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = combined.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, outputW, outputH);
+        g.drawImage(masterMockup, 0, 0, null);
+        g.drawImage(cardImg, cardX, cardY, null);
+        g.dispose();
+
+        StreamingResponseBody jpgStream = outputStream -> {
+            ImageIO.write(combined, "jpg", outputStream);
+            combined.flush();
+        };
+        String variantLabel = deriveVersionFromMockupFilename(masterMockupFile.getOriginalFilename());
+        String indexLabel = extractIndexFromProductFilename(cardFile.getOriginalFilename());
+        String finalName = String.format("%s_%s_%s.jpg", baseName, variantLabel, "NSL_" + indexLabel);
+        return ResponseEntity.status(HttpStatus.OK)
+            .contentType(MediaType.parseMediaType("image/jpeg"))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + finalName + "\"")
+            .body(jpgStream);
+    }
     @PostMapping(value = "/merge-detail-rsvp", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StreamingResponseBody> mergeDetailRsvpMockup(
         @RequestParam("master") MultipartFile masterMockupFile,
