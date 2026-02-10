@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem, FormControl } from '@mui/material';
 import axios, { API_BASE_URL } from '@/services/axiosConfig';
@@ -82,6 +81,12 @@ const TemplateMockupSetUI: React.FC = () => {
   const [productFile, setProductFile] = useState<File | null>(null);
   const [detailFile, setDetailFile] = useState<File | null>(null);
   const [rsvpFile, setRsvpFile] = useState<File | null>(null);
+  const [thankyouFile, setThankyouFile] = useState<File | null>(null);
+  const handleThankyouChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setThankyouFile(e.target.files[0]);
+    }
+  };
 
   // Logic to determine which upload buttons to show
   const selectedMockupLc = (selectedMockup || '').toLowerCase();
@@ -146,7 +151,7 @@ const TemplateMockupSetUI: React.FC = () => {
           responseType: 'blob',
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        const blob = new Blob([res.data], { type: 'image/png' });
+        const blob = new Blob([res.data], { type: 'image/jpeg' });
         const url = window.URL.createObjectURL(blob);
         setResultUrl(url);
         // Extract filename from Content-Disposition header if present
@@ -156,7 +161,45 @@ const TemplateMockupSetUI: React.FC = () => {
           const match = cd.match(/filename="?([^";]+)"?/i);
           if (match && match[1]) serverName = match[1];
         }
-        setDownloadName(serverName || 'merged_detail_rsvp_mockup.png');
+        // Compute fallback filename if serverName is not available
+        const base = 'Mockup_Template_Detail_RSVP';
+        const variantLabel = 'V1'; // Optionally extract from masterMockupFile if needed
+        const indexLabel = detailFile ? extractIndexFromProduct(detailFile.name) : '01';
+        const computedName = `${base}_${variantLabel}_NSL_${indexLabel}.jpg`;
+        setDownloadName(serverName || computedName);
+      } else if (selectedMockupLc.includes('thankyou')) {
+        if (!thankyouFile) {
+          setError('Please select Thankyou image.');
+          setLoading(false);
+          return;
+        }
+        // Fetch master mockup image as Blob
+        const masterResponse = await fetch(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
+        if (!masterResponse.ok) throw new Error('Failed to fetch master mockup image.');
+        const masterBlob = await masterResponse.blob();
+        const formData = new FormData();
+        formData.append('master', masterBlob, selectedMockup);
+        formData.append('thankyou', thankyouFile);
+        const res = await axios.post('/api/mockup-image/merge-thankyou', formData, {
+          responseType: 'blob',
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const blob = new Blob([res.data], { type: 'image/jpeg' });
+        const url = window.URL.createObjectURL(blob);
+        setResultUrl(url);
+        // Extract filename from Content-Disposition header if present
+        const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
+        let serverName: string | null = null;
+        if (cd) {
+          const match = cd.match(/filename="?([^";]+)"?/i);
+          if (match && match[1]) serverName = match[1];
+        }
+        // Compute fallback filename if serverName is not available
+        const base = 'Mockup_Template_Thankyou';
+        const variantLabel = 'V1';
+        const indexLabel = thankyouFile ? extractIndexFromProduct(thankyouFile.name) : '01';
+        const computedName = `${base}_${variantLabel}_NSL_${indexLabel}.jpg`;
+        setDownloadName(serverName || computedName);
       } else {
         // Existing merge logic
         if (!productFile) return;
@@ -182,7 +225,7 @@ const TemplateMockupSetUI: React.FC = () => {
           responseType: 'blob',
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        const blob = new Blob([res.data], { type: 'image/png' });
+        const blob = new Blob([res.data], { type: 'image/png' }); // keep as png for other types
         const url = window.URL.createObjectURL(blob);
         setResultUrl(url);
         const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
@@ -212,7 +255,7 @@ const TemplateMockupSetUI: React.FC = () => {
     if (!resultUrl) return;
     let fileName = downloadName || (() => {
       const type = mergedMockupType || 'primary';
-      return 'Mockup_Image_' + type.charAt(0).toUpperCase() + type.slice(1) + '.png';
+      return 'Mockup_Image_' + type.charAt(0).toUpperCase() + type.slice(1) + (showDetailRsvp ? '.jpg' : '.png');
     })();
     const a = document.createElement('a');
     a.href = resultUrl;
@@ -327,13 +370,22 @@ const TemplateMockupSetUI: React.FC = () => {
 
 
         {/* Conditional upload buttons based on master mockup filename */}
-        {!showDetailRsvp && (
+        {!showDetailRsvp && !selectedMockupLc.includes('thankyou') && (
           <Box mb={2}>
             <Button variant="outlined" component="label" sx={{ mb: 2 }}>
               Select Product Image
               <input type="file" hidden accept="image/*" onChange={handleProductChange} />
             </Button>
             {productFile && <Typography>{productFile.name}</Typography>}
+          </Box>
+        )}
+        {selectedMockupLc.includes('thankyou') && (
+          <Box mb={2}>
+            <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+              Select Thankyou Image
+              <input type="file" hidden accept="image/*" onChange={handleThankyouChange} />
+            </Button>
+            {thankyouFile && <Typography>{thankyouFile.name}</Typography>}
           </Box>
         )}
         {showDetailRsvp && (
@@ -362,7 +414,9 @@ const TemplateMockupSetUI: React.FC = () => {
             loading ||
             (showDetailRsvp
               ? (!detailFile || !rsvpFile)
-              : !productFile)
+              : selectedMockupLc.includes('thankyou')
+                ? !thankyouFile
+                : !productFile)
           }
           onClick={handleMerge}
           startIcon={loading ? <CircularProgress size={18} /> : undefined}
@@ -437,20 +491,33 @@ const TemplateMockupSetUI: React.FC = () => {
     {selectedMockupUrl && !resultUrl && (
       <Box p={3} boxShadow={2} borderRadius={2} bgcolor="#fff">
         <Typography>Selected Mockup Preview</Typography>
-        <img src={selectedMockupUrl} key={selectedMockupUrl} style={{ maxWidth: '100%' }} />
+        <img
+          src={selectedMockupUrl}
+          key={selectedMockupUrl}
+          style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
+          alt="Selected Mockup Image"
+        />
       </Box>
     )}
 
     {resultUrl && (
       <Box p={3} boxShadow={2} borderRadius={2} bgcolor="#fff">
         <Typography>
-          {mergedMockupType === 'mobile'
-            ? 'Mobile Mockup Image Preview'
-            : mergedMockupType === 'secondary'
-            ? 'Secondary Mockup Image Preview'
-            : 'Primary Mockup Image Preview'}
+          {(() => {
+            if (mergedMockupType === 'mobile') return 'Mobile Mockup Image Preview';
+            if (mergedMockupType === 'secondary') return 'Secondary Mockup Image Preview';
+            return 'Primary Mockup Image Preview';
+          })()}
         </Typography>
-        <img src={resultUrl} style={{ maxWidth: '100%' }} />
+        <img
+          src={resultUrl}
+          style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
+          alt={(() => {
+            if (mergedMockupType === 'mobile') return 'Mobile Mockup Image';
+            if (mergedMockupType === 'secondary') return 'Secondary Mockup Image';
+            return 'Primary Mockup Image';
+          })()}
+        />
       </Box>
     )}
   </Box>
