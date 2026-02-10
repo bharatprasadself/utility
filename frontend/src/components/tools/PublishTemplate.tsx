@@ -17,6 +17,9 @@ export default function PublishTemplate() {
   const { isAdmin } = useAuth();
   const admin = isAdmin();
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalTemplates, setTotalTemplates] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -55,24 +58,25 @@ export default function PublishTemplate() {
     return 'print-mobile';
   };
 
-  const refresh = async () => {
+  const refresh = async (p = page, s = pageSize) => {
     try {
       setError(null);
-      const data = await listTemplates();
-      setTemplates(data);
+      const { templates, total } = await listTemplates(p, s);
+      setTemplates(templates);
+      setTotalTemplates(total);
     } catch (e: any) {
       setError(e.message || 'Failed to load templates');
     }
   };
 
   useEffect(() => {
-    refresh();
+    refresh(page, pageSize);
     // Auto-generate title for new template
     if (editId == null) {
       import('../../services/templates').then(m => m.getNextTemplateTitle()).then(setTitle).catch(() => setTitle(''));
     }
     // eslint-disable-next-line
-  }, []);
+  }, [page, pageSize]);
 
   // When editing a template, keep the selected Buyer PDF Type in sync with the row map
   useEffect(() => {
@@ -665,6 +669,24 @@ export default function PublishTemplate() {
               ))}
             </TableBody>
           </Table>
+          {/* Pagination controls */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2 }}>
+            <Button disabled={page === 0} onClick={() => setPage(page - 1)} sx={{ mr: 2 }}>Previous</Button>
+            <Typography variant="body2">Page {page + 1} of {Math.ceil(totalTemplates / pageSize)}</Typography>
+            <Button disabled={(page + 1) * pageSize >= totalTemplates} onClick={() => setPage(page + 1)} sx={{ ml: 2 }}>Next</Button>
+            <FormControl sx={{ ml: 4, minWidth: 80 }} size="small">
+              <InputLabel>Page Size</InputLabel>
+              <Select
+                value={pageSize}
+                label="Page Size"
+                onChange={e => { setPageSize(Number(e.target.value)); setPage(0); }}
+              >
+                {[10, 20, 50, 100].map(size => (
+                  <MenuItem key={size} value={size}>{size}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </TableContainer>
       )}
     </Box>

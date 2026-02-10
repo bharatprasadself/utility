@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
@@ -41,50 +42,60 @@ public class TemplateController {
 
     @GetMapping("/api/admin/canva-templates")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public List<Template> list() {
-        // Default to first page, size 100 for admin listing
-        return service.list(0, 100);
+    public Map<String, Object> list(jakarta.servlet.http.HttpServletRequest request) {
+        int page = 0;
+        int size = 10;
+        try {
+            String pageStr = request.getParameter("page");
+            String sizeStr = request.getParameter("size");
+            if (pageStr != null) page = Integer.parseInt(pageStr);
+            if (sizeStr != null) size = Integer.parseInt(sizeStr);
+        } catch (Exception ignored) {}
+        org.springframework.data.domain.Page<Template> paged = service.listPaged(page, size);
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("templates", paged.getContent());
+        result.put("total", paged.getTotalElements());
+        return result;
     }
 
     // Public listing for shop (only published templates)
     @GetMapping("/api/canva-templates")
-    public List<Map<String, Object>> publicList() {
-        // Default to first page, size 100 for public listing
-        return service.list(0, 100).stream()
+    public Map<String, Object> publicList(jakarta.servlet.http.HttpServletRequest request) {
+        int page = 0;
+        int size = 10;
+        try {
+            String pageStr = request.getParameter("page");
+            String sizeStr = request.getParameter("size");
+            if (pageStr != null) page = Integer.parseInt(pageStr);
+            if (sizeStr != null) size = Integer.parseInt(sizeStr);
+        } catch (Exception ignored) {}
+        org.springframework.data.domain.Page<Template> paged = service.listPaged(page, size);
+        List<Map<String, Object>> templates = paged.getContent().stream()
             .filter(t -> "published".equalsIgnoreCase(t.getStatus()))
             .map(t -> {
                 java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
-                m.put("id", t.getId());
-                // Build storefront title: use custom wording if present, always append friendly PDF type suffix
                 String baseTitle = (t.getPublicDescription() != null && !t.getPublicDescription().isBlank())
                     ? t.getPublicDescription().trim()
                     : "NextStepLabs digital invite";
-
-                // Derive type label from preferred buyerPdfType or heuristics
                 String typeRaw = t.getBuyerPdfType();
                 String typeLabel;
                 if (typeRaw != null) {
-                    // Normalize common client values like 'invite_suite' -> 'INVITE_SUITE'
                     String norm = typeRaw.trim().toUpperCase().replace('-', '_');
                     switch (norm) {
                         case "INVITE_SUITE": typeLabel = "Invite Suite"; break;
                         case "PRINT_MOBILE": typeLabel = "Mobile + Print"; break;
                         case "PRINT_ONLY": typeLabel = "Only Print"; break;
-                        default: typeLabel = "Mobile + Print"; break; // default aligns with Buyer PDF common type
+                        default: typeLabel = "Mobile + Print"; break;
                     }
                 } else {
-                    boolean hasRsvp = t.getRsvpCanvaUseCopyUrl() != null && t.getRsvpCanvaUseCopyUrl().startsWith("http");
-                    boolean hasDetail = t.getDetailCardCanvaUseCopyUrl() != null && t.getDetailCardCanvaUseCopyUrl().startsWith("http");
-                    boolean hasThanks = t.getThankYouCardCanvaUseCopyUrl() != null && t.getThankYouCardCanvaUseCopyUrl().startsWith("http");
-                    boolean hasPrint = t.getCanvaUseCopyUrl() != null && t.getCanvaUseCopyUrl().startsWith("http");
-                    boolean hasMobile = t.getMobileCanvaUseCopyUrl() != null && t.getMobileCanvaUseCopyUrl().startsWith("http");
-                    if (hasRsvp || hasDetail || hasThanks) typeLabel = "Invite Suite";
-                    else if (hasPrint && hasMobile) typeLabel = "Mobile + Print";
+                    boolean hasPrint = t.getBuyerPdfType() != null && t.getBuyerPdfType().toLowerCase().contains("print");
+                    boolean hasMobile = t.getBuyerPdfType() != null && t.getBuyerPdfType().toLowerCase().contains("mobile");
+                    if (hasMobile && hasPrint) typeLabel = "Mobile + Print";
                     else if (hasPrint && !hasMobile) typeLabel = "Only Print";
                     else typeLabel = "Mobile + Print"; // fallback
                 }
-
                 String desc = baseTitle + " (" + typeLabel + ")";
+                m.put("id", t.getId());
                 m.put("title", desc);
                 m.put("mockupUrl", t.getMockupUrl());
                 m.put("secondaryMockupUrl", t.getSecondaryMockupUrl());
@@ -92,6 +103,10 @@ public class TemplateController {
                 m.put("etsyListingUrl", t.getEtsyListingUrl());
                 return m;
             }).collect(Collectors.toList());
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("templates", templates);
+        result.put("total", paged.getTotalElements());
+        return result;
     }
 
     @PostMapping("/api/admin/canva-templates")

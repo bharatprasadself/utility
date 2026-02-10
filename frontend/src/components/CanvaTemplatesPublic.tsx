@@ -8,12 +8,16 @@ const CanvaTemplatesPublic = () => {
   const [items, setItems] = useState<PublicTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalTemplates, setTotalTemplates] = useState(0);
 
-  const refresh = async () => {
+  const refresh = async (p = page, s = pageSize) => {
     try {
       setLoading(true);
-      const data = await listPublicTemplates();
-      setItems(data);
+      const { templates, total } = await listPublicTemplates(p, s);
+      setItems(templates);
+      setTotalTemplates(total);
     } catch (e: any) {
       setErr(e.message || 'Failed to load templates');
     } finally {
@@ -21,7 +25,7 @@ const CanvaTemplatesPublic = () => {
     }
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(page, pageSize); }, [page, pageSize]);
 
   const [imgIndexes, setImgIndexes] = useState<{[id: number]: number}>({});
 
@@ -145,6 +149,20 @@ const CanvaTemplatesPublic = () => {
             <Grid item xs={12}><Typography color="text.secondary">No templates found.</Typography></Grid>
           )}
         </Grid>
+
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2 }}>
+          <Button disabled={page === 0} onClick={() => setPage(page - 1)} sx={{ mr: 2 }}>Previous</Button>
+          <Typography variant="body2">Page {page + 1} of {Math.ceil(totalTemplates / pageSize)}</Typography>
+          <Button disabled={(page + 1) * pageSize >= totalTemplates} onClick={() => setPage(page + 1)} sx={{ ml: 2 }}>Next</Button>
+          <Box sx={{ ml: 4 }}>
+            <label htmlFor="page-size-select">Page Size: </label>
+            <select id="page-size-select" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(0); }}>
+              {[10, 20, 50, 100].map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </Box>
+        </Box>
       </Container>
       {/* Right rail ads: match Blog layout exactly */}
       <Box

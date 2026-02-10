@@ -24,8 +24,8 @@ export interface Template {
   buyerPdfType?: BuyerPdfType;
 }
 
-export const listTemplates = async (): Promise<Template[]> => {
-  const res = await axiosInstance.get<Template[]>('/api/admin/canva-templates');
+export const listTemplates = async (page = 0, size = 10): Promise<{templates: Template[], total: number}> => {
+  const res = await axiosInstance.get<{templates: Template[], total: number}>(`/api/admin/canva-templates?page=${page}&size=${size}`);
   return res.data;
 };
 
@@ -95,8 +95,8 @@ export interface PublicTemplate {
   etsyListingUrl?: string;
 }
 
-export const listPublicTemplates = async (): Promise<PublicTemplate[]> => {
-  const res = await axiosInstance.get<PublicTemplate[]>('/api/canva-templates');
+export const listPublicTemplates = async (page = 0, size = 10): Promise<{templates: PublicTemplate[], total: number}> => {
+  const res = await axiosInstance.get<{templates: PublicTemplate[], total: number}>(`/api/canva-templates?page=${page}&size=${size}`);
   return res.data;
 };
 
