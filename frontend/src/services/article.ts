@@ -177,4 +177,52 @@ export const ArticleService = {
       throw error;
     }
   }
+,
+  reorderArticles: async (orderedIds: string[]): Promise<AxiosResponse<void>> => {
+    console.log('🔀 Persisting reordered articles', orderedIds);
+    try {
+      const response = await api.post(`${BASE_URL}/reorder`, orderedIds);
+      console.log('✅ Reorder persisted');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to persist reorder:', error);
+      throw error;
+    }
+  }
+,
+  getArticleGroups: async (): Promise<AxiosResponse<string[]>> => {
+    console.log('🔍 Fetching article group order');
+    try {
+      const response = await publicApi.get(`${BASE_URL}/groups`);
+      console.log('✅ Fetched group order', response.data);
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to fetch group order:', error);
+      throw error;
+    }
+  },
+
+  reorderGroups: async (orderedGroupNames: string[]): Promise<AxiosResponse<void>> => {
+    console.log('🔀 Persisting reordered groups', orderedGroupNames);
+    try {
+      const response = await api.post(`${BASE_URL}/groups/reorder`, orderedGroupNames);
+      console.log('✅ Group reorder persisted');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to persist group reorder:', error);
+      throw error;
+    }
+  }
+,
+  renameGroup: async (oldName: string, newName: string): Promise<AxiosResponse<void>> => {
+    console.log(`✏️ Renaming group from "${oldName}" to "${newName}"`);
+    try {
+      const response = await api.post(`${BASE_URL}/groups/rename`, { oldName, newName });
+      console.log('✅ Group rename persisted');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to rename group:', error);
+      throw error;
+    }
+  }
 };

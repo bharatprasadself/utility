@@ -48,6 +48,9 @@ public class Article {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "group_name")
+    private String header;
+
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
@@ -113,6 +116,14 @@ public class Article {
 
     public void setReadTime(String readTime) {
         this.readTime = readTime;
+    }
+
+    public String getHeader() {
+        return header;
+    }
+
+    public void setHeader(String header) {
+        this.header = header;
     }
 
     public ArticleCategory getCategory() {

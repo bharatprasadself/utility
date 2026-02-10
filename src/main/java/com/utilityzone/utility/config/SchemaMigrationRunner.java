@@ -6,10 +6,12 @@
  import org.springframework.context.event.EventListener;
  import org.springframework.stereotype.Component;
 
- import javax.sql.DataSource;
- import java.sql.Connection;
- import java.sql.SQLException;
- import java.sql.Statement;
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 
 // /**
 //  * Lightweight safeguard to align schema changes when DDL auto is disabled.
@@ -29,15 +31,11 @@
 
      @EventListener(ApplicationReadyEvent.class)
      public void onReady() {
-         try (Connection conn = dataSource.getConnection()) {
-//             dropTemplateDescriptionsTable(conn);
-//             ensureCanvaTemplatesTable(conn);
-//             ensureCanvaTemplatesStatusColumn(conn);
-//             ensureBlogsStatusColumn(conn);
-//             ensureArticlesStatusAndPublishDate(conn);
-//             ensureUsersEmailColumn(conn);
-//             ensurePasswordResetTokenTable(conn);
-//             ensureTemplatesTable(conn);
+        try (Connection conn = dataSource.getConnection()) {
+           // Ensure articles.group_name column exists (safe to run repeatedly)
+            ensureArticlesGroupNameColumn(conn);
+           // Ensure article_groups table exists to persist admin group ordering
+           ensureArticleGroupsTable(conn);
          } catch (SQLException e) {
              log.warn("Schema migration runner encountered an error: {}", e.getMessage());
          }
@@ -153,12 +151,50 @@
 //         }
 //     }
 
-//     private boolean columnExists(Connection conn, String catalog, String schemaPattern, String tableName, String columnName) throws SQLException {
-//         DatabaseMetaData meta = conn.getMetaData();
-//         try (ResultSet rs = meta.getColumns(catalog, schemaPattern, tableName, columnName)) {
-//             return rs.next();
-//         }
-//     }
+    private boolean columnExists(Connection conn, String catalog, String schemaPattern, String tableName, String columnName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getColumns(catalog, schemaPattern, tableName, columnName)) {
+            return rs.next();
+        }
+    }
+
+    private void ensureArticleGroupsTable(Connection conn) {
+        try (Statement st = conn.createStatement()) {
+            // create table if it doesn't exist
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS article_groups (id BIGSERIAL PRIMARY KEY, name VARCHAR(255) UNIQUE NOT NULL, display_order INTEGER)");
+            log.info("Ensured article_groups table exists.");
+        } catch (SQLException e) {
+            log.warn("Failed to ensure article_groups table: {}", e.getMessage());
+        }
+    }
+
+    private void ensureArticlesGroupNameColumn(Connection conn) {
+        try {
+            // If group_name already exists, nothing to do
+            if (columnExists(conn, null, null, "ARTICLES", "GROUP_NAME")) {
+                return;
+            }
+
+            // If an old 'header' column exists, prefer renaming it to 'group_name'
+            if (columnExists(conn, null, null, "ARTICLES", "HEADER")) {
+                log.info("Renaming ARTICLES.HEADER -> ARTICLES.GROUP_NAME...");
+                try (Statement st = conn.createStatement()) {
+                    st.executeUpdate("ALTER TABLE articles RENAME COLUMN header TO group_name");
+                }
+                log.info("ARTICLES.HEADER renamed to GROUP_NAME.");
+                return;
+            }
+
+            // Otherwise create the new column
+            log.info("Adding ARTICLES.GROUP_NAME column...");
+            try (Statement st = conn.createStatement()) {
+                st.executeUpdate("ALTER TABLE articles ADD COLUMN group_name VARCHAR(255)");
+            }
+            log.info("ARTICLES.GROUP_NAME column added.");
+        } catch (SQLException e) {
+            log.warn("Failed to ensure ARTICLES.GROUP_NAME column: {}", e.getMessage());
+        }
+    }
 
 //     private boolean tableExists(Connection conn, String tableName) throws SQLException {
 //         DatabaseMetaData meta = conn.getMetaData();

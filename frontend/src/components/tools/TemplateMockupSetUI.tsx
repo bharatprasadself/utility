@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Alert, CircularProgress, Select, MenuItem, FormControl } from '@mui/material';
 import axios, { API_BASE_URL } from '@/services/axiosConfig';
@@ -80,6 +79,18 @@ const TemplateMockupSetUI: React.FC = () => {
       });
     }, [selectedStyle]);
   const [productFile, setProductFile] = useState<File | null>(null);
+  const [detailFile, setDetailFile] = useState<File | null>(null);
+  const [rsvpFile, setRsvpFile] = useState<File | null>(null);
+  const [thankyouFile, setThankyouFile] = useState<File | null>(null);
+  const handleThankyouChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setThankyouFile(e.target.files[0]);
+    }
+  };
+
+  // Logic to determine which upload buttons to show
+  const selectedMockupLc = (selectedMockup || '').toLowerCase();
+  const showDetailRsvp = selectedMockupLc.includes('detail') && selectedMockupLc.includes('rsvp');
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [selectedMockupUrl, setSelectedMockupUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,62 +113,206 @@ const TemplateMockupSetUI: React.FC = () => {
       setProductFile(e.target.files[0]);
     }
   };
+  const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setDetailFile(e.target.files[0]);
+    }
+  };
+  const handleRsvpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setRsvpFile(e.target.files[0]);
+    }
+  };
 
 
   const handleMerge = async () => {
-    if (!selectedMockup || !productFile) return;
+    if (!selectedMockup) return;
     setLoading(true);
     setError(null);
     setResultUrl(null);
     try {
-      // Fetch the selected mockup image as a Blob
-      const mockupResponse = await fetch(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
-      if (!mockupResponse.ok) throw new Error('Failed to fetch mockup image.');
-      const mockupBlob = await mockupResponse.blob();
-      const formData = new FormData();
-      formData.append('mockup', mockupBlob, selectedMockup);
-      formData.append('product', productFile);
-      // Add mockupType for backend logic (dynamic: mobile, secondary, or primary)
-      let derivedMockupType = 'primary';
       const selectedMockupLc = selectedMockup.toLowerCase();
-      if (selectedMockupLc.includes('mobile')) derivedMockupType = 'mobile';
-      else if (selectedMockupLc.includes('secondary')) derivedMockupType = 'secondary';
-      formData.append('mockupType', derivedMockupType);
-      // Extract version from master mockup filename (e.g., V1, V2, V3). Do not send to backend.
-      let version = 'V1';
-      const versionMatch = selectedMockup.match(/v\d+/i);
-      if (versionMatch) {
-        version = versionMatch[0].toUpperCase();
+      // If master mockup name contains both 'detail' and 'rsvp', use new endpoint
+      if (selectedMockupLc.includes('detail') && selectedMockupLc.includes('rsvp')) {
+        if (!detailFile || !rsvpFile) {
+          setError('Please select both Detail and RSVP images.');
+          setLoading(false);
+          return;
+        }
+        // Fetch master mockup image as Blob
+        const masterResponse = await fetch(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
+        if (!masterResponse.ok) throw new Error('Failed to fetch master mockup image.');
+        const masterBlob = await masterResponse.blob();
+        const formData = new FormData();
+        formData.append('master', masterBlob, selectedMockup);
+        formData.append('detail', detailFile);
+        formData.append('rsvp', rsvpFile);
+        const res = await axios.post('/api/mockup-image/merge-detail-rsvp', formData, {
+          responseType: 'blob',
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const blob = new Blob([res.data], { type: 'image/jpeg' });
+        const url = window.URL.createObjectURL(blob);
+        setResultUrl(url);
+        // Extract filename from Content-Disposition header if present
+        const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
+        let serverName: string | null = null;
+        if (cd) {
+          const match = cd.match(/filename="?([^";]+)"?/i);
+          if (match && match[1]) serverName = match[1];
+        }
+        // Compute fallback filename if serverName is not available
+        const base = 'Mockup_Template_Detail_RSVP';
+        const variantLabel = 'V1'; // Optionally extract from masterMockupFile if needed
+        const indexLabel = detailFile ? extractIndexFromProduct(detailFile.name) : '01';
+        const computedName = `${base}_${variantLabel}_NSL_${indexLabel}.jpg`;
+        setDownloadName(serverName || computedName);
+      } else if (selectedMockupLc.includes('thankyou')) {
+        if (!thankyouFile) {
+          setError('Please select Thankyou image.');
+          setLoading(false);
+          return;
+        }
+        // Fetch master mockup image as Blob
+        const masterResponse = await fetch(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
+        if (!masterResponse.ok) throw new Error('Failed to fetch master mockup image.');
+        const masterBlob = await masterResponse.blob();
+        const formData = new FormData();
+        formData.append('master', masterBlob, selectedMockup);
+        formData.append('card', thankyouFile);
+        formData.append('type', 'thankyou');
+        const res = await axios.post('/api/mockup-image/merge-single-card', formData, {
+          responseType: 'blob',
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const blob = new Blob([res.data], { type: 'image/jpeg' });
+        const url = window.URL.createObjectURL(blob);
+        setResultUrl(url);
+        // Extract filename from Content-Disposition header if present
+        const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
+        let serverName: string | null = null;
+        if (cd) {
+          const match = cd.match(/filename="?([^";]+)"?/i);
+          if (match && match[1]) serverName = match[1];
+        }
+        // Compute fallback filename if serverName is not available
+        const base = 'Mockup_Template_Thankyou';
+        const variantLabel = 'V1';
+        const indexLabel = thankyouFile ? extractIndexFromProduct(thankyouFile.name) : '01';
+        const computedName = `${base}_${variantLabel}_NSL_${indexLabel}.jpg`;
+        setDownloadName(serverName || computedName);
+      } else if (selectedMockupLc.includes('detail')) {
+        if (!detailFile) {
+          setError('Please select Detail image.');
+          setLoading(false);
+          return;
+        }
+        // Fetch master mockup image as Blob
+        const masterResponse = await fetch(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
+        if (!masterResponse.ok) throw new Error('Failed to fetch master mockup image.');
+        const masterBlob = await masterResponse.blob();
+        const formData = new FormData();
+        formData.append('master', masterBlob, selectedMockup);
+        formData.append('card', detailFile);
+        formData.append('type', 'detail');
+        const res = await axios.post('/api/mockup-image/merge-single-card', formData, {
+          responseType: 'blob',
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const blob = new Blob([res.data], { type: 'image/jpeg' });
+        const url = window.URL.createObjectURL(blob);
+        setResultUrl(url);
+        // Extract filename from Content-Disposition header if present
+        const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
+        let serverName: string | null = null;
+        if (cd) {
+          const match = cd.match(/filename="?([^";]+)"?/i);
+          if (match && match[1]) serverName = match[1];
+        }
+        // Compute fallback filename if serverName is not available
+        const base = 'Mockup_Template_Detail';
+        const variantLabel = 'V1';
+        const indexLabel = detailFile ? extractIndexFromProduct(detailFile.name) : '01';
+        const computedName = `${base}_${variantLabel}_NSL_${indexLabel}.jpg`;
+        setDownloadName(serverName || computedName);
+      } else if (selectedMockupLc.includes('rsvp')) {
+        if (!rsvpFile) {
+          setError('Please select RSVP image.');
+          setLoading(false);
+          return;
+        }
+        // Fetch master mockup image as Blob
+        const masterResponse = await fetch(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
+        if (!masterResponse.ok) throw new Error('Failed to fetch master mockup image.');
+        const masterBlob = await masterResponse.blob();
+        const formData = new FormData();
+        formData.append('master', masterBlob, selectedMockup);
+        formData.append('card', rsvpFile);
+        formData.append('type', 'rsvp');
+        const res = await axios.post('/api/mockup-image/merge-single-card', formData, {
+          responseType: 'blob',
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const blob = new Blob([res.data], { type: 'image/jpeg' });
+        const url = window.URL.createObjectURL(blob);
+        setResultUrl(url);
+        // Extract filename from Content-Disposition header if present
+        const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
+        let serverName: string | null = null;
+        if (cd) {
+          const match = cd.match(/filename="?([^";]+)"?/i);
+          if (match && match[1]) serverName = match[1];
+        }
+        // Compute fallback filename if serverName is not available
+        const base = 'Mockup_Template_RSVP';
+        const variantLabel = 'V1';
+        const indexLabel = rsvpFile ? extractIndexFromProduct(rsvpFile.name) : '01';
+        const computedName = `${base}_${variantLabel}_NSL_${indexLabel}.jpg`;
+        setDownloadName(serverName || computedName);
+      } else {
+        // Existing merge logic
+        if (!productFile) return;
+        // Fetch the selected mockup image as a Blob
+        const mockupResponse = await fetch(`${API_BASE_URL}/api/master-mockups/${encodeURIComponent(selectedMockup)}`);
+        if (!mockupResponse.ok) throw new Error('Failed to fetch mockup image.');
+        const mockupBlob = await mockupResponse.blob();
+        const formData = new FormData();
+        formData.append('mockup', mockupBlob, selectedMockup);
+        formData.append('product', productFile);
+        let derivedMockupType = 'primary';
+        if (selectedMockupLc.includes('mobile')) derivedMockupType = 'mobile';
+        else if (selectedMockupLc.includes('secondary')) derivedMockupType = 'secondary';
+        formData.append('mockupType', derivedMockupType);
+        let version = 'V1';
+        const versionMatch = selectedMockup.match(/v\d+/i);
+        if (versionMatch) {
+          version = versionMatch[0].toUpperCase();
+        }
+        formData.append('style', selectedStyle);
+        setMergedMockupType(derivedMockupType);
+        const res = await axios.post('/api/mockup-image/merge', formData, {
+          responseType: 'blob',
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const blob = new Blob([res.data], { type: 'image/png' }); // keep as png for other types
+        const url = window.URL.createObjectURL(blob);
+        setResultUrl(url);
+        const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
+        let serverName: string | null = null;
+        if (cd) {
+          const match = cd.match(/filename="?([^";]+)"?/i);
+          if (match && match[1]) serverName = match[1];
+        }
+        const base = deriveBaseNameFromMockup(selectedMockup);
+        const roleLabel = roleLabelFromType(derivedMockupType);
+        const variantLabel = (version || 'V1').toUpperCase();
+        const indexLabel = extractIndexFromProduct(productFile.name);
+        const nsIndex = `NSL${indexLabel}`;
+        const computedName = baseContainsRoleToken(base, roleLabel)
+          ? `${base}_${variantLabel}_${nsIndex}.png`
+          : `${base}_${roleLabel}_${variantLabel}_${nsIndex}.png`;
+        setDownloadName(serverName || computedName);
       }
-      // Add style parameter from dropdown
-      formData.append('style', selectedStyle);
-      // Store for download filename
-      setMergedMockupType(derivedMockupType);
-      const res = await axios.post('/api/mockup-image/merge', formData, {
-        responseType: 'blob',
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const blob = new Blob([res.data], { type: 'image/png' });
-      const url = window.URL.createObjectURL(blob);
-      setResultUrl(url);
-
-      // Try to read filename from Content-Disposition; else compute locally
-      const cd = (res.headers && (res.headers['content-disposition'] as string)) || '';
-      let serverName: string | null = null;
-      if (cd) {
-        const match = cd.match(/filename="?([^";]+)"?/i);
-        if (match && match[1]) serverName = match[1];
-      }
-
-      const base = deriveBaseNameFromMockup(selectedMockup);
-      const roleLabel = roleLabelFromType(derivedMockupType);
-      const variantLabel = (version || 'V1').toUpperCase();
-      const indexLabel = extractIndexFromProduct(productFile.name);
-      const nsIndex = `NSL${indexLabel}`;
-      const computedName = baseContainsRoleToken(base, roleLabel)
-        ? `${base}_${variantLabel}_${nsIndex}.png`
-        : `${base}_${roleLabel}_${variantLabel}_${nsIndex}.png`;
-      setDownloadName(serverName || computedName);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to merge images.');
     } finally {
@@ -169,7 +324,7 @@ const TemplateMockupSetUI: React.FC = () => {
     if (!resultUrl) return;
     let fileName = downloadName || (() => {
       const type = mergedMockupType || 'primary';
-      return 'Mockup_Image_' + type.charAt(0).toUpperCase() + type.slice(1) + '.png';
+      return 'Mockup_Image_' + type.charAt(0).toUpperCase() + type.slice(1) + (showDetailRsvp ? '.jpg' : '.png');
     })();
     const a = document.createElement('a');
     a.href = resultUrl;
@@ -283,18 +438,77 @@ const TemplateMockupSetUI: React.FC = () => {
 
 
 
-        {/* Product upload */}
-        <Box mb={2}>
-          <Button variant="outlined" component="label" sx={{ mb: 2 }}>
-            Select Product Image
-            <input type="file" hidden accept="image/*" onChange={handleProductChange} />
-          </Button>
-          {productFile && <Typography>{productFile.name}</Typography>}
-        </Box>
+        {/* Conditional upload buttons based on master mockup filename */}
+        {!showDetailRsvp && !selectedMockupLc.includes('thankyou') && !selectedMockupLc.includes('rsvp') && !selectedMockupLc.includes('detail') && (
+          <Box mb={2}>
+            <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+              Select Product Image
+              <input type="file" hidden accept="image/*" onChange={handleProductChange} />
+            </Button>
+            {productFile && <Typography>{productFile.name}</Typography>}
+          </Box>
+        )}
+        {selectedMockupLc.includes('detail') && !showDetailRsvp && !selectedMockupLc.includes('thankyou') && !selectedMockupLc.includes('rsvp') && (
+          <Box mb={2}>
+            <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+              Select Detail Image
+              <input type="file" hidden accept="image/*" onChange={handleDetailChange} />
+            </Button>
+            {detailFile && <Typography>{detailFile.name}</Typography>}
+          </Box>
+        )}
+        {selectedMockupLc.includes('thankyou') && (
+          <Box mb={2}>
+            <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+              Select Thankyou Image
+              <input type="file" hidden accept="image/*" onChange={handleThankyouChange} />
+            </Button>
+            {thankyouFile && <Typography>{thankyouFile.name}</Typography>}
+          </Box>
+        )}
+        {selectedMockupLc.includes('rsvp') && !showDetailRsvp && (
+          <Box mb={2}>
+            <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+              Select RSVP Image
+              <input type="file" hidden accept="image/*" onChange={handleRsvpChange} />
+            </Button>
+            {rsvpFile && <Typography>{rsvpFile.name}</Typography>}
+          </Box>
+        )}
+        {showDetailRsvp && (
+          <>
+            <Box mb={2}>
+              <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+                Select Detail Image
+                <input type="file" hidden accept="image/*" onChange={handleDetailChange} />
+              </Button>
+              {detailFile && <Typography>{detailFile.name}</Typography>}
+            </Box>
+            <Box mb={2}>
+              <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+                Select RSVP Image
+                <input type="file" hidden accept="image/*" onChange={handleRsvpChange} />
+              </Button>
+              {rsvpFile && <Typography>{rsvpFile.name}</Typography>}
+            </Box>
+          </>
+        )}
 
         <Button
           variant="contained"
-          disabled={!selectedMockup || !productFile || loading}
+          disabled={
+            !selectedMockup ||
+            loading ||
+            (showDetailRsvp
+              ? (!detailFile || !rsvpFile)
+              : selectedMockupLc.includes('thankyou')
+                ? !thankyouFile
+                : selectedMockupLc.includes('rsvp')
+                  ? !rsvpFile
+                  : selectedMockupLc.includes('detail')
+                    ? !detailFile
+                    : !productFile)
+          }
           onClick={handleMerge}
           startIcon={loading ? <CircularProgress size={18} /> : undefined}
           sx={{ mb: 2 }}
@@ -368,20 +582,33 @@ const TemplateMockupSetUI: React.FC = () => {
     {selectedMockupUrl && !resultUrl && (
       <Box p={3} boxShadow={2} borderRadius={2} bgcolor="#fff">
         <Typography>Selected Mockup Preview</Typography>
-        <img src={selectedMockupUrl} key={selectedMockupUrl} style={{ maxWidth: '100%' }} />
+        <img
+          src={selectedMockupUrl}
+          key={selectedMockupUrl}
+          style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
+          alt="Selected Mockup Image"
+        />
       </Box>
     )}
 
     {resultUrl && (
       <Box p={3} boxShadow={2} borderRadius={2} bgcolor="#fff">
         <Typography>
-          {mergedMockupType === 'mobile'
-            ? 'Mobile Mockup Image Preview'
-            : mergedMockupType === 'secondary'
-            ? 'Secondary Mockup Image Preview'
-            : 'Primary Mockup Image Preview'}
+          {(() => {
+            if (mergedMockupType === 'mobile') return 'Mobile Mockup Image Preview';
+            if (mergedMockupType === 'secondary') return 'Secondary Mockup Image Preview';
+            return 'Primary Mockup Image Preview';
+          })()}
         </Typography>
-        <img src={resultUrl} style={{ maxWidth: '100%' }} />
+        <img
+          src={resultUrl}
+          style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
+          alt={(() => {
+            if (mergedMockupType === 'mobile') return 'Mobile Mockup Image';
+            if (mergedMockupType === 'secondary') return 'Secondary Mockup Image';
+            return 'Primary Mockup Image';
+          })()}
+        />
       </Box>
     )}
   </Box>

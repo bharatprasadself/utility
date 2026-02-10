@@ -56,11 +56,11 @@ const navItems: NavItem[] = [
     path: '/articles',
     subItems: [
       { label: 'Spring Boot', path: '/articles/spring-boot' },
-      { label: 'React JS', path: '/articles/react' },
       { label: 'Java', path: '/articles/java' },
+      { label: 'Microservices', path: '/articles/microservices' },
+      { label: 'React JS', path: '/articles/react' },      
       { label: 'PostgreSQL', path: '/articles/postgresql' },
-      { label: 'Docker', path: '/articles/docker' },
-      { label: 'Microservices', path: '/articles/microservices' }
+      { label: 'Docker', path: '/articles/docker' }      
     ]
   }
 ];
@@ -82,11 +82,11 @@ const financeEmoji: Record<string, string> = {
 };
 const articlesEmoji: Record<string, string> = {
   'Spring Boot': '🌱',
-  'React JS': '⚛️',
   'Java': '☕',
+  'Microservices': '🧩',
+  'React JS': '⚛️',  
   'PostgreSQL': '🐘',
-  'Docker': '🐳',
-  'Microservices': '🧩'
+  'Docker': '🐳' 
 };
 const toolsExtraEmoji: Record<string, string> = {
   'Finance': '💰',

@@ -21,6 +21,9 @@ public class ArticleService {
     @Autowired
     private ArticleRepository articleRepository;
 
+    @Autowired
+    private com.utilityzone.repository.ArticleGroupRepository articleGroupRepository;
+
     @Cacheable(value = "articles")
     public List<Article> getAllArticles() {
         // Public list: only published articles, oldest first for deterministic chronological order
@@ -47,6 +50,75 @@ public class ArticleService {
     public List<Article> getDraftArticles() {
         // Admin view: all drafts, newest first for convenience
         return articleRepository.findAllByStatusOrderByCreatedAtDescIdDesc(PublicationStatus.DRAFT);
+    }
+
+    public java.util.List<String> getGroupOrder() {
+        java.util.List<com.utilityzone.model.ArticleGroup> groups = articleGroupRepository.findAll(org.springframework.data.domain.Sort.by("displayOrder"));
+        java.util.List<String> names = new java.util.ArrayList<>();
+        for (com.utilityzone.model.ArticleGroup g : groups) names.add(g.getName());
+        return names;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void reorderGroups(java.util.List<String> orderedNames) {
+        int pos = 0;
+        for (String name : orderedNames) {
+            java.util.Optional<com.utilityzone.model.ArticleGroup> existing = articleGroupRepository.findByName(name);
+            com.utilityzone.model.ArticleGroup g;
+            if (existing.isPresent()) {
+                g = existing.get();
+            } else {
+                g = new com.utilityzone.model.ArticleGroup(name, pos);
+            }
+            g.setDisplayOrder(pos);
+            articleGroupRepository.save(g);
+            pos++;
+        }
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.cache.annotation.Caching(evict = {
+        @org.springframework.cache.annotation.CacheEvict(value = "articles", allEntries = true),
+        @org.springframework.cache.annotation.CacheEvict(value = "articlesByCategory", allEntries = true),
+        @org.springframework.cache.annotation.CacheEvict(value = "articlesByTag", allEntries = true),
+        @org.springframework.cache.annotation.CacheEvict(value = "articleById", allEntries = true)
+    })
+    public void renameGroup(String oldName, String newName) {
+        if (oldName == null || newName == null) return;
+        oldName = oldName.trim();
+        newName = newName.trim();
+        if (oldName.equals(newName)) return;
+        // If a group with the target name already exists, merge old into new.
+        java.util.Optional<com.utilityzone.model.ArticleGroup> existingNew = articleGroupRepository.findByName(newName);
+        java.util.Optional<com.utilityzone.model.ArticleGroup> existingOld = articleGroupRepository.findByName(oldName);
+
+        if (existingNew.isPresent()) {
+            // Update articles to reference the existing new group name
+            articleRepository.updateHeaderForName(oldName, newName);
+            // Remove the old group record if present
+            existingOld.ifPresent(g -> {
+                try {
+                    articleGroupRepository.delete(g);
+                } catch (Exception ignored) {}
+            });
+        } else {
+            // No collision: rename the old group record if present, otherwise create a new record
+            if (existingOld.isPresent()) {
+                com.utilityzone.model.ArticleGroup g = existingOld.get();
+                g.setName(newName);
+                articleGroupRepository.save(g);
+            } else {
+                // create new group with displayOrder = max(displayOrder) + 1
+                java.util.List<com.utilityzone.model.ArticleGroup> allGroups = articleGroupRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "displayOrder"));
+                int nextOrder = 0;
+                if (!allGroups.isEmpty()) {
+                    try { nextOrder = allGroups.get(0).getDisplayOrder() + 1; } catch (Exception ignored) {}
+                }
+                articleGroupRepository.save(new com.utilityzone.model.ArticleGroup(newName, nextOrder));
+            }
+            // Update articles that referenced the old group name
+            articleRepository.updateHeaderForName(oldName, newName);
+        }
     }
 
     @Caching(evict = {
@@ -85,6 +157,8 @@ public class ArticleService {
                     existingArticle.setPublishDate(null);
                 }
             }
+            // Update header/group if provided
+            existingArticle.setHeader(articleDetails.getHeader());
             return articleRepository.save(existingArticle);
         }
         return null;

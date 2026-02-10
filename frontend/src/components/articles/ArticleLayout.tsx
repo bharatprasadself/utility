@@ -15,7 +15,11 @@ import {
   Alert,
   Chip,
   IconButton,
-  Tooltip
+  Checkbox,
+  Tooltip,
+  AccordionSummary,
+  AccordionDetails,
+  Accordion
 } from '@mui/material';
 import Paper from '@mui/material/Paper';
 import EditIcon from '@mui/icons-material/Edit';
@@ -27,6 +31,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import SearchIcon from '@mui/icons-material/Search';
 import Advertisement from '../Advertisement';
 import type { Article } from '../../types/Article';
 import { ArticleCategory } from '../../types/Article';
@@ -210,6 +215,156 @@ const MarkdownPreview: React.FC<{ content: string; hideLeadingH1?: boolean; stri
   );
 };
 
+// ArticleCard component for rendering individual articles
+interface ArticleCardProps {
+  article: Article;
+  isAdmin: boolean;
+  expandedArticles: Set<string>;
+  toggleArticleContent: (id: string) => void;
+  openEditDialog: (article: Article) => void;
+  setConfirmDelete: (id: string) => void;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+}
+
+const ArticleCard: React.FC<ArticleCardProps> = ({
+  article,
+  isAdmin,
+  expandedArticles,
+  toggleArticleContent,
+  openEditDialog,
+  setConfirmDelete,
+  selected = false,
+  onToggleSelect
+}) => (
+  <Card
+    sx={{
+      borderRadius: 2,
+      boxShadow: 1,
+      border: '1px solid',
+      borderColor: 'divider',
+      '&:hover': {
+        boxShadow: 2
+      }
+    }}
+  >
+    <CardContent sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {isAdmin && onToggleSelect && (
+          <Checkbox
+            checked={!!selected}
+            onChange={() => onToggleSelect(article.id)}
+            inputProps={{ 'aria-label': `select-${article.id}` }}
+          />
+        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: '#2c3e50', mb: 0 }}>
+            {article.title}
+          </Typography>
+          {article.status === 'DRAFT' && (
+            <Chip label="Draft" size="small" color="warning" variant="outlined" />
+          )}
+        </Box>
+        {article.header && (
+          <Chip label={article.header} size="small" color="secondary" variant="outlined" sx={{ ml: 1 }} />
+        )}
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1, flexWrap: 'wrap' }}>
+        <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 'medium' }}>
+          {article.category}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          • {article.readTime || computeReadTime(article.content)}
+        </Typography>
+        {isAdmin && (
+          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+            <Button
+              startIcon={<EditIcon />}
+              onClick={() => openEditDialog(article)}
+              color="success"
+              variant="contained"
+              size="small"
+              sx={{
+                textTransform: 'none',
+                borderRadius: 1,
+                fontWeight: 500,
+                px: 2,
+                py: 0.75,
+                boxShadow: 1,
+                letterSpacing: 0.3,
+                '&:hover': { boxShadow: 2 }
+              }}
+            >
+              Update
+            </Button>
+            <Button
+              startIcon={<DeleteIcon />}
+              onClick={() => setConfirmDelete(article.id)}
+              color="error"
+              variant="contained"
+              size="small"
+              sx={{
+                textTransform: 'none',
+                borderRadius: 1,
+                fontWeight: 500,
+                px: 2,
+                py: 0.75,
+                boxShadow: 1,
+                letterSpacing: 0.3,
+                '&:hover': { boxShadow: 2 }
+              }}
+            >
+              Delete
+            </Button>
+          </Box>
+        )}
+      </Box>
+      <Box sx={{ position: 'relative' }}>
+        {article.content && (
+          expandedArticles.has(article.id) ? (
+            <Box>
+              <MarkdownPreview content={article.content} hideLeadingH1 />
+              <Button
+                color="primary"
+                onClick={() => toggleArticleContent(article.id)}
+                endIcon={<ExpandLessIcon fontSize="small" />}
+                sx={{
+                  textTransform: 'none',
+                  mt: 2,
+                  fontWeight: 'medium',
+                  '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' }
+                }}
+              >
+                Show Less
+              </Button>
+            </Box>
+          ) : (
+            <Box>
+              <MarkdownPreview
+                content={article.content.slice(0, 200) + (article.content.length > 200 ? '...' : '')}
+                hideLeadingH1
+              />
+              <Button
+                color="primary"
+                onClick={() => toggleArticleContent(article.id)}
+                endIcon={<ExpandMoreIcon fontSize="small" />}
+                sx={{
+                  textTransform: 'none',
+                  mt: 1,
+                  fontWeight: 'medium',
+                  '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' }
+                }}
+              >
+                Read More
+              </Button>
+            </Box>
+          )
+        )}
+      </Box>
+    </CardContent>
+  </Card>
+);
+
 const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   title,
   description,
@@ -263,8 +418,143 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importedFileName, setImportedFileName] = useState<string>('');
   const contentTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [matchCount, setMatchCount] = useState<number | null>(null);
   // Track which articles have their content expanded
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
+  // Track which tag groups are expanded (for organizing articles by tags)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Group input for create/edit dialog
+  const [headerInput, setHeaderInput] = useState<string>('');
+  // Selection for bulk group assignment
+  const [selectedArticlesSet, setSelectedArticlesSet] = useState<Set<string>>(new Set());
+  const [bulkHeaderDialogOpen, setBulkHeaderDialogOpen] = useState(false);
+  const [bulkHeaderValue, setBulkHeaderValue] = useState('');
+
+  const toggleSelectArticle = (id: string) => {
+    setSelectedArticlesSet(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const applyHeaderToSelected = async (header: string) => {
+    if (!handleEdit) return;
+    const ids = Array.from(selectedArticlesSet);
+    try {
+      // update UI immediately for snappy feedback
+      setDisplayedArticles(prev => prev.map(a => ids.includes(a.id) ? { ...a, header } : a));
+      await Promise.all(ids.map(async (id) => {
+        const article = displayedArticles.find(a => a.id === id) || articles.find(a => a.id === id);
+        if (article) {
+          await handleEdit({ ...article, header });
+        }
+      }));
+      // refresh
+      if (isAdmin) {
+        if (viewDrafts) await loadDrafts(); else await loadPublished();
+      }
+      setSelectedArticlesSet(new Set());
+      setBulkHeaderValue('');
+      setBulkHeaderDialogOpen(false);
+    } catch (e: any) {
+      console.error('Failed to apply group to selected articles:', e);
+      setError(e?.message || 'Failed to assign group to selected articles');
+    }
+  };
+
+  // Helper function to group articles by their primary tag
+  // Group articles by `header` (admin-assigned group) if present, otherwise by primary tag.
+  // Returns a groups map and ungrouped array for items without tags/header.
+  const groupArticlesByTag = (articlesData: Article[]) => {
+    const groups: Record<string, Article[]> = {};
+    const ungrouped: Article[] = [];
+
+    articlesData.forEach(article => {
+      const headerGroup = (article as any).header?.toString().trim();
+      const primaryTag = article.tags && article.tags.length > 0 ? article.tags[0] : null;
+      const groupKey = headerGroup || primaryTag;
+
+      if (groupKey) {
+        if (!groups[groupKey]) groups[groupKey] = [];
+        groups[groupKey].push(article);
+      } else {
+        ungrouped.push(article);
+      }
+    });
+
+    return { groups, ungrouped };
+  };
+
+  // Toggle group expanded state
+  const toggleGroupCollapse = (groupName: string) => {
+    setExpandedGroups(prevState => {
+      const newState = new Set(prevState);
+      if (newState.has(groupName)) {
+        newState.delete(groupName);
+      } else {
+        newState.add(groupName);
+      }
+      return newState;
+    });
+  };
+
+  // Group ordering state (admin can reorder groups)
+  const [groupOrder, setGroupOrder] = useState<string[]>([]);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameOldName, setRenameOldName] = useState('');
+  const [renameNewName, setRenameNewName] = useState('');
+
+  // Load persisted group order from backend (public endpoint)
+  React.useEffect(() => {
+    let mounted = true;
+    const loadGroupOrder = async () => {
+      try {
+        const resp = await ArticleService.getArticleGroups();
+        if (mounted && Array.isArray(resp.data)) setGroupOrder(resp.data);
+      } catch (e) {
+        // ignore; fall back to alphabetical
+      }
+    };
+    loadGroupOrder();
+    return () => { mounted = false; };
+  }, []);
+
+  // Compute sorted group names using persisted order, append any unseen groups
+  const computeSortedGroupNames = (groupsObj: Record<string, Article[]>) => {
+    const known = new Set(Object.keys(groupsObj));
+    const ordered: string[] = [];
+    // Add groups in saved order if they exist in current groups
+    groupOrder.forEach(g => { if (known.has(g)) { ordered.push(g); known.delete(g); } });
+    // Append remaining groups (alphabetical)
+    const remaining = Array.from(known).sort();
+    return ordered.concat(remaining);
+  };
+
+  // Drag handlers for group-level reordering
+  const handleGroupDragStart = (e: React.DragEvent, groupName: string) => {
+    try { e.dataTransfer.setData('text/plain', groupName); e.dataTransfer.effectAllowed = 'move'; } catch {}
+  };
+
+  const handleGroupDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+
+  const handleGroupDrop = async (e: React.DragEvent, targetGroup: string) => {
+    e.preventDefault();
+    const dragged = e.dataTransfer.getData('text/plain');
+    if (!dragged || dragged === targetGroup) return;
+    setGroupOrder(prev => {
+      const arr = [...prev.filter(p => p !== dragged)];
+      const idx = arr.indexOf(targetGroup);
+      if (idx === -1) arr.push(dragged); else arr.splice(idx, 0, dragged);
+      // persist in background
+      ArticleService.reorderGroups(arr).catch(err => console.error('Failed to persist group order', err));
+      return arr;
+    });
+  };
 
   // Keep displayed list in sync with incoming props only when viewing published
   React.useEffect(() => {
@@ -311,6 +601,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     setContentInput(article.content || '');
     setTagsInput(article.tags || getDefaultTagsForCategory(article.category));
     setReadTimeInput(article.readTime || '');
+    setHeaderInput(article.header || '');
     setOpen(true);
   };
 
@@ -321,6 +612,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
     setContentInput('');
     setTagsInput(defaultTags); // Reset to contextual default tags
     setReadTimeInput('');
+    setHeaderInput('');
     setError('');
     setImportedFileName('');
   };
@@ -381,6 +673,21 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       e.target.value = '';
     }
   };
+
+  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const countMatches = () => {
+    if (!findText) { setMatchCount(0); return; }
+    const re = new RegExp(escapeRegExp(findText), 'g');
+    const matches = contentInput.match(re);
+    setMatchCount(matches ? matches.length : 0);
+  };
+  const replaceAll = () => {
+    if (!findText) return;
+    const re = new RegExp(escapeRegExp(findText), 'g');
+    const newContent = contentInput.replace(re, replaceText);
+    setContentInput(newContent);
+    countMatches();
+  };
   
   // Toggle content expansion for an article
   const toggleArticleContent = (articleId: string) => {
@@ -394,6 +701,8 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       return newState;
     });
   };
+
+  // Article-level drag handlers removed — using group-level dragging now
 
   // Removed generic handleSubmit; we now always save via explicit Draft/Publish buttons
 
@@ -419,6 +728,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
         // Use computed read-time primarily; allow admin override if they changed readTimeInput
         readTime: (readTimeInput && readTimeInput.trim()) || computeReadTime(contentInput),
         category: categoryValue,
+        header: headerInput && headerInput.trim() ? headerInput.trim() : undefined,
         status
       } as const;
 
@@ -430,6 +740,8 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
             ...baseData,
             description: articleToEdit.description
           });
+          // update local UI immediately
+          setDisplayedArticles(prev => prev.map(a => a.id === editArticleId ? { ...a, ...baseData, description: articleToEdit.description } : a));
         } else {
           setError('Could not find article to edit');
         }
@@ -438,6 +750,20 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           ...baseData,
           description: ''
         } as any);
+        // optimistic add - refresh will run shortly
+        setDisplayedArticles(prev => [{
+          id: `new-${Date.now()}`,
+          title: baseData.title,
+          description: '',
+          content: baseData.content,
+          tags: baseData.tags as string[],
+          readTime: baseData.readTime,
+          category: baseData.category as ArticleCategory,
+          status: baseData.status,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          header: baseData.header
+        }, ...prev]);
       }
       handleClose();
       // refresh current view after save/publish
@@ -537,6 +863,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                       setReadTimeInput('');
                       setError('');
                       setImportedFileName('');
+                      setHeaderInput('');
                       setOpen(true);
                     }}
                     startIcon={<EditIcon />}
@@ -548,6 +875,15 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     }}
                   >
                     New Article
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => setBulkHeaderDialogOpen(true)}
+                    disabled={selectedArticlesSet.size === 0}
+                    sx={{ ml: 1, textTransform: 'none' }}
+                  >
+                    Assign Group
                   </Button>
                 </Box>
               </Box>
@@ -592,6 +928,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   setReadTimeInput('');
                   setError('');
                   setImportedFileName('');
+                  setHeaderInput('');
                   setOpen(true);
                 }}
                 startIcon={<EditIcon />}
@@ -603,8 +940,120 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           </Box>
         )}
 
-        {/* Articles list */}
-        <Stack spacing={2}>
+        {/* Articles list - now organized by tag groups with collapsible sections */}
+        <Box>
+          {(() => {
+            const { groups, ungrouped } = groupArticlesByTag(displayedArticles);
+            const sortedGroupNames = computeSortedGroupNames(groups);
+
+            return (
+              <Stack spacing={2}>
+                {/* Render grouped articles */}
+                {sortedGroupNames.map((groupName) => (
+                  <Accordion
+                    key={groupName}
+                    expanded={expandedGroups.has(groupName)}
+                    onChange={() => toggleGroupCollapse(groupName)}
+                    sx={{
+                      borderRadius: 2,
+                      boxShadow: 1,
+                      '&:before': { display: 'none' },
+                      '&.Mui-expanded': { m: 0 },
+                      '&:hover': { boxShadow: 2 }
+                    }}
+                  >
+                    <AccordionSummary
+                      draggable={isAdmin}
+                      onDragStart={(e) => isAdmin && handleGroupDragStart(e, groupName)}
+                      onDragOver={(e) => isAdmin && handleGroupDragOver(e)}
+                      onDrop={(e) => isAdmin && handleGroupDrop(e, groupName)}
+                      expandIcon={<ExpandMoreIcon />}
+                      sx={{
+                        p: 0,
+                        minHeight: 56,
+                        bgcolor: 'background.paper',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        '& .MuiAccordionSummary-content': {
+                          margin: 0,
+                          alignItems: 'center',
+                          gap: 1,
+                          py: 1.5,
+                          px: 2
+                        },
+                        '& .MuiAccordionSummary-expandIconWrapper': {
+                          color: 'primary.main'
+                        },
+                        '&:hover': { boxShadow: 2 }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
+                          {groupName}
+                        </Typography>
+                        {/* Removed group count chip for cleaner header display */}
+                        {isAdmin && (
+                          <Box sx={{ ml: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); setRenameOldName(groupName); setRenameNewName(groupName); setRenameDialogOpen(true); }}
+                              aria-label={`Rename ${groupName}`}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        )}
+                      </Box>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ p: 0, bgcolor: 'background.paper' }}>
+                      <Stack spacing={2} sx={{ p: 2 }}>
+                        {groups[groupName].map((article) => (
+                          <ArticleCard
+                            key={article.id}
+                            article={article}
+                            isAdmin={isAdmin}
+                            expandedArticles={expandedArticles}
+                            toggleArticleContent={toggleArticleContent}
+                            openEditDialog={openEditDialog}
+                            setConfirmDelete={setConfirmDelete}
+                            selected={selectedArticlesSet.has(article.id)}
+                            onToggleSelect={toggleSelectArticle}
+                          />
+                        ))}
+                      </Stack>
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+
+                {/* Render ungrouped articles */}
+                {ungrouped.length > 0 && (
+                  <Stack spacing={2}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 2, mb: 0, color: '#2c3e50' }}>
+                      Other Articles
+                    </Typography>
+                      {ungrouped.map((article) => (
+                      <ArticleCard
+                        key={article.id}
+                        article={article}
+                        isAdmin={isAdmin}
+                        expandedArticles={expandedArticles}
+                        toggleArticleContent={toggleArticleContent}
+                        openEditDialog={openEditDialog}
+                        setConfirmDelete={setConfirmDelete}
+                        selected={selectedArticlesSet.has(article.id)}
+                        onToggleSelect={toggleSelectArticle}
+                      />
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+            );
+          })()}
+        </Box>
+
+        {/* Old non-grouped rendering - removed, using grouped version above */}
+        <Stack spacing={2} sx={{ display: 'none' }}>
           {displayedArticles.map((article) => (
             <Card key={article.id} sx={{
               borderRadius: 2,
@@ -718,6 +1167,34 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           ))}
   </Stack>
   </Paper>
+  {/* Bulk group assignment dialog */}
+  <Dialog open={bulkHeaderDialogOpen} onClose={() => setBulkHeaderDialogOpen(false)} maxWidth="xs" fullWidth>
+    <DialogTitle>Assign Group to Selected Articles</DialogTitle>
+    <DialogContent>
+      <TextField
+        label="Group"
+        value={bulkHeaderValue}
+        onChange={(e) => setBulkHeaderValue(e.target.value)}
+        fullWidth
+        variant="outlined"
+        placeholder="Enter group name to apply to selected articles"
+        sx={{ mt: 1 }}
+      />
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="body2">Selected: {selectedArticlesSet.size}</Typography>
+      </Box>
+    </DialogContent>
+    <DialogActions>
+      <Button onClick={() => setBulkHeaderDialogOpen(false)}>Cancel</Button>
+      <Button
+        variant="contained"
+        onClick={() => applyHeaderToSelected(bulkHeaderValue)}
+        disabled={!bulkHeaderValue.trim() || selectedArticlesSet.size === 0}
+      >
+        Apply
+      </Button>
+    </DialogActions>
+  </Dialog>
   {/* Dialogs for create/edit and delete */}
         <Dialog
           open={open}
@@ -754,6 +1231,18 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1
                   }
+                }}
+              />
+              <TextField
+                label="Group (optional)"
+                value={headerInput}
+                onChange={(e) => setHeaderInput(e.target.value)}
+                fullWidth
+                variant="outlined"
+                placeholder="Group name for this article"
+                sx={{
+                  '& .MuiOutlinedInput-root': { borderRadius: 1 },
+                  mt: 1
                 }}
               />
               
@@ -954,6 +1443,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   >
                     Numbered List
                   </Button>
+                  <Button size="small" startIcon={<SearchIcon />} onClick={() => { setFindOpen(true); setMatchCount(null); }}>
+                    Find / Replace
+                  </Button>
                 </Stack>
                 <Typography variant="caption" color={overHard ? 'error.main' : overSoft ? 'warning.main' : 'text.secondary'}>
                   Size: {formatBytes(contentBytes)}{overHard ? ' (over 1 MB limit)' : overSoft ? ' (getting large)' : ''}
@@ -1082,6 +1574,72 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                 </Button>
               </>
             )}
+          </DialogActions>
+        </Dialog>
+        {/* Find / Replace Dialog */}
+        <Dialog open={findOpen} onClose={() => setFindOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Find & Replace</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField label="Find" value={findText} onChange={e => setFindText(e.target.value)} fullWidth autoFocus />
+              <TextField label="Replace With" value={replaceText} onChange={e => setReplaceText(e.target.value)} fullWidth />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button variant="outlined" size="small" onClick={countMatches} disabled={!findText}>Count</Button>
+                <Button variant="contained" size="small" color="primary" onClick={replaceAll} disabled={!findText}>Replace All</Button>
+                {matchCount !== null && (
+                  <Typography variant="caption" color="text.secondary">Matches: {matchCount}</Typography>
+                )}
+              </Stack>
+              <Typography variant="caption" color="text.secondary">Simple literal matching (case-sensitive). Use consistent casing for best results.</Typography>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setFindOpen(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+        {/* Rename Group Dialog */}
+        <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Rename Group</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField label="Current" value={renameOldName} disabled fullWidth />
+              <TextField label="New name" value={renameNewName} onChange={(e) => setRenameNewName(e.target.value)} fullWidth />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                try {
+                  await ArticleService.renameGroup(renameOldName, renameNewName);
+                  // Refresh persisted group order from backend
+                  try {
+                    const resp = await ArticleService.getArticleGroups();
+                    if (Array.isArray(resp.data)) setGroupOrder(resp.data);
+                  } catch (e) {
+                    // ignore
+                  }
+                  // Reload articles for current view so headers reflect persisted change
+                  try {
+                    if (isAdmin && viewDrafts) {
+                      await loadDrafts();
+                    } else {
+                      await loadPublished();
+                    }
+                  } catch (e) {
+                    // fallback: update local UI immediately
+                    setDisplayedArticles(prev => prev.map(a => ({ ...a, header: a.header === renameOldName ? renameNewName : a.header })));
+                  }
+                } catch (err: any) {
+                  setError(err?.message || 'Failed to rename group');
+                } finally {
+                  setRenameDialogOpen(false);
+                }
+              }}
+            >
+              Rename
+            </Button>
           </DialogActions>
         </Dialog>
         <Dialog

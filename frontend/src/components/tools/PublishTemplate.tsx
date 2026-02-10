@@ -25,6 +25,7 @@ export default function PublishTemplate() {
   const [mobileCanvaUrl, setMobileCanvaUrl] = useState('');
   const [rsvpCanvaUrl, setRsvpCanvaUrl] = useState('');
   const [detailCardCanvaUrl, setDetailCardCanvaUrl] = useState('');
+  const [thankYouCardCanvaUrl, setThankYouCardCanvaUrl] = useState('');
   const [mockupFile, setMockupFile] = useState<File | null>(null);
   const [mockupUrl, setMockupUrl] = useState<string>('');
   const [secondaryFile, setSecondaryFile] = useState<File | null>(null);
@@ -135,6 +136,7 @@ export default function PublishTemplate() {
           mobileCanvaUseCopyUrl: mobileCanvaUrl.trim(),
           rsvpCanvaUseCopyUrl: rsvpCanvaUrl.trim() || undefined,
           detailCardCanvaUseCopyUrl: detailCardCanvaUrl.trim() || undefined,
+          thankYouCardCanvaUseCopyUrl: thankYouCardCanvaUrl.trim() || undefined,
           mockupUrl: mockupUrl.trim() || undefined,
           secondaryMockupUrl: secondaryUrl.trim() || undefined,
           mobileMockupUrl: mobileUrl.trim() || undefined,
@@ -151,6 +153,9 @@ export default function PublishTemplate() {
       }
       setCanvaUrl('');
       setMobileCanvaUrl('');
+      setRsvpCanvaUrl('');
+      setDetailCardCanvaUrl('');
+      setThankYouCardCanvaUrl('');
       setMockupFile(null);
       setMockupUrl('');
       setEtsyUrl('');
@@ -174,6 +179,7 @@ export default function PublishTemplate() {
     setMobileCanvaUrl(t.mobileCanvaUseCopyUrl || '');
     setRsvpCanvaUrl(t.rsvpCanvaUseCopyUrl || '');
     setDetailCardCanvaUrl(t.detailCardCanvaUseCopyUrl || '');
+    setThankYouCardCanvaUrl((t as any).thankYouCardCanvaUseCopyUrl || '');
     setMockupUrl(t.mockupUrl || '');
     setSecondaryUrl(t.secondaryMockupUrl || '');
     setMobileUrl(t.mobileMockupUrl || '');
@@ -217,6 +223,7 @@ export default function PublishTemplate() {
           mobileCanvaUseCopyUrl: mobileCanvaUrl.trim() || undefined,
           rsvpCanvaUseCopyUrl: rsvpCanvaUrl.trim() || undefined,
           detailCardCanvaUseCopyUrl: detailCardCanvaUrl.trim() || undefined,
+          thankYouCardCanvaUseCopyUrl: thankYouCardCanvaUrl.trim() || undefined,
           mockupUrl: mockupUrl.trim() || undefined,
           secondaryMockupUrl: secondaryUrl.trim() || undefined,
           mobileMockupUrl: mobileUrl.trim() || undefined,
@@ -250,6 +257,9 @@ export default function PublishTemplate() {
     setTitle('');
     setCanvaUrl('');
     setMobileCanvaUrl('');
+    setRsvpCanvaUrl('');
+    setDetailCardCanvaUrl('');
+    setThankYouCardCanvaUrl('');
     setMockupFile(null);
     setMockupUrl('');
     setSecondaryFile(null);
@@ -378,6 +388,14 @@ export default function PublishTemplate() {
                         label="Detail Card Canva ‘Use a Copy’ URL"
                         value={detailCardCanvaUrl}
                         onChange={(e) => setDetailCardCanvaUrl(e.target.value)}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Thank You Card Canva ‘Use a Copy’ URL"
+                        value={thankYouCardCanvaUrl}
+                        onChange={(e) => setThankYouCardCanvaUrl(e.target.value)}
                         fullWidth
                       />
                     </Grid>
