@@ -793,14 +793,14 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           minWidth: 0
         }}
       >
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+        <Paper elevation={2} sx={{ p: { xs: 1, sm: 3 }, borderRadius: 2 }}>
         {/* Header Section (styled like Blogs) */}
-        <Box sx={{ mb: 4, width: '100%' }}>
+        <Box sx={{ mb: { xs: 2, sm: 4 }, width: '100%' }}>
           <Box sx={{ width: '100%' }}>
-            <Typography variant="h4" gutterBottom sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
+            <Typography variant="h4" gutterBottom sx={{ mb: { xs: 1, sm: 2 }, fontWeight: 'bold', color: '#1976d2', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
               {title}
             </Typography>
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: { xs: 1, sm: 2 } }}>
               <MarkdownPreview content={description} stripFootnotes />
             </Box>
             {isAdmin && (
@@ -809,9 +809,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: 2,
-                  mb: 2,
-                  flexWrap: 'nowrap'
+                  gap: { xs: 1, sm: 2 },
+                  mb: { xs: 1, sm: 2 },
+                  flexWrap: { xs: 'wrap', sm: 'nowrap' }
                 }}
               >
                 <Typography
@@ -822,20 +822,23 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     bgcolor: 'primary.main',
                     color: 'white',
                     borderRadius: 1,
-                    fontSize: '0.75rem',
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
                     flexShrink: 0
                   }}
                 >
                   Admin
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, ml: 'auto', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
                   <Button
                     variant={viewDrafts ? 'outlined' : 'contained'}
                     color="secondary"
                     onClick={async () => { setViewDrafts(false); await loadPublished(); }}
                     sx={{
                       textTransform: 'none',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      minWidth: { xs: 80, sm: 100 },
+                      fontSize: { xs: '0.8rem', sm: '1rem' },
+                      py: { xs: 0.5, sm: 1 }
                     }}
                   >
                     Published
@@ -846,7 +849,10 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     onClick={async () => { setViewDrafts(true); await loadDrafts(); }}
                     sx={{
                       textTransform: 'none',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      minWidth: { xs: 80, sm: 100 },
+                      fontSize: { xs: '0.8rem', sm: '1rem' },
+                      py: { xs: 0.5, sm: 1 }
                     }}
                   >
                     Drafts
@@ -871,7 +877,10 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                       borderRadius: 2,
                       boxShadow: 2,
                       textTransform: 'none',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      minWidth: { xs: 100, sm: 120 },
+                      fontSize: { xs: '0.8rem', sm: '1rem' },
+                      py: { xs: 0.5, sm: 1 }
                     }}
                   >
                     New Article
@@ -881,7 +890,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     color="primary"
                     onClick={() => setBulkHeaderDialogOpen(true)}
                     disabled={selectedArticlesSet.size === 0}
-                    sx={{ ml: 1, textTransform: 'none' }}
+                    sx={{ ml: { xs: 0, sm: 1 }, textTransform: 'none', minWidth: { xs: 100, sm: 120 }, fontSize: { xs: '0.8rem', sm: '1rem' }, py: { xs: 0.5, sm: 1 } }}
                   >
                     Assign Group
                   </Button>
@@ -890,7 +899,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
             )}
           </Box>
           
-          <Box sx={{ borderTop: '2px solid #e0e0e0', mt: 1 }} />
+          <Box sx={{ borderTop: '2px solid #e0e0e0', mt: { xs: 0.5, sm: 1 } }} />
           
           
           
@@ -898,22 +907,23 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
           
           
           {error && (
-            <Alert
-              severity="error"
-              sx={{
-                mb: 2,
-                borderRadius: 2
-              }}
-              onClose={() => setError('')}
-            >
-              {error}
-            </Alert>
-          )}
+              <Alert
+                severity="error"
+                sx={{
+                  mb: { xs: 1, sm: 2 },
+                  borderRadius: 2,
+                  fontSize: { xs: '0.9rem', sm: '1rem' }
+                }}
+                onClose={() => setError('')}
+              >
+                {error}
+              </Alert>
+            )}
         </Box>
         {/* Empty-state when there are no articles to show */}
         {displayedArticles.length === 0 && (
-          <Box sx={{ my: 2 }}>
-            <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
+          <Box sx={{ my: { xs: 1, sm: 2 } }}>
+            <Alert severity="info" sx={{ borderRadius: 2, mb: { xs: 1, sm: 2 }, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
               No articles found for this category.
             </Alert>
             {isAdmin && (
@@ -932,7 +942,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                   setOpen(true);
                 }}
                 startIcon={<EditIcon />}
-                sx={{ borderRadius: 2, boxShadow: 2, textTransform: 'none' }}
+                sx={{ borderRadius: 2, boxShadow: 2, textTransform: 'none', minWidth: { xs: 120, sm: 160 }, fontSize: { xs: '0.9rem', sm: '1rem' }, py: { xs: 0.7, sm: 1.2 } }}
               >
                 Create First Article
               </Button>
@@ -941,13 +951,13 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
         )}
 
         {/* Articles list - now organized by tag groups with collapsible sections */}
-        <Box>
+        <Box sx={{ width: '100%' }}>
           {(() => {
             const { groups, ungrouped } = groupArticlesByTag(displayedArticles);
             const sortedGroupNames = computeSortedGroupNames(groups);
 
             return (
-              <Stack spacing={2}>
+              <Stack spacing={2} sx={{ width: '100%' }}>
                 {/* Render grouped articles */}
                 {sortedGroupNames.map((groupName) => (
                   <Accordion
@@ -957,6 +967,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                     sx={{
                       borderRadius: 2,
                       boxShadow: 1,
+                      width: '100%',
                       '&:before': { display: 'none' },
                       '&.Mui-expanded': { m: 0 },
                       '&:hover': { boxShadow: 2 }
@@ -970,7 +981,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                       expandIcon={<ExpandMoreIcon />}
                       sx={{
                         p: 0,
-                        minHeight: 56,
+                        minHeight: { xs: 44, sm: 56 },
                         bgcolor: 'background.paper',
                         borderRadius: 1,
                         border: '1px solid',
@@ -978,9 +989,9 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                         '& .MuiAccordionSummary-content': {
                           margin: 0,
                           alignItems: 'center',
-                          gap: 1,
-                          py: 1.5,
-                          px: 2
+                          gap: { xs: 0.5, sm: 1 },
+                          py: { xs: 1, sm: 1.5 },
+                          px: { xs: 1, sm: 2 }
                         },
                         '& .MuiAccordionSummary-expandIconWrapper': {
                           color: 'primary.main'
@@ -988,8 +999,8 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                         '&:hover': { boxShadow: 2 }
                       }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, width: '100%' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2c3e50', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                           {groupName}
                         </Typography>
                         {/* Removed group count chip for cleaner header display */}
@@ -1007,7 +1018,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
                       </Box>
                     </AccordionSummary>
                     <AccordionDetails sx={{ p: 0, bgcolor: 'background.paper' }}>
-                      <Stack spacing={2} sx={{ p: 2 }}>
+                      <Stack spacing={2} sx={{ p: { xs: 1, sm: 2 } }}>
                         {groups[groupName].map((article) => (
                           <ArticleCard
                             key={article.id}
@@ -1028,8 +1039,8 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
 
                 {/* Render ungrouped articles */}
                 {ungrouped.length > 0 && (
-                  <Stack spacing={2}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 2, mb: 0, color: '#2c3e50' }}>
+                  <Stack spacing={2} sx={{ width: '100%' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', mt: { xs: 1, sm: 2 }, mb: 0, color: '#2c3e50', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                       Other Articles
                     </Typography>
                       {ungrouped.map((article) => (
