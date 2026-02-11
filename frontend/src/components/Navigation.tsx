@@ -389,49 +389,57 @@ const Navigation = () => {
   );
 
   const renderMobileNav = () => (
-    <>
-      <IconButton color="inherit" edge="end" sx={{ ml: 'auto' }} onClick={() => setMobileDrawerOpen(true)} aria-label="Open menu">
-        <MenuIcon />
-      </IconButton>
-      <Drawer
-        anchor="right"
-        open={mobileDrawerOpen}
-        onClose={() => { setMobileDrawerOpen(false); setMobileExpanded(null); }}
-      >
-        <Box sx={{ width: 280 }} role="presentation">
-          <List>
-            {navItems.map(item => {
-              const subs = filterSubItems(item.subItems);
-              const hasSubs = subs.length > 0;
-              return (
-                <div key={`mobile-${item.path}`}>
-                  <ListItemButton
-                    onClick={() => {
-                      if (hasSubs) setMobileExpanded(mobileExpanded === item.label ? null : item.label);
-                      else { handleNavigation(item.path); setMobileDrawerOpen(false); }
-                    }}
-                  >
-                    <ListItemText primary={item.label} />
-                    {hasSubs ? (mobileExpanded === item.label ? <ExpandLess /> : <ExpandMore />) : null}
-                  </ListItemButton>
-                  {hasSubs && (
-                    <Collapse in={mobileExpanded === item.label} timeout="auto" unmountOnExit>
-                      <List component="div" disablePadding>
-                        {subs.map(si => (
-                          <ListItemButton key={si.path} sx={{ pl: 4 }} onClick={() => { handleNavigation(si.path); setMobileDrawerOpen(false); }}>
-                            <ListItemText primary={si.label} />
-                          </ListItemButton>
-                        ))}
-                      </List>
-                    </Collapse>
-                  )}
-                </div>
-              );
-            })}
-          </List>
-        </Box>
-      </Drawer>
-    </>
+      <>
+        <IconButton color="inherit" edge="end" sx={{ ml: 'auto', width: 48, height: 48 }} onClick={() => setMobileDrawerOpen(true)} aria-label="Open menu">
+          <MenuIcon sx={{ fontSize: 32 }} />
+        </IconButton>
+        <Drawer
+          anchor="right"
+          open={mobileDrawerOpen}
+          onClose={() => { setMobileDrawerOpen(false); setMobileExpanded(null); }}
+          PaperProps={{ sx: { width: '80vw', maxWidth: 340, borderRadius: '16px 0 0 16px', bgcolor: '#f5f5f5' } }}
+        >
+          <Box sx={{ width: '100%', minHeight: '100vh', py: 2 }} role="presentation">
+            <List>
+              {navItems.map(item => {
+                const subs = filterSubItems(item.subItems);
+                const hasSubs = subs.length > 0;
+                return (
+                  <div key={`mobile-${item.path}`}> 
+                    <ListItemButton
+                      sx={{ py: 2, px: 3, fontSize: '1.1rem', borderRadius: 2, mb: 0.5 }}
+                      onClick={() => {
+                        if (hasSubs) setMobileExpanded(mobileExpanded === item.label ? null : item.label);
+                        else { handleNavigation(item.path); setMobileDrawerOpen(false); }
+                      }}
+                      aria-expanded={hasSubs ? mobileExpanded === item.label : undefined}
+                      aria-controls={hasSubs ? `${item.label}-mobile-submenu` : undefined}
+                    >
+                      <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 600 }} />
+                      {hasSubs ? (mobileExpanded === item.label ? <ExpandLess /> : <ExpandMore />) : null}
+                    </ListItemButton>
+                    {hasSubs && (
+                      <Collapse in={mobileExpanded === item.label} timeout="auto" unmountOnExit>
+                        <List component="div" disablePadding id={`${item.label}-mobile-submenu`}>
+                          {subs.map(si => (
+                            <ListItemButton 
+                              key={si.path} 
+                              sx={{ pl: 5, py: 1.5, fontSize: '1rem', borderRadius: 2 }}
+                              onClick={() => { handleNavigation(si.path); setMobileDrawerOpen(false); }}
+                            >
+                              <ListItemText primary={si.label} primaryTypographyProps={{ fontWeight: 500 }} />
+                            </ListItemButton>
+                          ))}
+                        </List>
+                      </Collapse>
+                    )}
+                  </div>
+                );
+              })}
+            </List>
+          </Box>
+        </Drawer>
+      </>
   );
 
   return (
