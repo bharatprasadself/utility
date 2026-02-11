@@ -1,5 +1,7 @@
-import { AppBar, Toolbar, Typography, Button, Box, IconButton, Menu, MenuItem, useMediaQuery } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, IconButton, Menu, MenuItem, useMediaQuery, Drawer, List, ListItemButton, ListItemText, Collapse } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useState } from 'react';
@@ -122,6 +124,8 @@ const Navigation = () => {
   const [activeToolsGroup, setActiveToolsGroup] = useState<string | null>(null);
   const [userMenuAnchorEl, setUserMenuAnchorEl] = useState<null | HTMLElement>(null);
   const userMenuOpen = Boolean(userMenuAnchorEl);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
 
   const filterSubItems = (items?: SubNavItem[]) => {
     if (!items) return [];
@@ -385,9 +389,49 @@ const Navigation = () => {
   );
 
   const renderMobileNav = () => (
-    <IconButton color="inherit" edge="end" sx={{ ml: 'auto' }}>
-      <MenuIcon />
-    </IconButton>
+    <>
+      <IconButton color="inherit" edge="end" sx={{ ml: 'auto' }} onClick={() => setMobileDrawerOpen(true)} aria-label="Open menu">
+        <MenuIcon />
+      </IconButton>
+      <Drawer
+        anchor="right"
+        open={mobileDrawerOpen}
+        onClose={() => { setMobileDrawerOpen(false); setMobileExpanded(null); }}
+      >
+        <Box sx={{ width: 280 }} role="presentation">
+          <List>
+            {navItems.map(item => {
+              const subs = filterSubItems(item.subItems);
+              const hasSubs = subs.length > 0;
+              return (
+                <div key={`mobile-${item.path}`}>
+                  <ListItemButton
+                    onClick={() => {
+                      if (hasSubs) setMobileExpanded(mobileExpanded === item.label ? null : item.label);
+                      else { handleNavigation(item.path); setMobileDrawerOpen(false); }
+                    }}
+                  >
+                    <ListItemText primary={item.label} />
+                    {hasSubs ? (mobileExpanded === item.label ? <ExpandLess /> : <ExpandMore />) : null}
+                  </ListItemButton>
+                  {hasSubs && (
+                    <Collapse in={mobileExpanded === item.label} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {subs.map(si => (
+                          <ListItemButton key={si.path} sx={{ pl: 4 }} onClick={() => { handleNavigation(si.path); setMobileDrawerOpen(false); }}>
+                            <ListItemText primary={si.label} />
+                          </ListItemButton>
+                        ))}
+                      </List>
+                    </Collapse>
+                  )}
+                </div>
+              );
+            })}
+          </List>
+        </Box>
+      </Drawer>
+    </>
   );
 
   return (
