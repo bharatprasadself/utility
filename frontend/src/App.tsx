@@ -13,7 +13,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import ReactArticles from './components/articles/ReactArticles';
 import SpringBootArticles from './components/articles/SpringBootArticles';
 import PostgreSQLArticles from './components/articles/PostgreSQLArticles';
-import DockerArticles from './components/articles/DockerArticles';
+import DevopsArticles from './components/articles/DevopsArticles';
 import JavaArticles from './components/articles/JavaArticles';
 import MicroservicesArticles from './components/articles/MicroservicesArticles';
 import FallingBall from './components/FallingBall';
@@ -65,7 +65,7 @@ function App() {
                     <Route path="/articles/spring-boot/*" element={<SpringBootArticles />} />
                     <Route path="/articles/react/*" element={<ReactArticles />} />
                     <Route path="/articles/postgresql/*" element={<PostgreSQLArticles />} />
-                    <Route path="/articles/docker/*" element={<DockerArticles />} />
+                    <Route path="/articles/docker/*" element={<DevopsArticles />} />
                     <Route path="/articles/microservices/*" element={<MicroservicesArticles />} />
                     <Route path="/articles/java/*" element={<JavaArticles />} />
                     <Route path="/games/falling-ball" element={<FallingBall />} />

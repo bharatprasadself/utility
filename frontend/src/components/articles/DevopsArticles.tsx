@@ -128,30 +128,25 @@ docker run --user 1000:1000 my-app
   }
 ];
 
-function DockerArticles() {
+function DevopsArticles() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
   const [articles, setArticles] = useState<Article[]>([]);
-  // Removed unused loading state to clean up warnings
-  // const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadArticles = async () => {
-  // no-op loading removed
     try {
-      console.log('Loading Docker articles...');
+      console.log('Loading Devops articles...');
       const response = await ArticleService.getArticlesByCategory(ArticleCategory.DOCKER);
-      console.log('Docker articles response:', response);
+      console.log('Devops articles response:', response);
       const list = Array.isArray(response.data) ? response.data : [];
       const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
       setArticles(list.length === 0 && showStatic ? staticArticles : list);
     } catch (error) {
-      console.error('Failed to load Docker articles:', error);
+      console.error('Failed to load Devops articles:', error);
       const showStatic = (import.meta as any)?.env?.VITE_SHOW_STATIC_FALLBACK === 'true';
       setArticles(showStatic ? staticArticles : []);
-    } finally {
-      // no-op
     }
   };
 
@@ -169,7 +164,7 @@ function DockerArticles() {
     setError(null);
     
     try {
-      console.log('Creating Docker article:', articleData);
+      console.log('Creating Devops article:', articleData);
       
       // Create a new article with the DOCKER category
       const articleToCreate = {
@@ -177,7 +172,7 @@ function DockerArticles() {
         category: ArticleCategory.DOCKER
       };
       
-      console.log('Docker article to create:', articleToCreate);
+      console.log('Devops article to create:', articleToCreate);
       
       // Create a modified version for the API that has the raw enum name
       const apiArticle = {
@@ -191,12 +186,12 @@ function DockerArticles() {
       console.log('API article with raw enum name:', apiArticle);
       // @ts-ignore - Ignoring type mismatch as we're manually formatting for the API
       await ArticleService.createArticle(apiArticle);
-      console.log('Docker article created successfully');
+      console.log('Devops article created successfully');
       
       // Reload articles to include the new one
       await loadArticles();
     } catch (error: any) {
-      console.error('Failed to create Docker article:', error);
+      console.error('Failed to create Devops article:', error);
       const errorMessage = 
         error?.response?.data?.message || 
         error?.message || 
@@ -221,7 +216,7 @@ function DockerArticles() {
       return;
     }
     
-    console.log('Editing Docker article:', article);
+    console.log('Editing Devops article:', article);
     setCreating(true); // Reusing the creating state for edit operation
     setError(null);
     
@@ -237,16 +232,16 @@ function DockerArticles() {
         updatedArticle.tags = ['Docker'];
       }
       
-      console.log('Sending updated Docker article:', updatedArticle);
+      console.log('Sending updated Devops article:', updatedArticle);
       
       // @ts-ignore - Ignoring type issues with the category
       await ArticleService.updateArticle(article.id, updatedArticle);
-      console.log('Docker article updated successfully');
+      console.log('Devops article updated successfully');
       
       // Reload articles to reflect changes
       await loadArticles();
     } catch (error: any) {
-      console.error('Failed to update Docker article:', error);
+      console.error('Failed to update Devops article:', error);
       const errorMessage = 
         error?.response?.data?.message || 
         error?.message || 
@@ -272,11 +267,11 @@ function DockerArticles() {
     }
     
     try {
-      console.log('Deleting Docker article:', id);
+      console.log('Deleting Devops article:', id);
       await ArticleService.deleteArticle(id);
       await loadArticles(); // Refresh the articles list
     } catch (error: any) {
-      console.error('Failed to delete Docker article:', error);
+      console.error('Failed to delete Devops article:', error);
       setError(error?.response?.data?.message || 'Failed to delete article. Please try again.');
     }
   };
@@ -289,7 +284,7 @@ function DockerArticles() {
         </div>
       )}
       <ArticleLayout
-        title="Docker Articles"
+        title="Devops Article"
         description="Learn about container technology, Docker best practices, and deployment strategies."
         articles={articles}
         isAdmin={isAdmin}
@@ -302,4 +297,4 @@ function DockerArticles() {
   );
 }
 
-export default DockerArticles;
+export default DevopsArticles;
