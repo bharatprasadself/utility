@@ -62,7 +62,7 @@ const navItems: NavItem[] = [
       { label: 'Microservices', path: '/articles/microservices' },
       { label: 'React JS', path: '/articles/react' },      
       { label: 'PostgreSQL', path: '/articles/postgresql' },
-      { label: 'Docker', path: '/articles/docker' }      
+      { label: 'Devops', path: '/articles/docker' }      
     ]
   }
 ];
@@ -88,7 +88,7 @@ const articlesEmoji: Record<string, string> = {
   'Microservices': '🧩',
   'React JS': '⚛️',  
   'PostgreSQL': '🐘',
-  'Docker': '🐳' 
+  'Devops': '⚙️' 
 };
 const toolsExtraEmoji: Record<string, string> = {
   'Finance': '💰',
