@@ -658,7 +658,7 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       const reader = new FileReader();
       // Convert simple ASCII-aligned tables to GFM pipe tables
       const convertAsciiTablesToGfm = (md: string) => {
-    return md.replace(/(^|\n)([^\n]+)\n(\s*[-=]{2,}(?:\s+[-=]{2,})*\s*)\n((?:[^\n]+\n?)*)/g, (match: string, pre: string, headerLine: string, sepLine: string, bodyLines: string) => {
+    	return md.replace(/(^|\n)([^\n]+)\n(\s*[-=]{2,}(?:\s+[-=]{2,})*\s*)\n((?:[^\n]+\n?)*)/g, (match: string, pre: string, headerLine: string, _sepLine: string, bodyLines: string) => {
           try {
             const headerCols = headerLine.trim().split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
             const rows = bodyLines.split(/\r?\n/).filter(l => l.trim() !== '');
