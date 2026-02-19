@@ -49,6 +49,10 @@ public class Template {
     @Column(name = "thank_you_card_canva_use_copy_url", length = 1000)
     private String thankYouCardCanvaUseCopyUrl;
 
+    // Instagram Post (1080x1080) Canva template link (optional)
+    @Column(name = "instagram_post_canva_use_copy_url", length = 1000)
+    private String instagramPostCanvaUseCopyUrl;
+
     @Column(name = "mobile_mockup_url", length = 1000)
     private String mobileMockupUrl;
 
@@ -112,6 +116,9 @@ public class Template {
 
     public String getThankYouCardCanvaUseCopyUrl() { return thankYouCardCanvaUseCopyUrl; }
     public void setThankYouCardCanvaUseCopyUrl(String thankYouCardCanvaUseCopyUrl) { this.thankYouCardCanvaUseCopyUrl = thankYouCardCanvaUseCopyUrl; }
+
+    public String getInstagramPostCanvaUseCopyUrl() { return instagramPostCanvaUseCopyUrl; }
+    public void setInstagramPostCanvaUseCopyUrl(String instagramPostCanvaUseCopyUrl) { this.instagramPostCanvaUseCopyUrl = instagramPostCanvaUseCopyUrl; }
 
     public String getMobileMockupUrl() { return mobileMockupUrl; }
     public void setMobileMockupUrl(String mobileMockupUrl) { this.mobileMockupUrl = mobileMockupUrl; }

@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS canva_templates (
   secondary_mockup_url VARCHAR(1000),
   rsvp_canva_use_copy_url VARCHAR(1000),
   detail_card_canva_use_copy_url VARCHAR(1000),
+  instagram_post_canva_use_copy_url VARCHAR(1000),
   mobile_mockup_url VARCHAR(1000),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

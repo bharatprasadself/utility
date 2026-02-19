@@ -11,9 +11,9 @@ const CanvaTemplates = () => {
   // const [templates, setTemplates] = useState<Template[]>([]);
   // const [loading, setLoading] = useState(false);
   // PDF type selection for Buyer PDF
-  const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'invite-suite'>('print-mobile');
+  const [pdfType, setPdfType] = useState<'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle'>('print-mobile');
   const handlePdfTypeChange = (event: SelectChangeEvent) => {
-    setPdfType(event.target.value as 'print-mobile' | 'print-only' | 'invite-suite');
+    setPdfType(event.target.value as 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle');
   };
 
   // Public form state
@@ -93,7 +93,7 @@ const CanvaTemplates = () => {
       // Remove empty fields
       Object.keys(payload).forEach(k => (payload[k] === '' || payload[k] === undefined) && delete payload[k]);
       // Call backend (simulate with templateId: 0, backend should handle public)
-      const pdfUrl = await generateBuyerPdf(0, pdfType); // You may need to adjust backend to accept payload
+      const pdfUrl = await generateBuyerPdf(0, pdfType);
       setResultUrl(pdfUrl);
     } catch (err: any) {
       setFormError(err?.message || 'Failed to generate PDF');
@@ -121,6 +121,7 @@ const CanvaTemplates = () => {
               <MenuItem value="print-mobile">Print + Mobile (default)</MenuItem>
               <MenuItem value="print-only">Print-only</MenuItem>
               <MenuItem value="invite-suite">Invite Suite (Invitation + RSVP + Details)</MenuItem>
+              <MenuItem value="corporate-bundle">Corporate Bundle</MenuItem>
             </Select>
           </FormControl>
           <TextField label="Title" value={title} onChange={e => setTitle(e.target.value)} fullWidth required sx={{ pl: 0, ml: 0 }} />
@@ -150,7 +151,7 @@ const CanvaTemplates = () => {
             </Box>
           )}
           <TextField label="Canva Link" value={canvaLink} onChange={e => setCanvaLink(e.target.value)} fullWidth sx={{ pl: 0, ml: 0 }} />
-          {(pdfType === 'print-mobile' || pdfType === 'invite-suite') && (
+          {(pdfType === 'print-mobile' || pdfType === 'invite-suite' || pdfType === 'corporate-bundle') && (
             <TextField label="Mobile Canva Link" value={mobileCanvaLink} onChange={e => setMobileCanvaLink(e.target.value)} fullWidth sx={{ pl: 0, ml: 0 }} />
           )}
           {pdfType === 'invite-suite' && (

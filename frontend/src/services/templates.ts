@@ -3,13 +3,14 @@ export const publishTemplate = async (id: number): Promise<void> => {
   await axiosInstance.post(`/api/admin/canva-templates/${id}/publish`);
 };
 import axiosInstance from './axiosConfig';
-export type BuyerPdfType = 'print-mobile' | 'print-only' | 'invite-suite';
+export type BuyerPdfType = 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle';
 export interface Template {
   id: number;
   title: string;
   publicDescription?: string;
   canvaUseCopyUrl?: string;
   mobileCanvaUseCopyUrl?: string;
+  instagramPostCanvaUseCopyUrl?: string;
   mockupUrl?: string;
   secondaryMockupUrl?: string;
   rsvpCanvaUseCopyUrl?: string;
@@ -74,7 +75,7 @@ const extractTrailingDigits = (name: string): string | null => {
   return m ? m[1] : null;
 };
 
-export const createTemplate = async (payload: { title: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; thankYouCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }): Promise<Template> => {
+export const createTemplate = async (payload: { title: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; instagramPostCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; thankYouCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }): Promise<Template> => {
   const res = await axiosInstance.post<Template>('/api/admin/canva-templates', payload);
   return res.data;
 };
@@ -115,7 +116,7 @@ export const listPublicTemplates = async (page = 0, size = 10): Promise<{templat
 
 export const updateTemplate = async (
   id: number,
-  payload: { title?: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; thankYouCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; buyerPdfUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }
+  payload: { title?: string; publicDescription?: string; canvaUseCopyUrl?: string; mobileCanvaUseCopyUrl?: string; instagramPostCanvaUseCopyUrl?: string; rsvpCanvaUseCopyUrl?: string; detailCardCanvaUseCopyUrl?: string; thankYouCardCanvaUseCopyUrl?: string; mockupUrl?: string; secondaryMockupUrl?: string; mobileMockupUrl?: string; etsyListingUrl?: string; buyerPdfUrl?: string; status?: string; buyerPdfType?: BuyerPdfType }
 ): Promise<Template> => {
   const res = await axiosInstance.put<Template>(`/api/admin/canva-templates/${id}`, payload);
   return res.data;

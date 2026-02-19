@@ -119,6 +119,7 @@ public class TemplateController {
         ct.setTitle(req.getTitle() == null ? null : req.getTitle().trim());
         ct.setCanvaUseCopyUrl(req.getCanvaUseCopyUrl() == null ? null : req.getCanvaUseCopyUrl().trim());
         ct.setMobileCanvaUseCopyUrl(req.getMobileCanvaUseCopyUrl() == null ? null : req.getMobileCanvaUseCopyUrl().trim());
+        ct.setInstagramPostCanvaUseCopyUrl(req.getInstagramPostCanvaUseCopyUrl() == null ? null : req.getInstagramPostCanvaUseCopyUrl().trim());
         ct.setMockupUrl(req.getMockupUrl() == null ? null : req.getMockupUrl().trim());
         ct.setEtsyListingUrl(req.getEtsyListingUrl() == null ? null : req.getEtsyListingUrl().trim());
         ct.setSecondaryMockupUrl(req.getSecondaryMockupUrl() == null ? null : req.getSecondaryMockupUrl().trim());
@@ -147,6 +148,7 @@ public class TemplateController {
         changes.setTitle(req.getTitle() == null ? null : req.getTitle().trim());
         changes.setCanvaUseCopyUrl(req.getCanvaUseCopyUrl() == null ? null : req.getCanvaUseCopyUrl().trim());
         changes.setMobileCanvaUseCopyUrl(req.getMobileCanvaUseCopyUrl() == null ? null : req.getMobileCanvaUseCopyUrl().trim());
+        changes.setInstagramPostCanvaUseCopyUrl(req.getInstagramPostCanvaUseCopyUrl() == null ? null : req.getInstagramPostCanvaUseCopyUrl().trim());
         changes.setMockupUrl(req.getMockupUrl() == null ? null : req.getMockupUrl().trim());
         changes.setEtsyListingUrl(req.getEtsyListingUrl() == null ? null : req.getEtsyListingUrl().trim());
         changes.setSecondaryMockupUrl(req.getSecondaryMockupUrl() == null ? null : req.getSecondaryMockupUrl().trim());

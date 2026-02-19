@@ -119,6 +119,21 @@ public class ArticleService {
             // Update articles that referenced the old group name
             articleRepository.updateHeaderForName(oldName, newName);
         }
+
+        // Additionally, rename any tags that match the old group name so that
+        // tag-based groups (articles without an explicit header/group) also
+        // reflect the new name. This keeps the UI grouping consistent whether
+        // it was driven by headers or by primary tags.
+        java.util.List<Article> taggedWithOldName = articleRepository.findByTagsContaining(oldName);
+        for (Article article : taggedWithOldName) {
+            if (article.getTags() == null || article.getTags().isEmpty()) continue;
+            java.util.Set<String> updatedTags = new java.util.HashSet<>(article.getTags());
+            if (updatedTags.remove(oldName)) {
+                updatedTags.add(newName);
+                article.setTags(updatedTags);
+                articleRepository.save(article);
+            }
+        }
     }
 
     @Caching(evict = {

@@ -112,6 +112,7 @@ public class TemplateService {
         if (changes.getTitle() != null) existing.setTitle(changes.getTitle());
         if (changes.getCanvaUseCopyUrl() != null) existing.setCanvaUseCopyUrl(changes.getCanvaUseCopyUrl());
         if (changes.getMobileCanvaUseCopyUrl() != null) existing.setMobileCanvaUseCopyUrl(changes.getMobileCanvaUseCopyUrl());
+        if (changes.getInstagramPostCanvaUseCopyUrl() != null) existing.setInstagramPostCanvaUseCopyUrl(changes.getInstagramPostCanvaUseCopyUrl());
         if (changes.getRsvpCanvaUseCopyUrl() != null) existing.setRsvpCanvaUseCopyUrl(changes.getRsvpCanvaUseCopyUrl());
         if (changes.getDetailCardCanvaUseCopyUrl() != null) existing.setDetailCardCanvaUseCopyUrl(changes.getDetailCardCanvaUseCopyUrl());
         if (changes.getThankYouCardCanvaUseCopyUrl() != null) existing.setThankYouCardCanvaUseCopyUrl(changes.getThankYouCardCanvaUseCopyUrl());
@@ -275,6 +276,9 @@ public class TemplateService {
             case "invite-suite":
                 backendType = "INVITE_SUITE";
                 break;
+            case "corporate-bundle":
+                backendType = "CORPORATE_BUNDLE";
+                break;
             default:
                 backendType = "PRINT_MOBILE";
         }
@@ -341,6 +345,7 @@ public class TemplateService {
                     case INVITE_SUITE: typeLabel = "Invite Suite"; break;
                     case PRINT_MOBILE: typeLabel = "Mobile + Print"; break;
                     case PRINT_ONLY: typeLabel = "Only Print"; break;
+                    case CORPORATE_BUNDLE: typeLabel = "Corporate Bundle"; break;
                     default: typeLabel = "PDF"; // safe fallback
                 }
                 String title = baseTitle + " (" + typeLabel + ")";
@@ -380,33 +385,42 @@ public class TemplateService {
                         // What's Included (type-specific)
                         String[] itemsPg1;
                         switch (type) {
-                        case INVITE_SUITE:
-                            itemsPg1 = new String[]{
-                                "Print Invitation (5×7 in)",
-                                "Mobile Invitation (1080×1920 px)",
-                                "RSVP Card",
-                                "Details Card",
-                                "Thank You Card",
-                                "Editable Canva Links",
-                                "Buyer PDF Included"
-                            };
-                            break;
-                        case PRINT_MOBILE:
-                            itemsPg1 = new String[]{
-                                "Print Invitation (5×7 in)",
-                                "Mobile Invitation (1080×1920 px)",
-                                "Editable Canva Links",
-                                "Buyer PDF Included"
-                            };
-                            break;
-                        case PRINT_ONLY:
-                        default:
-                            itemsPg1 = new String[]{
-                                "Print Invitation (5×7 in)",
-                                "Editable Canva Links",
-                                "Buyer PDF Included"
-                            };
-                            break;
+                            case INVITE_SUITE:
+                                itemsPg1 = new String[]{
+                                    "Print Invitation (5×7 in)",
+                                    "Mobile Invitation (1080×1920 px)",
+                                    "RSVP Card",
+                                    "Details Card",
+                                    "Thank You Card",
+                                    "Editable Canva Links",
+                                    "Buyer PDF Included"
+                                };
+                                break;
+                            case PRINT_MOBILE:
+                                itemsPg1 = new String[]{
+                                    "Print Invitation (5×7 in)",
+                                    "Mobile Invitation (1080×1920 px)",
+                                    "Editable Canva Links",
+                                    "Buyer PDF Included"
+                                };
+                                break;
+                            case CORPORATE_BUNDLE:
+                                itemsPg1 = new String[]{
+                                    "5×7 inch Printable Invitation",
+                                    "1080×1080 Instagram Post",
+                                    "1080×1920 Instagram Story",
+                                    "Editable Canva Links",
+                                    "Buyer PDF Included"
+                                };
+                                break;
+                            case PRINT_ONLY:
+                            default:
+                                itemsPg1 = new String[]{
+                                    "Print Invitation (5×7 in)",
+                                    "Editable Canva Links",
+                                    "Buyer PDF Included"
+                                };
+                                break;
                         }
                     // Left-aligned bullets starting at the mockup's left edge
                     float cy = afterHeaderY;
@@ -719,6 +733,137 @@ public class TemplateService {
                             y = thankBtnY - GAP * 2;
                         }
                         // Fallthrough to render mobile section for Wedding Set below
+                        break;
+                    case CORPORATE_BUNDLE:
+                        // Instagram Post section
+                        y -= 20f;
+                        drawText(cs, "Instagram Post (1080 x 1080 px)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
+                        y -= 14f;
+                        String igPostLink = t.getInstagramPostCanvaUseCopyUrl();
+                        float igPostBtnY = y - BUTTON_H - 4f;
+                        if (igPostLink != null && igPostLink.startsWith("http")) {
+                            drawButtonWithLink(doc, p2, cs, MARGIN, igPostBtnY, btnW, BUTTON_H, "Edit Instagram Post Template", igPostLink);
+                            float qrLabelXIg = 0f; float qrLabelDefaultYIg = 0f; boolean qrDrawnIg = false;
+                            try {
+                                BufferedImage qrIg = createQrCodeImage(igPostLink, 200);
+                                if (qrIg != null) {
+                                    PDImageXObject qrImgIg = LosslessFactory.createFromImage(doc, qrIg);
+                                    float qrSizeIg = 100f;
+                                    float qrXIg = rightX + (qrAreaW - qrSizeIg) / 2f;
+                                    float qrYIg = igPostBtnY + (BUTTON_H - qrSizeIg) / 2f + 15f;
+                                    cs.drawImage(qrImgIg, qrXIg, qrYIg, qrSizeIg, qrSizeIg);
+
+                                    PDAnnotationLink qrLinkIg = new PDAnnotationLink();
+                                    PDRectangle qrRectIg = new PDRectangle(qrXIg, qrYIg, qrSizeIg, qrSizeIg);
+                                    qrLinkIg.setRectangle(qrRectIg);
+                                    PDBorderStyleDictionary qrBorderIg = new PDBorderStyleDictionary();
+                                    qrBorderIg.setWidth(0f);
+                                    qrLinkIg.setBorderStyle(qrBorderIg);
+                                    qrLinkIg.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                                    qrLinkIg.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                                    PDActionURI qrActionIg = new PDActionURI();
+                                    qrActionIg.setURI(igPostLink);
+                                    qrLinkIg.setAction(qrActionIg);
+                                    p2.getAnnotations().add(qrLinkIg);
+
+                                    String qrLabelIg = "Scan to open";
+                                    qrLabelXIg = qrXIg + (qrSizeIg - (PDType1Font.HELVETICA.getStringWidth(qrLabelIg) / 1000f * 9f)) / 2f;
+                                    qrLabelDefaultYIg = qrYIg - 15f;
+                                    qrDrawnIg = true;
+                                }
+                            } catch (Exception ignore) {}
+
+                            float urlStartYIg = igPostBtnY - 12f;
+                            cs.setNonStrokingColor(Color.BLACK);
+                            PDAnnotationLink urlAnnotIg = new PDAnnotationLink();
+                            PDRectangle urlRectIg = new PDRectangle(MARGIN - 2f, urlStartYIg - 2f, leftW + 4f, 16f);
+                            urlAnnotIg.setRectangle(urlRectIg);
+                            PDBorderStyleDictionary urlBorderIg = new PDBorderStyleDictionary();
+                            urlBorderIg.setWidth(0f);
+                            urlAnnotIg.setBorderStyle(urlBorderIg);
+                            urlAnnotIg.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                            urlAnnotIg.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                            PDActionURI urlActionIg = new PDActionURI();
+                            urlActionIg.setURI(igPostLink);
+                            urlAnnotIg.setAction(urlActionIg);
+                            p2.getAnnotations().add(urlAnnotIg);
+
+                            if (qrDrawnIg) {
+                                float qrLabelYIg = Math.min(qrLabelDefaultYIg, (urlStartYIg - 12f) - 6f);
+                                drawText(cs, "Scan to open", qrLabelXIg, qrLabelYIg, PDType1Font.HELVETICA, 9f);
+                                lastQrLabelY = qrLabelYIg;
+                            }
+
+                            y = (urlStartYIg - 12f) - GAP * 2;
+                        } else {
+                            drawButton(cs, MARGIN, igPostBtnY, btnW, BUTTON_H, "Instagram Post template (link needed)");
+                            y = igPostBtnY - GAP * 2;
+                        }
+
+                        // Instagram Story section (uses mobile Canva link)
+                        y -= 20f;
+                        drawText(cs, "Instagram Story (1080 x 1920 px)", MARGIN, y, PDType1Font.HELVETICA_BOLD, 16f);
+                        y -= 14f;
+                        String storyLink = t.getMobileCanvaUseCopyUrl();
+                        float storyBtnY = y - BUTTON_H - 4f;
+                        if (storyLink != null && storyLink.startsWith("http")) {
+                            drawButtonWithLink(doc, p2, cs, MARGIN, storyBtnY, btnW, BUTTON_H, "Edit Instagram Story Template", storyLink);
+                            float qrLabelXStory = 0f; float qrLabelDefaultYStory = 0f; boolean qrDrawnStory = false;
+                            try {
+                                BufferedImage qrStory = createQrCodeImage(storyLink, 200);
+                                if (qrStory != null) {
+                                    PDImageXObject qrImgStory = LosslessFactory.createFromImage(doc, qrStory);
+                                    float qrSizeStory = 100f;
+                                    float qrXStory = rightX + (qrAreaW - qrSizeStory) / 2f;
+                                    float qrYStory = storyBtnY + (BUTTON_H - qrSizeStory) / 2f + 15f;
+                                    cs.drawImage(qrImgStory, qrXStory, qrYStory, qrSizeStory, qrSizeStory);
+
+                                    PDAnnotationLink qrLinkStory = new PDAnnotationLink();
+                                    PDRectangle qrRectStory = new PDRectangle(qrXStory, qrYStory, qrSizeStory, qrSizeStory);
+                                    qrLinkStory.setRectangle(qrRectStory);
+                                    PDBorderStyleDictionary qrBorderStory = new PDBorderStyleDictionary();
+                                    qrBorderStory.setWidth(0f);
+                                    qrLinkStory.setBorderStyle(qrBorderStory);
+                                    qrLinkStory.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                                    qrLinkStory.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                                    PDActionURI qrActionStory = new PDActionURI();
+                                    qrActionStory.setURI(storyLink);
+                                    qrLinkStory.setAction(qrActionStory);
+                                    p2.getAnnotations().add(qrLinkStory);
+
+                                    String qrLabelStory = "Scan to open";
+                                    qrLabelXStory = qrXStory + (qrSizeStory - (PDType1Font.HELVETICA.getStringWidth(qrLabelStory) / 1000f * 9f)) / 2f;
+                                    qrLabelDefaultYStory = qrYStory - 15f;
+                                    qrDrawnStory = true;
+                                }
+                            } catch (Exception ignore) {}
+
+                            float urlStartYStory = storyBtnY - 12f;
+                            cs.setNonStrokingColor(Color.BLACK);
+                            PDAnnotationLink urlAnnotStory = new PDAnnotationLink();
+                            PDRectangle urlRectStory = new PDRectangle(MARGIN - 2f, urlStartYStory - 2f, leftW + 4f, 16f);
+                            urlAnnotStory.setRectangle(urlRectStory);
+                            PDBorderStyleDictionary urlBorderStory = new PDBorderStyleDictionary();
+                            urlBorderStory.setWidth(0f);
+                            urlAnnotStory.setBorderStyle(urlBorderStory);
+                            urlAnnotStory.setColor(new PDColor(new float[]{25/255f, 118/255f, 210/255f}, PDDeviceRGB.INSTANCE));
+                            urlAnnotStory.setHighlightMode(PDAnnotationLink.HIGHLIGHT_MODE_OUTLINE);
+                            PDActionURI urlActionStory = new PDActionURI();
+                            urlActionStory.setURI(storyLink);
+                            urlAnnotStory.setAction(urlActionStory);
+                            p2.getAnnotations().add(urlAnnotStory);
+
+                            if (qrDrawnStory) {
+                                float qrLabelYStory = Math.min(qrLabelDefaultYStory, (urlStartYStory - 12f) - 6f);
+                                drawText(cs, "Scan to open", qrLabelXStory, qrLabelYStory, PDType1Font.HELVETICA, 9f);
+                                lastQrLabelY = qrLabelYStory;
+                            }
+
+                            y = (urlStartYStory - 12f) - GAP * 2;
+                        } else {
+                            drawButton(cs, MARGIN, storyBtnY, btnW, BUTTON_H, "Instagram Story template (link needed)");
+                            y = storyBtnY - GAP * 2;
+                        }
                         break;
                 }
 

@@ -33,7 +33,7 @@ BEGIN
   ) THEN
     ALTER TABLE canva_templates
       ADD CONSTRAINT chk_canva_templates_buyer_pdf_type
-      CHECK (buyer_pdf_type IN ('PRINT_MOBILE','PRINT_ONLY','INVITE_SUITE') OR buyer_pdf_type IS NULL);
+      CHECK (buyer_pdf_type IN ('PRINT_MOBILE','PRINT_ONLY','INVITE_SUITE','CORPORATE_BUNDLE') OR buyer_pdf_type IS NULL);
   END IF;
 END $$;
 
@@ -66,4 +66,4 @@ END;
 
 -- 3) Optional CHECK constraint (H2 supports simple CHECK)
 ALTER TABLE canva_templates ADD CONSTRAINT chk_canva_templates_buyer_pdf_type
-  CHECK (buyer_pdf_type IN ('PRINT_MOBILE','PRINT_ONLY','INVITE_SUITE') OR buyer_pdf_type IS NULL);
+  CHECK (buyer_pdf_type IN ('PRINT_MOBILE','PRINT_ONLY','INVITE_SUITE','CORPORATE_BUNDLE') OR buyer_pdf_type IS NULL);

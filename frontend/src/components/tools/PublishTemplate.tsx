@@ -26,6 +26,7 @@ export default function PublishTemplate() {
   const [title, setTitle] = useState('');
   const [canvaUrl, setCanvaUrl] = useState('');
   const [mobileCanvaUrl, setMobileCanvaUrl] = useState('');
+  const [instagramPostCanvaUrl, setInstagramPostCanvaUrl] = useState('');
   const [rsvpCanvaUrl, setRsvpCanvaUrl] = useState('');
   const [detailCardCanvaUrl, setDetailCardCanvaUrl] = useState('');
   const [thankYouCardCanvaUrl, setThankYouCardCanvaUrl] = useState('');
@@ -41,22 +42,23 @@ export default function PublishTemplate() {
   const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
   // Per-template PDF type selection
-  const [pdfTypeById, setPdfTypeById] = useState<Record<number, 'print-mobile' | 'print-only' | 'invite-suite'>>({});
-    const getPdfTypeFor = (id: number): 'print-mobile' | 'print-only' | 'invite-suite' => pdfTypeById[id] || 'print-mobile';
+  const [pdfTypeById, setPdfTypeById] = useState<Record<number, 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle'>>({});
+  const getPdfTypeFor = (id: number): 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle' => pdfTypeById[id] || 'print-mobile';
   const [publicDescription, setPublicDescription] = useState<string>('');
   // Create-form specific PDF type selector (since global was removed)
-  const [createPdfType, setCreatePdfType] = useState<'print-mobile' | 'print-only' | 'invite-suite'>('print-mobile');
+  const [createPdfType, setCreatePdfType] = useState<'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle'>('print-mobile');
   // Removed global handler; each row controls its own type
 
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all');
 
   // Normalize server/DB values (e.g., PRINT_MOBILE) into UI values (print-mobile)
-  const normalizePdfType = (val?: string | null): 'print-mobile' | 'print-only' | 'invite-suite' => {
+  const normalizePdfType = (val?: string | null): 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle' => {
     if (!val) return 'print-mobile';
     const v = String(val).toUpperCase().replace(/\s+/g, '');
     if (v === 'PRINT_ONLY' || v === 'PRINT-ONLY') return 'print-only';
     if (v === 'INVITE-SUITE' || v === 'invite-suite') return 'invite-suite';
+    if (v === 'CORPORATE_BUNDLE' || v === 'CORPORATE-BUNDLE') return 'corporate-bundle';
     // default and also covers PRINT_MOBILE/PRINT-MOBILE
     return 'print-mobile';
   };
@@ -141,6 +143,7 @@ export default function PublishTemplate() {
           publicDescription: publicDescription.trim() || undefined,
           canvaUseCopyUrl: canvaUrl.trim(),
           mobileCanvaUseCopyUrl: mobileCanvaUrl.trim(),
+          instagramPostCanvaUseCopyUrl: instagramPostCanvaUrl.trim() || undefined,
           rsvpCanvaUseCopyUrl: rsvpCanvaUrl.trim() || undefined,
           detailCardCanvaUseCopyUrl: detailCardCanvaUrl.trim() || undefined,
           thankYouCardCanvaUseCopyUrl: thankYouCardCanvaUrl.trim() || undefined,
@@ -160,6 +163,7 @@ export default function PublishTemplate() {
       }
       setCanvaUrl('');
       setMobileCanvaUrl('');
+      setInstagramPostCanvaUrl('');
       setRsvpCanvaUrl('');
       setDetailCardCanvaUrl('');
       setThankYouCardCanvaUrl('');
@@ -184,6 +188,7 @@ export default function PublishTemplate() {
     setTitle(t.title || '');
     setCanvaUrl(t.canvaUseCopyUrl || '');
     setMobileCanvaUrl(t.mobileCanvaUseCopyUrl || '');
+    setInstagramPostCanvaUrl((t as any).instagramPostCanvaUseCopyUrl || '');
     setRsvpCanvaUrl(t.rsvpCanvaUseCopyUrl || '');
     setDetailCardCanvaUrl(t.detailCardCanvaUseCopyUrl || '');
     setThankYouCardCanvaUrl((t as any).thankYouCardCanvaUseCopyUrl || '');
@@ -228,6 +233,7 @@ export default function PublishTemplate() {
           publicDescription: publicDescription.trim() || undefined,
           canvaUseCopyUrl: canvaUrl.trim(),
           mobileCanvaUseCopyUrl: mobileCanvaUrl.trim() || undefined,
+          instagramPostCanvaUseCopyUrl: instagramPostCanvaUrl.trim() || undefined,
           rsvpCanvaUseCopyUrl: rsvpCanvaUrl.trim() || undefined,
           detailCardCanvaUseCopyUrl: detailCardCanvaUrl.trim() || undefined,
           thankYouCardCanvaUseCopyUrl: thankYouCardCanvaUrl.trim() || undefined,
@@ -242,6 +248,7 @@ export default function PublishTemplate() {
       setTitle('');
       setCanvaUrl('');
       setMobileCanvaUrl('');
+      setInstagramPostCanvaUrl('');
       setMockupFile(null);
       setMockupUrl('');
       setEtsyUrl('');
@@ -264,6 +271,7 @@ export default function PublishTemplate() {
     setTitle('');
     setCanvaUrl('');
     setMobileCanvaUrl('');
+    setInstagramPostCanvaUrl('');
     setRsvpCanvaUrl('');
     setDetailCardCanvaUrl('');
     setThankYouCardCanvaUrl('');
@@ -303,7 +311,7 @@ export default function PublishTemplate() {
       const row = templates.find(x => x.id === id);
       const serverType = row ? normalizePdfType((row as any).buyerPdfType as string | undefined) : undefined;
       const selected = pdfTypeById[id];
-      const effectiveType = (selected || serverType || 'print-mobile') as 'print-mobile' | 'print-only' | 'invite-suite';
+      const effectiveType = (selected || serverType || 'print-mobile') as 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle';
       const includeAgeInstructions = !!includeAgeInstructionsById[id];
       const url = await generateBuyerPdf(id, effectiveType, includeAgeInstructions);
       setSuccess('Buyer PDF generated successfully.');
@@ -353,11 +361,12 @@ export default function PublishTemplate() {
                       id="create-pdf-type-select"
                       value={createPdfType}
                       label="Buyer PDF Type"
-                      onChange={(e: SelectChangeEvent) => setCreatePdfType(e.target.value as 'print-mobile' | 'print-only' | 'invite-suite')}
+                      onChange={(e: SelectChangeEvent) => setCreatePdfType(e.target.value as 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle')}
                     >
                       <MenuItem value="print-mobile">Print & Mobile</MenuItem>
                       <MenuItem value="print-only">Print only</MenuItem>
                       <MenuItem value="invite-suite">Invite Suite</MenuItem>
+                      <MenuItem value="corporate-bundle">Corporate Bundle</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -370,7 +379,17 @@ export default function PublishTemplate() {
                     fullWidth
                   />
                 </Grid>
-                {(createPdfType === 'print-mobile' || createPdfType === 'invite-suite') && (
+                {createPdfType === 'corporate-bundle' && (
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Instagram Post Canva ‘Use a Copy’ URL (1080 x 1080 px)"
+                      value={instagramPostCanvaUrl}
+                      onChange={(e) => setInstagramPostCanvaUrl(e.target.value)}
+                      fullWidth
+                    />
+                  </Grid>
+                )}
+                {(createPdfType === 'print-mobile' || createPdfType === 'invite-suite' || createPdfType === 'corporate-bundle') && (
                   <Grid item xs={12}>
                     <TextField
                       label="Mobile Canva ‘Use a Copy’ URL (1080 X 1920 px)"

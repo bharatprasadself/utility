@@ -656,16 +656,87 @@ const ArticleLayout: React.FC<ArticleLayoutProps> = ({
       };
 
       const reader = new FileReader();
+      // Convert simple ASCII-aligned tables to GFM pipe tables
+      const convertAsciiTablesToGfm = (md: string) => {
+    return md.replace(/(^|\n)([^\n]+)\n(\s*[-=]{2,}(?:\s+[-=]{2,})*\s*)\n((?:[^\n]+\n?)*)/g, (match: string, pre: string, headerLine: string, sepLine: string, bodyLines: string) => {
+          try {
+            const headerCols = headerLine.trim().split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
+            const rows = bodyLines.split(/\r?\n/).filter(l => l.trim() !== '');
+            if (headerCols.length < 2 || rows.length === 0) return match;
+            const tableRows: string[][] = rows.map(r => r.trim().split(/\s{2,}/).map(c => c.trim()));
+            const colCount = headerCols.length;
+            const normalized: string[][] = tableRows.map((cells: string[]) => {
+              const out = cells.slice(0, colCount);
+              while (out.length < colCount) out.push('');
+              return out;
+            });
+            const header = '| ' + headerCols.join(' | ') + ' |';
+            const sep = '| ' + headerCols.map(() => '---').join(' | ') + ' |';
+            const body = normalized.map((cells: string[]) => '| ' + cells.join(' | ') + ' |').join('\n');
+            return pre + header + '\n' + sep + '\n' + body + '\n';
+          } catch (e) {
+            return match;
+          }
+        });
+      };
+
       reader.onload = (ev) => {
         const text = (ev.target?.result as string) || '';
         const { heading, body } = splitMdHeading(text);
+        let cleaned = body || text;
+
+        // If fully wrapped in a fenced block, unwrap it (some exports wrap entire doc in ```)
+        const fencedMatch = cleaned.match(/^\s*```[^\n]*\n([\s\S]*?)\n```\s*$/);
+        if (fencedMatch && fencedMatch[1]) cleaned = fencedMatch[1];
+
+        // Convert ASCII tables (aligned with 2+ spaces and dashed separator) to GFM
+        cleaned = convertAsciiTablesToGfm(cleaned);
+
+          // Convert any HTML <table> blocks into GFM pipe tables so the markdown
+          // preview (react-markdown without rehype-raw) will render tables correctly.
+          // Avoid DOMParser (safer across environments) and use a targeted regex-based
+          // converter that extracts rows/cells from simple HTML tables.
+          const convertHtmlTablesToGfm = (mdText: string) => {
+            if (!mdText.includes('<table')) return mdText;
+            try {
+                return mdText.replace(/<table[\s\S]*?<\/table>/gi, (tableHtml: string) => {
+                // Extract rows
+                const rowMatches = Array.from(tableHtml.matchAll(/<tr[\s\S]*?>[\s\S]*?<\/tr>/gi)).map((m: RegExpMatchArray) => m[0]);
+                if (!rowMatches.length) return tableHtml;
+                const cellsFromRow = (rowHtml: string) => {
+                  const cellMatches = Array.from(rowHtml.matchAll(/<(th|td)[^>]*>([\s\S]*?)<\/\1>/gi)) as RegExpMatchArray[];
+                  return cellMatches.map((cm: RegExpMatchArray) => {
+                    const inner = (cm[2] || '').replace(/<[^>]+>/g, '').trim();
+                    return inner.replace(/\|/g, '\\|');
+                  });
+                };
+                const allRows = rowMatches.map(r => cellsFromRow(r)).filter(r => r.length > 0);
+                if (!allRows.length) return tableHtml;
+                const header = allRows[0];
+                const body = allRows.slice(1);
+                const headerLine = '| ' + header.join(' | ') + ' |';
+                const sepLine = '| ' + header.map(() => '---').join(' | ') + ' |';
+                const bodyLines = body.map((cols: string[]) => {
+                  const out = cols.slice(0, header.length);
+                  while (out.length < header.length) out.push('');
+                  return '| ' + out.join(' | ') + ' |';
+                }).join('\n');
+                return headerLine + '\n' + sepLine + (bodyLines ? '\n' + bodyLines : '');
+              });
+            } catch (e) {
+              return mdText;
+            }
+          };
+
+          cleaned = convertHtmlTablesToGfm(cleaned);
+
         if (!titleInput && heading) {
           setTitleInput(heading);
         }
-        setContentInput(body || text);
+        setContentInput(cleaned);
         setImportedFileName(file.name);
         // Compute read time primarily
-        setReadTimeInput(computeReadTime(body || text));
+        setReadTimeInput(computeReadTime(cleaned));
       };
       reader.readAsText(file);
     } finally {
