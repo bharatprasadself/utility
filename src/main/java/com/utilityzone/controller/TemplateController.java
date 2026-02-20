@@ -46,15 +46,21 @@ public class TemplateController {
         int page = 0;
         int size = 10;
         String status = null;
+        String sort = null;
+        String dir = null;
         try {
             String pageStr = request.getParameter("page");
             String sizeStr = request.getParameter("size");
             String statusStr = request.getParameter("status");
+            String sortStr = request.getParameter("sort");
+            String dirStr = request.getParameter("dir");
             if (pageStr != null) page = Integer.parseInt(pageStr);
             if (sizeStr != null) size = Integer.parseInt(sizeStr);
             if (statusStr != null && !statusStr.equalsIgnoreCase("all")) status = statusStr;
+            if (sortStr != null && !sortStr.isBlank()) sort = sortStr;
+            if (dirStr != null && !dirStr.isBlank()) dir = dirStr;
         } catch (Exception ignored) {}
-        org.springframework.data.domain.Page<Template> paged = service.listPaged(page, size, status);
+        org.springframework.data.domain.Page<Template> paged = service.listPaged(page, size, status, sort, dir);
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("templates", paged.getContent());
         result.put("total", paged.getTotalElements());

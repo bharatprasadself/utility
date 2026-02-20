@@ -25,10 +25,14 @@ export interface Template {
   buyerPdfType?: BuyerPdfType;
 }
 
+export type TemplateSortField = 'title' | 'createdAt';
+
 export const listTemplates = async (
   page = 0,
   size = 10,
-  status: 'all' | 'draft' | 'published' = 'all'
+  status: 'all' | 'draft' | 'published' = 'all',
+  sortField?: TemplateSortField,
+  sortDir: 'asc' | 'desc' = 'asc'
 ): Promise<{ templates: Template[]; total: number }> => {
   const params = new URLSearchParams({
     page: String(page),
@@ -37,6 +41,10 @@ export const listTemplates = async (
   if (status && status !== 'all') {
     params.append('status', status);
   }
+   if (sortField) {
+     params.append('sort', sortField);
+     params.append('dir', sortDir);
+   }
   const res = await axiosInstance.get<{ templates: Template[]; total: number }>(
     `/api/admin/canva-templates?${params.toString()}`
   );

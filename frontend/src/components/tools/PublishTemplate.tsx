@@ -7,7 +7,7 @@ import { Box, Typography, Button, Paper, Table, TableBody, TableCell, TableConta
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/services/axiosConfig';
 import { listTemplates, publishTemplate, generateBuyerPdf } from '../../services/templates';
-import type { Template } from '../../services/templates';
+import type { Template, TemplateSortField } from '../../services/templates';
 
 export default function PublishTemplate() {
   // State for selected template (radio selection)
@@ -52,6 +52,9 @@ export default function PublishTemplate() {
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all');
 
+  // Sort state: combine field + direction into a single option
+  const [sortOption, setSortOption] = useState<'title-asc' | 'createdAt-desc'>('title-asc');
+
   // Normalize server/DB values (e.g., PRINT_MOBILE) into UI values (print-mobile)
   const normalizePdfType = (val?: string | null): 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle' => {
     if (!val) return 'print-mobile';
@@ -63,10 +66,11 @@ export default function PublishTemplate() {
     return 'print-mobile';
   };
 
-  const refresh = async (p = page, s = pageSize, status = statusFilter) => {
+  const refresh = async (p = page, s = pageSize, status = statusFilter, sort = sortOption) => {
     try {
       setError(null);
-      const { templates, total } = await listTemplates(p, s, status);
+      const [field, dir] = sort.split('-') as [TemplateSortField, 'asc' | 'desc'];
+      const { templates, total } = await listTemplates(p, s, status, field, dir);
       setTemplates(templates);
       setTotalTemplates(total);
     } catch (e: any) {
@@ -75,13 +79,13 @@ export default function PublishTemplate() {
   };
 
   useEffect(() => {
-    refresh(page, pageSize, statusFilter);
+    refresh(page, pageSize, statusFilter, sortOption);
     // Auto-generate title for new template
     if (editId == null) {
       import('../../services/templates').then(m => m.getNextTemplateTitle()).then(setTitle).catch(() => setTitle(''));
     }
     // eslint-disable-next-line
-  }, [page, pageSize, statusFilter]);
+  }, [page, pageSize, statusFilter, sortOption]);
 
   // When editing a template, keep the selected Buyer PDF Type in sync with the row map
   useEffect(() => {
@@ -583,6 +587,23 @@ export default function PublishTemplate() {
           {/* Action bar above the table header */}
           <Box sx={{ width: '100%', p: 2, pb: 1 }}>
             <Grid container alignItems="center" justifyContent="flex-end" spacing={2}>
+              <Grid item>
+                <FormControl sx={{ minWidth: 160 }} size="small">
+                  <InputLabel>Sort by</InputLabel>
+                  <Select
+                    value={sortOption}
+                    label="Sort by"
+                    onChange={e => {
+                      const value = e.target.value as 'title-asc' | 'createdAt-desc';
+                      setSortOption(value);
+                      setPage(0);
+                    }}
+                  >
+                    <MenuItem value="title-asc">Title (A–Z)</MenuItem>
+                    <MenuItem value="createdAt-desc">Newest first</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
               <Grid item>
                 <FormControl sx={{ minWidth: 120 }} size="small">
                   <InputLabel>Status</InputLabel>

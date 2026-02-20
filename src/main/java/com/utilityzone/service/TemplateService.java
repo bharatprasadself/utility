@@ -86,7 +86,32 @@ public class TemplateService {
 
     // Return Page object for pagination, with optional status filter
     public org.springframework.data.domain.Page<Template> listPaged(int page, int size, String status) {
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return listPaged(page, size, status, null, null);
+    }
+
+    // Return Page object for pagination, with optional status filter and sort
+    public org.springframework.data.domain.Page<Template> listPaged(int page, int size, String status, String sort, String dir) {
+        String property = null;
+        if (sort != null && !sort.isBlank()) {
+            if ("title".equalsIgnoreCase(sort)) {
+                property = "title";
+            } else if ("createdAt".equalsIgnoreCase(sort)) {
+                property = "createdAt";
+            }
+        }
+
+        org.springframework.data.domain.Pageable pageable;
+        if (property != null) {
+            org.springframework.data.domain.Sort.Direction direction =
+                    (dir != null && dir.equalsIgnoreCase("desc"))
+                            ? org.springframework.data.domain.Sort.Direction.DESC
+                            : org.springframework.data.domain.Sort.Direction.ASC;
+            pageable = org.springframework.data.domain.PageRequest.of(page, size,
+                    org.springframework.data.domain.Sort.by(direction, property));
+        } else {
+            pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        }
+
         if (status != null && !status.isBlank()) {
             return repo.findByStatusIgnoreCase(status, pageable);
         } else {
