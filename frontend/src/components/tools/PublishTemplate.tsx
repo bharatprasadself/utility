@@ -52,8 +52,8 @@ export default function PublishTemplate() {
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all');
 
-  // Sort state: combine field + direction into a single option
-  const [sortOption, setSortOption] = useState<'title-asc' | 'createdAt-desc'>('title-asc');
+  // Sort state: combine field + direction into a single option (default: newest first)
+  const [sortOption, setSortOption] = useState<'title-asc' | 'createdAt-desc'>('createdAt-desc');
 
   // Normalize server/DB values (e.g., PRINT_MOBILE) into UI values (print-mobile)
   const normalizePdfType = (val?: string | null): 'print-mobile' | 'print-only' | 'invite-suite' | 'corporate-bundle' => {
@@ -594,13 +594,13 @@ export default function PublishTemplate() {
                     value={sortOption}
                     label="Sort by"
                     onChange={e => {
-                      const value = e.target.value as 'title-asc' | 'createdAt-desc';
+                      const value = e.target.value as 'createdAt-desc' | 'title-asc' ;
                       setSortOption(value);
                       setPage(0);
                     }}
                   >
-                    <MenuItem value="title-asc">Title (A–Z)</MenuItem>
                     <MenuItem value="createdAt-desc">Newest first</MenuItem>
+                    <MenuItem value="title-asc">Title (A–Z)</MenuItem>                    
                   </Select>
                 </FormControl>
               </Grid>
