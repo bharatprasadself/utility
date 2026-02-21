@@ -632,7 +632,7 @@ export default function PublishTemplate() {
                       disabled={selectedTemplateId == null}
                     />
                   }
-                  label="Age/balloon instructions"
+                  label="Age/balloon"
                   sx={{ mr: 1, mb: 0 }}
                 />
               </Grid>
